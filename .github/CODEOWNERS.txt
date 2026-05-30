@@ -1,0 +1,27 @@
+# Format: pattern @username1 @username2
+# Replace với GitHub username thật của team members
+
+# Default reviewer - leader review mọi PR
+* @leader-github-username
+
+# Backend
+/backend/                              @leader-github-username
+/backend/src/AISO.SapIntegration/      @leader-github-username @sap-dev-1-github
+/backend/src/AISO.AiOrchestration/     @leader-github-username @ai-github
+
+# SAP code (abapGit synced)
+/sap/                                  @sap-dev-1-github @sap-dev-2-github
+
+# AI module
+/ai/                                   @ai-github
+
+# Frontend
+/frontend/                             @fe-github
+
+# Infrastructure + CI changes require leader
+/infrastructure/                       @leader-github-username
+/.github/                              @leader-github-username
+/pdf-function/                         @leader-github-username
+
+# Documentation
+/docs/                                 @leader-github-username

@@ -1,0 +1,60 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.cache
+TestResults/
+
+# Node / Frontend
+node_modules/
+npm-debug.log*
+*.log
+
+# Python (AI module)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Secrets - CRITICAL never commit
+.env
+.env.local
+.env.*.local
+appsettings.Development.json
+appsettings.Production.json
+secrets.json
+**/secrets/
+
+# Docker
+.docker/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.zip
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# SAP - exported credentials
+sap/credentials.txt
+
+# Output / temporary
+output/
+tmp/
+*.tmp
