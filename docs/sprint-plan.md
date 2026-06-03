@@ -4,7 +4,7 @@
 **Duration**: May 2026 – August 2026 (~14 weeks)
 **Methodology**: Phased delivery with Scrum-inspired 2-week sprints
 **Team**: 5 members (1 BE Lead + 2 SAP + 2 AI/FE)
-**Mentor**: FSoft Mentor (TBD) + School Supervisor: Thầy Nguyễn Bá Lê
+**Mentor**: FSoft Mentor (TBD) + School Supervisor: Thầy Nguyễn Ba Lê
 
 ---
 
