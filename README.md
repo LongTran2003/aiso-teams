@@ -9,8 +9,8 @@ Capstone Project — Spring 2026, FPT University.
 - **Tran Ngoc Quy Long** (Leader, Backend) — SE173662
 - **Mguyen Minh Quan** (SAP Dev) — SE183543
 - **Tran Dang Minh Quan** (SAP Dev) — SE180398
-- **Vu Ngoc Tien** (AI Engineer) — SE183132
-- **Le Thi Thanh Thuy** (Frontend) — SE170111
+- **Vu Ngoc Tien** (Frontend) — SE183132
+- **Le Thi Thanh Thuy** (AI Engineer) — SE170111
 
 Supervisors: Mr. Nguyen Ba Le
 
