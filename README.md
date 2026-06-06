@@ -23,7 +23,7 @@ Modular monolith pattern, deployed to Azure App Service. See `/docs/architecture
 ## Folder structure
 
 - `backend/` — .NET Core Bot Service (modular monolith)
-- `ai/` — AI orchestration module (Python FastAPI or .NET)
+- `ai/` — AI orchestration module (Python FastAPI)
 - `frontend/` — Teams app manifest + Adaptive Card templates
 - `sap/` — SAP ABAP code (synced via abapGit)
 - `pdf-function/` — Azure Function for PDF generation
