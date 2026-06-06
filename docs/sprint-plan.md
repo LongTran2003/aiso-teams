@@ -31,15 +31,15 @@
 The project follows a **4-phase delivery model** aligned with FSoft mentor reviews and the academic defense calendar.
 
 ```
-Phase 1                  Phase 2                                Phase 3       Phase 4
-Preparation +            Realization                            UAT           Defense
-Explore                  (Development)                                        (Golive)
-─────────                ──────────────────────────────────     ───────       ─────────
-16/05 — 17/05            19/05 — 27/07                          30/07 — 05/08  23/08
-2 days                   10 weeks (5 sprints)                   1 week         2.5 weeks
-        │                              │                               │             │
-        ▼                              ▼                               ▼             ▼
-   Mentor Review 1            Mentor Review 2                Mentor Review 3   Thesis Defense
+Phase 1                  Phase 2                                Phase 3                 Phase 4
+Preparation +            Realization                            UAT                     Defense
+Explore                  (Development)                                                  (Golive)
+─────────                ──────────────────────────────────     ───────                 ─────────
+16/05 — 17/05            19/05 — 27/07                          30/07 — 05/08           23/08
+2 days                   10 weeks (5 sprints)                   1 week                  2.5 weeks
+        │                              │                               │                   │
+        ▼                              ▼                               ▼                   ▼
+   Mentor Review 1            Mentor Review 2                Mentor Review 3         Thesis Defense
 ```
 
 ### Phase 1: Preparation + Explore (16/05 – 17/05)
@@ -144,12 +144,10 @@ The team operates with three work streams. Each member has a primary role plus a
 | Member | Primary | Secondary | Sprint deliverable focus |
 |---|---|---|---|
 | **Trần Ngọc Quý Long** | BE Lead / Architect | DevOps · Integration | .NET solution, Bot Framework, Docker, Azure OpenAI SDK |
-| **TBD (SAP-1)** | SAP Lead — CDS / AMDP | OData modeling | CDS Aggregation Views, AMDP procedures, RAP service binding |
-| **TBD (SAP-2)** | SAP — RAP / Z-Objects | SAP authorization | Z-Tables, RAP behavior pool, PFCG roles, background jobs |
-| **TBD (AI-1)** | AI Lead — LLM / Function Calling | Prompt evaluation | Function registry, prompt design, Vietnamese tuning |
-| **TBD (AI-2)** | AI/FE — Adaptive Cards | UAT + documentation | Card templates, chart rendering, manifest, user manual |
-
-> ⚠️ Names for SAP-1, SAP-2, AI-1, AI-2 should be assigned by the team leader. Recommended to match each member's strongest pre-existing skill to reduce ramp-up time.
+| **Trần Đặng Minh Quân** | SAP Lead — CDS / AMDP | OData modeling | CDS Aggregation Views, AMDP procedures, RAP service binding |
+| **Nguyễn Minh Quân** | SAP — RAP / Z-Objects | SAP authorization | Z-Tables, RAP behavior pool, PFCG roles, background jobs |
+| **Lê Thị Thanh Thuý** | AI Lead — LLM / Function Calling | Prompt evaluation | Function registry, prompt design, Vietnamese tuning |
+| **Vũ Ngọc Tiến** | AI/FE — Adaptive Cards | UAT + documentation | Card templates, chart rendering, manifest, user manual |
 
 ### Cross-cutting responsibilities
 
