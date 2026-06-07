@@ -7,6 +7,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <EmbeddedResource Include="Cards\Templates\SoSummaryCard.json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AdaptiveCards.Templating" Version="2.0.6" />
     <PackageReference Include="Microsoft.Bot.Builder" Version="4.23.1" />
     <PackageReference Include="Microsoft.Bot.Builder.Integration.AspNet.Core" Version="4.23.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
