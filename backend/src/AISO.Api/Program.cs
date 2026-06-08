@@ -1,45 +1,108 @@
 using AISO.AiOrchestration;
 using AISO.AiOrchestration.Functions;
+using AISO.AiOrchestration.Logging;
 using AISO.AiOrchestration.Stub;
+using AISO.Api.Middleware;
 using AISO.Bot;
 using AISO.Persistence;
 using AISO.SapIntegration;
 using AISO.SapIntegration.Mock;
+using HealthChecks.UI.Client;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Connector.Authentication;
+using Serilog;
 
-var builder = WebApplication.CreateBuilder(args);
+// --- Bootstrap Serilog before host is built so startup errors are captured ---
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .CreateBootstrapLogger();
 
-// --- ASP.NET Core basics ---
-builder.Services.AddHttpClient();
-builder.Services.AddControllers().AddNewtonsoftJson();
+try
+{
+    var builder = WebApplication.CreateBuilder(args);
 
-// --- Bot Framework authentication + adapter ---
-builder.Services.AddSingleton<BotFrameworkAuthentication, ConfigurationBotFrameworkAuthentication>();
-builder.Services.AddSingleton<IBotFrameworkHttpAdapter, AdapterWithErrorHandler>();
-builder.Services.AddTransient<IBot, TeamsBot>();
+    // Replace the default logging provider with Serilog, reading config
+    // from "Serilog" section in appsettings.
+    builder.Host.UseSerilog((ctx, services, cfg) =>
+        cfg.ReadFrom.Configuration(ctx.Configuration)
+           .ReadFrom.Services(services)
+           .Enrich.FromLogContext());
 
-// --- Persistence (EF Core + PostgreSQL) ---
-builder.Services.AddPersistence(builder.Configuration);
+    // --- ASP.NET Core basics ---
+    builder.Services.AddHttpClient();
+    builder.Services.AddControllers().AddNewtonsoftJson();
 
-// --- SAP Integration ---
-// Sprint 2: mock client with seeded Global Bike data.
-// Sprint 3: replaced by a real OData client calling SAP via Cloud Connector.
-builder.Services.AddSingleton<ISapClient, MockSapClient>();
+    // --- Bot Framework authentication + adapter ---
+    builder.Services.AddSingleton<BotFrameworkAuthentication, ConfigurationBotFrameworkAuthentication>();
+    builder.Services.AddSingleton<IBotFrameworkHttpAdapter, AdapterWithErrorHandler>();
+    builder.Services.AddTransient<IBot, TeamsBot>();
 
-// --- AI Orchestration ---
-// Register every IFunction implementation; FunctionRegistry collects them.
-builder.Services.AddSingleton<IFunction, GetSalesOrdersFunction>();
-builder.Services.AddSingleton<IFunctionRegistry, FunctionRegistry>();
+    // --- Persistence (EF Core + PostgreSQL) + Audit logger ---
+    builder.Services.AddPersistence(builder.Configuration);
 
-// Sprint 2: keyword-stub dispatcher.
-// Sprint 3: replaced by Azure OpenAI function-calling dispatcher (AI team).
-builder.Services.AddSingleton<IFunctionDispatcher, KeywordFunctionDispatcher>();
+    // --- SAP Integration ---
+    // Sprint 2: mock client with seeded Global Bike data.
+    // Sprint 3: replaced by a real OData client calling SAP via Cloud Connector.
+    builder.Services.AddSingleton<ISapClient, MockSapClient>();
 
-var app = builder.Build();
+    // --- AI Orchestration ---
+    builder.Services.AddSingleton<IFunction, GetSalesOrdersFunction>();
+    builder.Services.AddSingleton<IFunctionRegistry, FunctionRegistry>();
+    builder.Services.AddSingleton<IFunctionDispatcher, KeywordFunctionDispatcher>();
 
-app.UseRouting();
-app.MapControllers();
+    // Decorate IFunctionDispatcher with structured logging. Scrutor's Decorate
+    // re-wires the registration so that any consumer of IFunctionDispatcher
+    // gets the LoggingFunctionDispatcher wrapping the inner KeywordFunctionDispatcher.
+    builder.Services.Decorate<IFunctionDispatcher, LoggingFunctionDispatcher>();
 
-app.Run();
+    // --- Health Checks ---
+    builder.Services.AddHealthChecks()
+        .AddNpgSql(
+            connectionString: builder.Configuration.GetConnectionString("Postgres")!,
+            name: "postgres",
+            tags: new[] { "db", "ready" })
+        .AddRedis(
+            redisConnectionString: builder.Configuration.GetConnectionString("Redis")!,
+            name: "redis",
+            tags: new[] { "cache", "ready" });
+
+    var app = builder.Build();
+
+    // --- HTTP pipeline ---
+    app.UseMiddleware<CorrelationIdMiddleware>();
+    app.UseSerilogRequestLogging();
+    app.UseRouting();
+    app.MapControllers();
+
+    app.MapHealthChecks("/health/live", new HealthCheckOptions
+    {
+        Predicate = _ => false,
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    });
+
+    app.MapHealthChecks("/health/ready", new HealthCheckOptions
+    {
+        Predicate = check => check.Tags.Contains("ready"),
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    });
+
+    app.MapHealthChecks("/health", new HealthCheckOptions
+    {
+        ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+    });
+
+    Log.Information("AISO-Teams Bot starting up");
+    app.Run();
+}
+catch (Exception ex) when (ex is not HostAbortedException)
+{
+    Log.Fatal(ex, "AISO-Teams Bot terminated unexpectedly");
+    throw;
+}
+finally
+{
+    Log.CloseAndFlush();
+}
