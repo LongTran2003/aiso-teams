@@ -1,4 +1,0 @@
-@EndUserText.label: 'AISO Sales Order Service Definition'
-define service ZSD_AISO_SALES_ORDER {
-  expose ZC_AISO_SO_WITH_ITEMS as SalesOrder;
-}
