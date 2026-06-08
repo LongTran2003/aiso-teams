@@ -30,10 +30,10 @@ public class TeamsBot : ActivityHandler
         ITurnContext<IMessageActivity> turnContext,
         CancellationToken cancellationToken)
     {
-        var userMessage    = turnContext.Activity.Text ?? string.Empty;
-        var teamsUserId    = turnContext.Activity.From?.Id ?? "anonymous";
+        var userMessage = turnContext.Activity.Text ?? string.Empty;
+        var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
         var conversationId = turnContext.Activity.Conversation?.Id;
-        var activityId     = turnContext.Activity.Id;
+        var activityId = turnContext.Activity.Id;
 
         // Push activity-scoped properties into Serilog LogContext so every
         // log emitted inside this turn is tagged for end-to-end traceability.
@@ -53,13 +53,13 @@ public class TeamsBot : ActivityHandler
             {
                 await _audit.LogAsync(new AuditEntry
                 {
-                    TeamsUserId    = teamsUserId,
+                    TeamsUserId = teamsUserId,
                     ConversationId = conversationId,
-                    Action         = dispatch.FunctionName ?? "unrecognized",
+                    Action = dispatch.FunctionName ?? "unrecognized",
                     ParametersJson = "{}",
-                    ResultStatus   = DeriveStatus(dispatch),
-                    DurationMs     = (int)stopwatch.ElapsedMilliseconds,
-                    ErrorMessage   = dispatch.Result?.ErrorMessage ?? dispatch.Reason
+                    ResultStatus = DeriveStatus(dispatch),
+                    DurationMs = (int)stopwatch.ElapsedMilliseconds,
+                    ErrorMessage = dispatch.Result?.ErrorMessage ?? dispatch.Reason
                 }, cancellationToken);
             }
             catch (Exception ex)

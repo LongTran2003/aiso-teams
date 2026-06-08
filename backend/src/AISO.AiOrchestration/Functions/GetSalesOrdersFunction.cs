@@ -57,11 +57,11 @@ public sealed class GetSalesOrdersFunction : IFunction
         var query = new SalesOrdersQuery
         {
             CustomerIdOrName = GetString(parameters, "customerIdOrName"),
-            SalesOrg         = GetString(parameters, "salesOrg"),
-            FromDate         = GetDate(parameters, "fromDate"),
-            ToDate           = GetDate(parameters, "toDate"),
-            Status           = GetEnum<SalesOrderStatus>(parameters, "status"),
-            Top              = GetInt(parameters, "top") ?? 10
+            SalesOrg = GetString(parameters, "salesOrg"),
+            FromDate = GetDate(parameters, "fromDate"),
+            ToDate = GetDate(parameters, "toDate"),
+            Status = GetEnum<SalesOrderStatus>(parameters, "status"),
+            Top = GetInt(parameters, "top") ?? 10
         };
 
         _logger.LogInformation(
