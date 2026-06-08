@@ -1,0 +1,48 @@
+# Top-most EditorConfig for the AISO-Teams backend solution.
+root = true
+
+# Defaults applied to every file under backend/.
+[*]
+indent_style = space
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+end_of_line = lf
+
+# C# source files
+[*.cs]
+indent_size = 4
+
+# Tab-style indentation kept for hand-edited XML files
+[*.{csproj,props,targets}]
+indent_size = 2
+
+# YAML / JSON / Markdown
+[*.{yml,yaml,json}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false  # Markdown uses trailing spaces for line breaks
+
+# C# coding conventions — minimal set; expand in later sprints
+[*.cs]
+
+# Use 'var' for built-in types where the type is apparent
+csharp_style_var_for_built_in_types = true:suggestion
+csharp_style_var_when_type_is_apparent = true:suggestion
+csharp_style_var_elsewhere = true:silent
+
+# File-scoped namespaces (C# 10+)
+csharp_style_namespace_declarations = file_scoped:suggestion
+
+# Expression-bodied members
+csharp_style_expression_bodied_methods = when_on_single_line:silent
+csharp_style_expression_bodied_constructors = false:silent
+csharp_style_expression_bodied_properties = true:silent
+
+# Pattern matching
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+csharp_style_pattern_matching_over_as_with_null_check = true:suggestion
+
+# Modifier preferences
+csharp_preferred_modifier_order = public,private,protected,internal,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,volatile,async:suggestion
