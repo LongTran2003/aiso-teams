@@ -1,0 +1,4 @@
+# Normalize line endings for the backend subtree to LF, matching .editorconfig
+# (end_of_line = lf). Prevents CRLF/LF churn on Windows where core.autocrlf=true
+# and keeps `dotnet format --verify-no-changes` consistent between local and CI.
+* text=auto eol=lf

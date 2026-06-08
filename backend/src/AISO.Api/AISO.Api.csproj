@@ -2,13 +2,28 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AISO.Bot\AISO.Bot.csproj" />
+    <ProjectReference Include="..\AISO.AiOrchestration\AISO.AiOrchestration.csproj" />
+    <ProjectReference Include="..\AISO.SapIntegration\AISO.SapIntegration.csproj" />
+    <ProjectReference Include="..\AISO.Domain\AISO.Domain.csproj" />
     <ProjectReference Include="..\AISO.Scheduling\AISO.Scheduling.csproj" />
     <ProjectReference Include="..\AISO.Persistence\AISO.Persistence.csproj" />
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AspNetCore.HealthChecks.NpgSql" Version="8.0.2" />
+    <PackageReference Include="AspNetCore.HealthChecks.Redis" Version="8.0.1" />
+    <PackageReference Include="AspNetCore.HealthChecks.UI.Client" Version="8.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="8.0.0" />
     <PackageReference Include="Microsoft.Bot.Builder.Integration.AspNet.Core" Version="4.23.1" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
+    <PackageReference Include="Scrutor" Version="4.2.2" />
+    <PackageReference Include="Serilog.AspNetCore" Version="8.0.3" />
+    <PackageReference Include="Serilog.Enrichers.Environment" Version="3.0.1" />
+    <PackageReference Include="Serilog.Enrichers.Thread" Version="4.0.0" />
   </ItemGroup>
 
   <PropertyGroup>
