@@ -1,4 +1,4 @@
-﻿namespace AISO.Domain;
+namespace AISO.Domain;
 
 public class Class1
 {

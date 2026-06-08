@@ -20,14 +20,14 @@ public sealed class EfAuditLogger : IAuditLogger
     {
         var row = new AuditLog
         {
-            Timestamp      = DateTimeOffset.UtcNow,
-            TeamsUserId    = entry.TeamsUserId,
+            Timestamp = DateTimeOffset.UtcNow,
+            TeamsUserId = entry.TeamsUserId,
             ConversationId = entry.ConversationId,
-            Action         = entry.Action,
+            Action = entry.Action,
             ParametersJson = entry.ParametersJson,
-            ResultStatus   = entry.ResultStatus,
-            DurationMs     = entry.DurationMs,
-            ErrorMessage   = entry.ErrorMessage
+            ResultStatus = entry.ResultStatus,
+            DurationMs = entry.DurationMs,
+            ErrorMessage = entry.ErrorMessage
         };
 
         _db.AuditLogs.Add(row);

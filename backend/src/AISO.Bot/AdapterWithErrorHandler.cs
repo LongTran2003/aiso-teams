@@ -18,7 +18,7 @@ public class AdapterWithErrorHandler : CloudAdapter
 
             await turnContext.SendActivityAsync(
                 "Bot gặp lỗi không mong muốn. Vui lòng thử lại.");
-            
+
             if (turnContext.Activity.ChannelId == "msteams")
             {
                 await turnContext.SendActivityAsync(
