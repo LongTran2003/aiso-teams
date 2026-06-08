@@ -1,4 +1,5 @@
 using AISO.Domain.SalesOrders;
+using Microsoft.Extensions.Logging;
 
 namespace AISO.SapIntegration.Mock;
 
@@ -9,6 +10,13 @@ namespace AISO.SapIntegration.Mock;
 /// </summary>
 public sealed class MockSapClient : ISapClient
 {
+    private readonly ILogger<MockSapClient>? _logger;
+
+    public MockSapClient(ILogger<MockSapClient>? logger = null)
+    {
+        _logger = logger;
+    }
+
     private static readonly IReadOnlyList<SalesOrder> SeedData = new List<SalesOrder>
     {
         new()
@@ -18,18 +26,12 @@ public sealed class MockSapClient : ISapClient
             SalesOrg = "UE00", Status = SalesOrderStatus.Open,
             Items = new List<SalesOrderItem>
             {
-                new()
-                {
-                    ItemNumber = "00010", Material = "DXTR1000",
-                    Description = "Deluxe Touring Bike (Black)",
-                    Quantity = 5m, Unit = "EA", NetValue = 12_500m
-                },
-                new()
-                {
-                    ItemNumber = "00020", Material = "WDFR1000",
-                    Description = "Water Bottle (Front)",
-                    Quantity = 50m, Unit = "EA", NetValue = 3_250m
-                }
+                new() { ItemNumber = "00010", Material = "DXTR1000",
+                        Description = "Deluxe Touring Bike (Black)",
+                        Quantity = 5m, Unit = "EA", NetValue = 12_500m },
+                new() { ItemNumber = "00020", Material = "WDFR1000",
+                        Description = "Water Bottle (Front)",
+                        Quantity = 50m, Unit = "EA", NetValue = 3_250m }
             }
         },
         new()
@@ -39,12 +41,9 @@ public sealed class MockSapClient : ISapClient
             SalesOrg = "UE00", Status = SalesOrderStatus.Delivered,
             Items = new List<SalesOrderItem>
             {
-                new()
-                {
-                    ItemNumber = "00010", Material = "DXTR2000",
-                    Description = "Deluxe Touring Bike (Silver)",
-                    Quantity = 3m, Unit = "EA", NetValue = 8_400m
-                }
+                new() { ItemNumber = "00010", Material = "DXTR2000",
+                        Description = "Deluxe Touring Bike (Silver)",
+                        Quantity = 3m, Unit = "EA", NetValue = 8_400m }
             }
         },
         new()
@@ -54,12 +53,9 @@ public sealed class MockSapClient : ISapClient
             SalesOrg = "DN00", Status = SalesOrderStatus.Blocked,
             Items = new List<SalesOrderItem>
             {
-                new()
-                {
-                    ItemNumber = "00010", Material = "PRTR1000",
-                    Description = "Professional Touring Bike (Black)",
-                    Quantity = 8m, Unit = "EA", NetValue = 22_300m
-                }
+                new() { ItemNumber = "00010", Material = "PRTR1000",
+                        Description = "Professional Touring Bike (Black)",
+                        Quantity = 8m, Unit = "EA", NetValue = 22_300m }
             }
         },
         new()
@@ -69,12 +65,9 @@ public sealed class MockSapClient : ISapClient
             SalesOrg = "DS00", Status = SalesOrderStatus.PartiallyDelivered,
             Items = new List<SalesOrderItem>
             {
-                new()
-                {
-                    ItemNumber = "00010", Material = "ORWN1000",
-                    Description = "Off Road Bike",
-                    Quantity = 4m, Unit = "EA", NetValue = 5_600m
-                }
+                new() { ItemNumber = "00010", Material = "ORWN1000",
+                        Description = "Off Road Bike",
+                        Quantity = 4m, Unit = "EA", NetValue = 5_600m }
             }
         },
         new()
@@ -84,18 +77,12 @@ public sealed class MockSapClient : ISapClient
             SalesOrg = "UW00", Status = SalesOrderStatus.Open,
             Items = new List<SalesOrderItem>
             {
-                new()
-                {
-                    ItemNumber = "00010", Material = "DXTR1000",
-                    Description = "Deluxe Touring Bike (Black)",
-                    Quantity = 4m, Unit = "EA", NetValue = 10_000m
-                },
-                new()
-                {
-                    ItemNumber = "00020", Material = "WDFR1000",
-                    Description = "Water Bottle (Front)",
-                    Quantity = 24m, Unit = "EA", NetValue = 1_200m
-                }
+                new() { ItemNumber = "00010", Material = "DXTR1000",
+                        Description = "Deluxe Touring Bike (Black)",
+                        Quantity = 4m, Unit = "EA", NetValue = 10_000m },
+                new() { ItemNumber = "00020", Material = "WDFR1000",
+                        Description = "Water Bottle (Front)",
+                        Quantity = 24m, Unit = "EA", NetValue = 1_200m }
             }
         }
     };
@@ -104,6 +91,11 @@ public sealed class MockSapClient : ISapClient
         SalesOrdersQuery query,
         CancellationToken ct = default)
     {
+        _logger?.LogDebug(
+            "MockSapClient.GetSalesOrdersAsync called: customer={Customer}, " +
+            "salesOrg={SalesOrg}, top={Top}",
+            query.CustomerIdOrName, query.SalesOrg, query.Top);
+
         IEnumerable<SalesOrder> q = SeedData;
 
         if (!string.IsNullOrWhiteSpace(query.CustomerIdOrName))
@@ -128,14 +120,18 @@ public sealed class MockSapClient : ISapClient
 
         var top = Math.Clamp(query.Top, 1, 50);
         var result = q.OrderByDescending(o => o.OrderDate).Take(top).ToList();
+
+        _logger?.LogDebug(
+            "MockSapClient returning {Count} orders from {SeedCount} seeds",
+            result.Count, SeedData.Count);
+
         return Task.FromResult<IReadOnlyList<SalesOrder>>(result);
     }
 
     public Task<SalesOrder?> GetSalesOrderByIdAsync(
-        string soNumber,
-        CancellationToken ct = default)
+        string soNumber, CancellationToken ct = default)
     {
-        var so = SeedData.FirstOrDefault(o => o.SoNumber == soNumber);
-        return Task.FromResult(so);
+        _logger?.LogDebug("MockSapClient.GetSalesOrderByIdAsync called: soNumber={SoNumber}", soNumber);
+        return Task.FromResult(SeedData.FirstOrDefault(o => o.SoNumber == soNumber));
     }
 }
