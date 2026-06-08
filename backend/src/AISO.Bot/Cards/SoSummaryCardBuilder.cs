@@ -23,13 +23,13 @@ public static class SoSummaryCardBuilder
             count = orders.Count,
             orders = orders.Select(o => new
             {
-                soNumber       = o.SoNumber,
-                customerName   = o.CustomerName,
-                orderDate      = o.OrderDate.ToString("dd MMM yyyy"),
+                soNumber = o.SoNumber,
+                customerName = o.CustomerName,
+                orderDate = o.OrderDate.ToString("dd MMM yyyy"),
                 formattedValue = $"{o.NetValue:N0} {o.Currency}",
-                status         = o.Status.ToString(),
-                statusColor    = StatusToColor(o.Status),
-                salesOrg       = o.SalesOrg
+                status = o.Status.ToString(),
+                statusColor = StatusToColor(o.Status),
+                salesOrg = o.SalesOrg
             }).ToList()
         };
 

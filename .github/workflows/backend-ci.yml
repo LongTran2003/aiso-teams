@@ -1,31 +1,71 @@
 name: Backend CI
 
 on:
-  pull_request:
-    paths:
-      - 'backend/**'
-      - '.github/workflows/backend-ci.yml'
   push:
     branches: [develop, main]
     paths:
       - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/backend-ci.yml'
+
+# Cancel any in-flight run for the same PR/branch when a new commit lands.
+concurrency:
+  group: backend-ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  build-test:
+    name: Build, Format, Test
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Setup .NET 8
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '8.0.x'
-      
+          dotnet-version: 8.0.x
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('backend/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
       - name: Restore dependencies
-        working-directory: ./backend
         run: dotnet restore
-      
-      - name: Build
-        working-directory: ./backend
-        run: dotnet build --no-restore --configuration Release
+
+      - name: Build (Release)
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Verify formatting
+        run: dotnet format --verify-no-changes --no-restore --severity warn
+
+      - name: Run tests
+        run: |
+          dotnet test \
+            --configuration Release \
+            --no-build \
+            --verbosity normal \
+            --logger "trx;LogFileName=test-results.trx" \
+            --logger "console;verbosity=normal"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: backend/**/TestResults/*.trx
+          retention-days: 7
