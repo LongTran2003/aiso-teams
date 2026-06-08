@@ -1,3 +1,4 @@
+using AISO.Persistence.Auditing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,6 +21,9 @@ public static class DependencyInjection
 
         services.AddDbContext<AppDbContext>(opts =>
             opts.UseNpgsql(connectionString));
+
+        // Audit logger — Scoped to share the per-turn DbContext.
+        services.AddScoped<IAuditLogger, EfAuditLogger>();
 
         return services;
     }
