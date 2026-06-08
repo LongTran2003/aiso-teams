@@ -2,20 +2,21 @@ using System.Globalization;
 using System.Text.Json;
 using AISO.Domain.SalesOrders;
 using AISO.SapIntegration;
+using Microsoft.Extensions.Logging;
 
 namespace AISO.AiOrchestration.Functions;
 
-/// <summary>
-/// LLM-callable function: retrieves Sales Orders from the SAP backend
-/// with optional filters on customer, sales org, date range, and status.
-/// </summary>
 public sealed class GetSalesOrdersFunction : IFunction
 {
     private readonly ISapClient _sap;
+    private readonly ILogger<GetSalesOrdersFunction> _logger;
 
-    public GetSalesOrdersFunction(ISapClient sap)
+    public GetSalesOrdersFunction(
+        ISapClient sap,
+        ILogger<GetSalesOrdersFunction> logger)
     {
         _sap = sap;
+        _logger = logger;
     }
 
     public string Name => "getSalesOrders";
@@ -50,7 +51,8 @@ public sealed class GetSalesOrdersFunction : IFunction
         }
         """;
 
-    public async Task<FunctionResult> ExecuteAsync(JsonElement parameters, CancellationToken ct = default)
+    public async Task<FunctionResult> ExecuteAsync(
+        JsonElement parameters, CancellationToken ct = default)
     {
         var query = new SalesOrdersQuery
         {
@@ -62,7 +64,17 @@ public sealed class GetSalesOrdersFunction : IFunction
             Top              = GetInt(parameters, "top") ?? 10
         };
 
+        _logger.LogInformation(
+            "Executing getSalesOrders: customer={Customer}, salesOrg={SalesOrg}, " +
+            "from={FromDate}, to={ToDate}, status={Status}, top={Top}",
+            query.CustomerIdOrName, query.SalesOrg, query.FromDate, query.ToDate,
+            query.Status, query.Top);
+
         var orders = await _sap.GetSalesOrdersAsync(query, ct);
+
+        _logger.LogInformation(
+            "getSalesOrders returned {Count} orders", orders.Count);
+
         return FunctionResult.Ok(orders);
     }
 
