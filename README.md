@@ -16,14 +16,14 @@ Supervisors: Mr. Nguyen Ba Le
 
 ## Architecture
 
-Modular monolith pattern, deployed to Azure App Service. See `/docs/architecture.md` for details.
+Modular monolith pattern, deployed to Azure App Service. See [`docs/01-foundation/architecture.md`](docs/01-foundation/architecture.md) for details.
 
 **Stack:** ASP.NET Core 8, Azure OpenAI, SAP S/4HANA, Microsoft Teams, Redis, PostgreSQL.
 
 ## Folder structure
 
 - `backend/` — .NET Core Bot Service (modular monolith)
-- `ai/` — AI orchestration module (Python FastAPI or .NET)
+- `ai/` — AI orchestration module (Python FastAPI)
 - `frontend/` — Teams app manifest + Adaptive Card templates
 - `sap/` — SAP ABAP code (synced via abapGit)
 - `pdf-function/` — Azure Function for PDF generation
@@ -32,7 +32,9 @@ Modular monolith pattern, deployed to Azure App Service. See `/docs/architecture
 
 ## Getting started
 
-See `docs/dev-setup.md` for environment setup instructions per role.
+Backend development setup (toolchain, Docker services, run & debug) is documented in
+[`backend/README.md`](backend/README.md). Other module guides live under their respective
+folders and in [`docs/`](docs/).
 
 ## Branching
 
@@ -44,4 +46,6 @@ All work goes through Pull Request review.
 
 ## Project status
 
-Currently in Sprint 1 (Foundation phase). See `docs/sprint-plan.md`.
+Sprint 2 complete — backend vertical slice (Teams bot → mock SAP → Adaptive Card),
+observability (audit logging, health checks, Serilog), and CI (GitHub Actions) are merged.
+See [`docs/00-planning/sprint-plan.md`](docs/00-planning/sprint-plan.md).
