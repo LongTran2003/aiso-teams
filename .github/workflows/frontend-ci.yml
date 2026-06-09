@@ -1,0 +1,74 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [develop, main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate Frontend Assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Validate all JSON files (Adaptive Cards, manifest, etc.)
+      - name: Validate JSON files
+        run: |
+          echo "🔍 Validating JSON files..."
+          errors=0
+          while IFS= read -r -d '' file; do
+            if ! python3 -m json.tool "$file" > /dev/null 2>&1; then
+              echo "❌ Invalid JSON: $file"
+              errors=$((errors + 1))
+            else
+              echo "✅ $file"
+            fi
+          done < <(find . -name '*.json' -print0)
+
+          if [ "$errors" -gt 0 ]; then
+            echo "::error::Found $errors invalid JSON file(s)"
+            exit 1
+          fi
+          echo "✅ All JSON files are valid"
+
+      # Verify Teams manifest exists and has required fields
+      - name: Verify Teams manifest
+        run: |
+          if [ -f "teams-app/manifest.json" ]; then
+            echo "✅ Teams manifest found"
+            python3 -c "
+          import json, sys
+          with open('teams-app/manifest.json') as f:
+              m = json.load(f)
+          required = ['\$schema', 'manifestVersion', 'version', 'id', 'name']
+          missing = [k for k in required if k not in m]
+          if missing:
+              print(f'❌ Missing required fields: {missing}')
+              sys.exit(1)
+          print('✅ Manifest has all required fields')
+          "
+          else
+            echo "⚠️ No manifest found yet — skipping validation"
+          fi

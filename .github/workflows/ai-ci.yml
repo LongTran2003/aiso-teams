@@ -1,0 +1,99 @@
+name: AI CI
+
+on:
+  push:
+    branches: [develop, main]
+    paths:
+      - 'ai/**'
+      - '.github/workflows/ai-ci.yml'
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'ai/**'
+      - '.github/workflows/ai-ci.yml'
+
+concurrency:
+  group: ai-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate AI Module
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    defaults:
+      run:
+        working-directory: ai
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Validate JSON schemas (function definitions, prompt configs)
+      - name: Validate JSON files
+        run: |
+          echo "🔍 Validating JSON files..."
+          errors=0
+          while IFS= read -r -d '' file; do
+            if ! python3 -m json.tool "$file" > /dev/null 2>&1; then
+              echo "❌ Invalid JSON: $file"
+              errors=$((errors + 1))
+            else
+              echo "✅ $file"
+            fi
+          done < <(find . -name '*.json' -print0)
+
+          if [ "$errors" -gt 0 ]; then
+            echo "::error::Found $errors invalid JSON file(s)"
+            exit 1
+          fi
+          echo "✅ All JSON files are valid"
+
+      # If Python project exists, run lint & tests
+      - name: Check for Python project
+        id: check-python
+        run: |
+          if [ -f "requirements.txt" ] || [ -f "pyproject.toml" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup Python
+        if: steps.check-python.outputs.found == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install dependencies
+        if: steps.check-python.outputs.found == 'true'
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+          fi
+          if [ -f "pyproject.toml" ]; then
+            pip install -e ".[dev]" 2>/dev/null || pip install -e .
+          fi
+
+      - name: Lint (ruff)
+        if: steps.check-python.outputs.found == 'true'
+        run: |
+          pip install ruff
+          ruff check .
+          ruff format --check .
+
+      - name: Run tests
+        if: steps.check-python.outputs.found == 'true'
+        run: |
+          if [ -d "tests" ]; then
+            pip install pytest
+            pytest tests/ -v
+          else
+            echo "⚠️ No tests/ directory found — skipping"
+          fi
