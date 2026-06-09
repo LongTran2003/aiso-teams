@@ -1,0 +1,161 @@
+name: CI Gate
+
+# Always runs on every PR to develop/main — acts as the single required
+# status check for branch protection, replacing per-module checks.
+# It detects which modules changed, waits for the relevant CI workflows,
+# and reports a unified pass/fail.
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+concurrency:
+  group: ci-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  detect-changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      sap: ${{ steps.filter.outputs.sap }}
+      ai: ${{ steps.filter.outputs.ai }}
+      docs-only: ${{ steps.filter.outputs.docs-only }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Detect changed paths
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+            frontend:
+              - 'frontend/**'
+            sap:
+              - 'sap/**'
+            ai:
+              - 'ai/**'
+            docs-only:
+              - 'docs/**'
+
+  # ── Per-module gates ──────────────────────────────────────────────
+  # Each gate job waits for its module CI to finish. If the module
+  # was not changed, the job is skipped (counts as success).
+
+  backend-gate:
+    name: "Gate: Backend"
+    needs: detect-changes
+    if: needs.detect-changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Wait for Backend CI
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: 'Build, Format, Test'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+
+  frontend-gate:
+    name: "Gate: Frontend"
+    needs: detect-changes
+    if: needs.detect-changes.outputs.frontend == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Wait for Frontend CI
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: 'Validate Frontend Assets'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+
+  sap-gate:
+    name: "Gate: SAP"
+    needs: detect-changes
+    if: needs.detect-changes.outputs.sap == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Wait for SAP CI
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: 'Validate SAP Artifacts'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+
+  ai-gate:
+    name: "Gate: AI"
+    needs: detect-changes
+    if: needs.detect-changes.outputs.ai == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Wait for AI CI
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: 'Validate AI Module'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 15
+
+  # ── Final verdict ─────────────────────────────────────────────────
+  # This is the ONLY job that branch protection should require.
+  # It succeeds if all relevant gates passed (or were skipped).
+
+  gate-pass:
+    name: CI Gate Pass
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    if: always()
+    needs:
+      - detect-changes
+      - backend-gate
+      - frontend-gate
+      - sap-gate
+      - ai-gate
+    steps:
+      - name: Evaluate results
+        run: |
+          echo "=== CI Gate Results ==="
+          echo "Backend  changed: ${{ needs.detect-changes.outputs.backend }}"
+          echo "Frontend changed: ${{ needs.detect-changes.outputs.frontend }}"
+          echo "SAP      changed: ${{ needs.detect-changes.outputs.sap }}"
+          echo "AI       changed: ${{ needs.detect-changes.outputs.ai }}"
+          echo ""
+          echo "Backend  gate: ${{ needs.backend-gate.result }}"
+          echo "Frontend gate: ${{ needs.frontend-gate.result }}"
+          echo "SAP      gate: ${{ needs.sap-gate.result }}"
+          echo "AI       gate: ${{ needs.ai-gate.result }}"
+          echo ""
+
+          # A gate is OK if it succeeded or was skipped (module not changed)
+          FAILED=false
+          for gate in \
+            "${{ needs.backend-gate.result }}" \
+            "${{ needs.frontend-gate.result }}" \
+            "${{ needs.sap-gate.result }}" \
+            "${{ needs.ai-gate.result }}"; do
+            if [[ "$gate" != "success" && "$gate" != "skipped" ]]; then
+              FAILED=true
+            fi
+          done
+
+          if [ "$FAILED" = true ]; then
+            echo "::error::❌ One or more CI checks failed"
+            exit 1
+          fi
+
+          echo "✅ All relevant CI checks passed!"
