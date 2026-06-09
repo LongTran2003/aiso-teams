@@ -1,0 +1,84 @@
+name: SAP CI
+
+on:
+  push:
+    branches: [develop, main]
+    paths:
+      - 'sap/**'
+      - '.github/workflows/sap-ci.yml'
+  pull_request:
+    branches: [develop, main]
+    paths:
+      - 'sap/**'
+      - '.github/workflows/sap-ci.yml'
+
+concurrency:
+  group: sap-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate SAP Artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        working-directory: sap
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Validate XML files (abapGit serialized objects)
+      - name: Validate XML files
+        run: |
+          echo "🔍 Validating XML files..."
+          errors=0
+          while IFS= read -r -d '' file; do
+            if ! python3 -c "
+          import xml.etree.ElementTree as ET
+          try:
+              ET.parse('$file')
+          except ET.ParseError as e:
+              print(f'❌ {e}')
+              exit(1)
+          " 2>&1; then
+              echo "❌ Invalid XML: $file"
+              errors=$((errors + 1))
+            else
+              echo "✅ $file"
+            fi
+          done < <(find . -name '*.xml' -print0)
+
+          if [ "$errors" -gt 0 ]; then
+            echo "::error::Found $errors invalid XML file(s)"
+            exit 1
+          fi
+          echo "✅ All XML files are valid"
+
+      # Check for common abapGit issues
+      - name: Verify abapGit structure
+        run: |
+          if [ -f ".abapgit.xml" ]; then
+            echo "✅ .abapgit.xml found"
+          else
+            echo "⚠️ .abapgit.xml not found — may cause abapGit sync issues"
+          fi
+
+          # Check that package.devc.xml exists in src/
+          if [ -f "src/package.devc.xml" ]; then
+            echo "✅ src/package.devc.xml found"
+          else
+            echo "⚠️ src/package.devc.xml not found"
+          fi
+
+      # List changed ABAP objects for review context
+      - name: List changed files
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "📋 SAP files in this change:"
+          git diff --name-only ${{ github.event.pull_request.base.sha }}..HEAD -- . || true
