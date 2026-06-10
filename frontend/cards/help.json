@@ -5,14 +5,14 @@
   "body": [
     {
       "type": "TextBlock",
-      "text": "📖 DANH SÁCH CÂU LỆNH HỖ TRỢ",
+      "text": "📖 SUPPORTED COMMAND LIST",
       "weight": "Bolder",
       "size": "Medium",
       "color": "Accent"
     },
     {
       "type": "TextBlock",
-      "text": "Bạn có thể gõ trực tiếp câu hỏi bằng tiếng Việt/tiếng Anh hoặc nhấn vào các lối tắt bên dưới để yêu cầu AISO Bot xử lý hệ thống SAP:",
+      "text": "You can type your questions directly in Vietnamese/English or click the shortcuts below to request AISO Bot to process the SAP system:",
       "wrap": true,
       "spacing": "Medium"
     },
@@ -21,17 +21,17 @@
       "actions": [
         {
           "type": "Action.Submit",
-          "title": "🔍 Tra cứu đơn hàng gần đây",
+          "title": "🔍 Find Recent Orders",
           "data": { "msteams": { "type": "imBack" }, "command": "recent orders" }
         },
         {
           "type": "Action.Submit",
-          "title": "📊 Xem Dashboard KPI Doanh thu",
+          "title": "📊 View Revenue KPI Dashboard",
           "data": { "msteams": { "type": "imBack" }, "command": "show revenue kpi" }
         },
         {
           "type": "Action.Submit",
-          "title": "📑 Đăng ký người thay thế (Substitution)",
+          "title": "📑 Register Substitute (Substitution)",
           "data": { "msteams": { "type": "imBack" }, "command": "setup substitution" }
         }
       ],
