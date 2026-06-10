@@ -7,26 +7,26 @@
       "type": "TextBlock",
       "size": "Large",
       "weight": "Bolder",
-      "text": "👋 Xin chào! Tôi là AISO Bot",
+      "text": "👋 Hello! I am AISO Bot",
       "color": "Accent"
     },
     {
       "type": "TextBlock",
-      "text": "Hệ thống hỗ trợ quản lý đơn hàng SAP bằng Trí tuệ nhân tạo tích hợp trên Microsoft Teams.",
+      "text": "An AI-powered SAP sales order management system integrated with Microsoft Teams.",
       "wrap": true
     },
     {
       "type": "FactSet",
       "facts": [
-        { "title": "Tài khoản:", "value": "${username}" },
-        { "title": "Trạng thái:", "value": "🟢 Đã kết nối hệ thống SAP S40" }
+        { "title": "Account:", "value": "${username}" },
+        { "title": "Status:", "value": "🟢 Connected to SAP S40 system" }
       ]
     }
   ],
   "actions": [
     {
       "type": "Action.Submit",
-      "title": "Xem danh sách đơn hàng gần đây",
+      "title": "View Recent Orders",
       "data": {
         "msteams": { "type": "imBack" },
         "command": "recent orders"
