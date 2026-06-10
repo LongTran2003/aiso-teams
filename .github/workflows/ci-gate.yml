@@ -64,7 +64,7 @@ jobs:
         uses: lewagon/wait-on-check-action@v1.3.4
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-          check-name: 'Build, Format, Test'
+          check-name: 'Validate Backend Code'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 15
 
