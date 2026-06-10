@@ -6,6 +6,7 @@ Kiến trúc giữ nguyên: nạp system prompt, load dynamic function schemas
 từ /functions, gọi Gemini với Function Calling, parse kết quả về
 đúng JSON contract mà Backend (.NET) kỳ vọng.
 """
+
 from __future__ import annotations
 
 import json
@@ -43,6 +44,7 @@ _GEMINI_MODEL: str = os.getenv("GEMINI_MODEL_NAME", "gemini-1.5-flash")
 # Helpers – file loading
 # ---------------------------------------------------------------------------
 
+
 def _load_system_prompt() -> str:
     """Đọc system prompt từ disk; fallback về chuỗi mặc định nếu không tìm thấy."""
     try:
@@ -69,7 +71,7 @@ def _json_schema_to_gemini_function(raw: dict[str, Any]) -> types.FunctionDeclar
     Gemini FunctionDeclaration nhận trực tiếp name, description, parameters
     dưới dạng types.Schema.
     """
-    fn = raw.get("function", raw)          # hỗ trợ cả 2 format: wrapped & flat
+    fn = raw.get("function", raw)  # hỗ trợ cả 2 format: wrapped & flat
     name: str = fn["name"]
     description: str = fn.get("description", "")
     params_raw: dict[str, Any] = fn.get("parameters", {})
@@ -99,12 +101,12 @@ def _json_schema_to_gemini_function(raw: dict[str, Any]) -> types.FunctionDeclar
 def _map_json_type(json_type: str) -> types.Type:
     """Map JSON Schema primitive types → Gemini types.Type enum."""
     return {
-        "string":  types.Type.STRING,
-        "number":  types.Type.NUMBER,
+        "string": types.Type.STRING,
+        "number": types.Type.NUMBER,
         "integer": types.Type.INTEGER,
         "boolean": types.Type.BOOLEAN,
-        "array":   types.Type.ARRAY,
-        "object":  types.Type.OBJECT,
+        "array": types.Type.ARRAY,
+        "object": types.Type.OBJECT,
     }.get(json_type.lower(), types.Type.STRING)
 
 
@@ -135,6 +137,7 @@ def _load_gemini_tools() -> list[types.Tool] | None:
 # Helpers – misc
 # ---------------------------------------------------------------------------
 
+
 def _is_real_key_configured() -> bool:
     """True khi GEMINI_API_KEY trông như key thật (không phải placeholder)."""
     return bool(_GEMINI_API_KEY) and "your-" not in _GEMINI_API_KEY
@@ -149,6 +152,7 @@ def _function_name_to_intent(name: str) -> str:
 # ---------------------------------------------------------------------------
 # Mock fallback (không cần key thật)
 # ---------------------------------------------------------------------------
+
 
 def _mock_response(user_message: str) -> ChatResponse:
     """
@@ -185,6 +189,7 @@ def _mock_response(user_message: str) -> ChatResponse:
 # ---------------------------------------------------------------------------
 # AIOrchestrator class – Gemini
 # ---------------------------------------------------------------------------
+
 
 class AIOrchestrator:
     """
@@ -268,7 +273,7 @@ class AIOrchestrator:
 
             parsed_tool_calls.append(
                 ToolCall(
-                    id=str(uuid.uuid4()),   # Gemini không trả id → tự sinh
+                    id=str(uuid.uuid4()),  # Gemini không trả id → tự sinh
                     function_name=fn_name,
                     arguments=args,
                 )
@@ -277,9 +282,8 @@ class AIOrchestrator:
         if parsed_tool_calls:
             intent = _function_name_to_intent(parsed_tool_calls[0].function_name)
             if not reply_text:
-                reply_text = (
-                    "Đang thực thi hàm: "
-                    + ", ".join(tc.function_name for tc in parsed_tool_calls)
+                reply_text = "Đang thực thi hàm: " + ", ".join(
+                    tc.function_name for tc in parsed_tool_calls
                 )
 
         return ChatResponse(
@@ -307,6 +311,7 @@ def _get_orchestrator() -> AIOrchestrator:
 # ---------------------------------------------------------------------------
 # Public API – entry point từ main.py (giữ nguyên signature)
 # ---------------------------------------------------------------------------
+
 
 def process_user_message(request: ChatRequest) -> ChatResponse:
     """

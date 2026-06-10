@@ -1,6 +1,7 @@
 """
 schemas.py – Pydantic models for request/response validation.
 """
+
 from __future__ import annotations
 
 from typing import Any
@@ -11,6 +12,7 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 # Request
 # ---------------------------------------------------------------------------
+
 
 class ChatRequest(BaseModel):
     """Payload gửi lên endpoint POST /api/v1/orchestrate."""
@@ -25,9 +27,7 @@ class ChatRequest(BaseModel):
 
     model_config = {
         "json_schema_extra": {
-            "example": {
-                "user_message": "Kiểm tra trạng thái đơn hàng ORD-20240001"
-            }
+            "example": {"user_message": "Kiểm tra trạng thái đơn hàng ORD-20240001"}
         }
     }
 
@@ -35,6 +35,7 @@ class ChatRequest(BaseModel):
 # ---------------------------------------------------------------------------
 # Response
 # ---------------------------------------------------------------------------
+
 
 class ToolCall(BaseModel):
     """Đại diện cho một lần gọi hàm mà model yêu cầu."""
