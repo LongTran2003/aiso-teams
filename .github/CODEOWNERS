@@ -2,26 +2,26 @@
 # Replace với GitHub username thật của team members
 
 # Default reviewer - leader review mọi PR
-* @leader-github-username
+* @LongTran2003
 
 # Backend
-/backend/                              @leader-github-username
-/backend/src/AISO.SapIntegration/      @leader-github-username @sap-dev-1-github
-/backend/src/AISO.AiOrchestration/     @leader-github-username @ai-github
+/backend/                              @LongTran2003
+/backend/src/AISO.SapIntegration/      @LongTran2003 @TranDangMinhQuan
+/backend/src/AISO.AiOrchestration/     @LongTran2003 @thanhthuy1003
 
 # SAP code (abapGit synced)
-/sap/                                  @sap-dev-1-github @sap-dev-2-github
+/sap/                                  @TranDangMinhQuan @Quan2906
 
 # AI module
-/ai/                                   @ai-github
+/ai/                                   @thanhthuy1003
 
 # Frontend
-/frontend/                             @fe-github
+/frontend/                             @vutien2412
 
 # Infrastructure + CI changes require leader
-/infrastructure/                       @leader-github-username
-/.github/                              @leader-github-username
-/pdf-function/                         @leader-github-username
+/infrastructure/                       @LongTran2003
+/.github/                              @LongTran2003
+/pdf-function/                         @LongTran2003
 
 # Documentation
-/docs/                                 @leader-github-username
+/docs/                                 @LongTran2003
