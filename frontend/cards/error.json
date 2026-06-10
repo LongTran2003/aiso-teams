@@ -1,0 +1,43 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Attention",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "⚠️ ĐÃ XẢY RA SỰ CỐ HỆ THỐNG",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Attention"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Rất tiếc, AISO Bot không thể hoàn thành yêu cầu xử lý này tại thời điểm hiện tại.",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Mã lỗi:", "value": "${errorCode}" },
+        { "title": "Chi tiết:", "value": "${errorMessage}" }
+      ],
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Vui lòng kiểm tra lại trạng thái kết nối phần mềm On-premises Data Gateway hoặc liên hệ Admin hệ thống.",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small",
+      "spacing": "Large"
+    }
+  ]
+}

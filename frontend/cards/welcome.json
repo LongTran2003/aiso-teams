@@ -1,0 +1,36 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "size": "Large",
+      "weight": "Bolder",
+      "text": "👋 Xin chào! Tôi là AISO Bot",
+      "color": "Accent"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Hệ thống hỗ trợ quản lý đơn hàng SAP bằng Trí tuệ nhân tạo tích hợp trên Microsoft Teams.",
+      "wrap": true
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Tài khoản:", "value": "${username}" },
+        { "title": "Trạng thái:", "value": "🟢 Đã kết nối hệ thống SAP S40" }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Xem danh sách đơn hàng gần đây",
+      "data": {
+        "msteams": { "type": "imBack" },
+        "command": "recent orders"
+      }
+    }
+  ]
+}

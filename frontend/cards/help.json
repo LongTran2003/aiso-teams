@@ -1,0 +1,41 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "📖 DANH SÁCH CÂU LỆNH HỖ TRỢ",
+      "weight": "Bolder",
+      "size": "Medium",
+      "color": "Accent"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Bạn có thể gõ trực tiếp câu hỏi bằng tiếng Việt/tiếng Anh hoặc nhấn vào các lối tắt bên dưới để yêu cầu AISO Bot xử lý hệ thống SAP:",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "ActionSet",
+      "actions": [
+        {
+          "type": "Action.Submit",
+          "title": "🔍 Tra cứu đơn hàng gần đây",
+          "data": { "msteams": { "type": "imBack" }, "command": "recent orders" }
+        },
+        {
+          "type": "Action.Submit",
+          "title": "📊 Xem Dashboard KPI Doanh thu",
+          "data": { "msteams": { "type": "imBack" }, "command": "show revenue kpi" }
+        },
+        {
+          "type": "Action.Submit",
+          "title": "📑 Đăng ký người thay thế (Substitution)",
+          "data": { "msteams": { "type": "imBack" }, "command": "setup substitution" }
+        }
+      ],
+      "spacing": "Large"
+    }
+  ]
+}
