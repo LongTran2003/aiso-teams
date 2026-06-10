@@ -5,7 +5,7 @@
   "body": [
     {
       "type": "TextBlock",
-      "text": "📦 CHI TIẾT ĐƠN HÀNG SAP: ${salesOrderNumber}",
+      "text": "📦 SAP SALES ORDER DETAILS: ${salesOrderNumber}",
       "weight": "Bolder",
       "size": "Large",
       "color": "Accent"
@@ -13,16 +13,16 @@
     {
       "type": "FactSet",
       "facts": [
-        { "title": "Khách hàng (Customer):", "value": "${customerName} (${customerId})" },
-        { "title": "Ngày tạo đơn (Doc Date):", "value": "${documentDate}" },
-        { "title": "Tổng giá trị (Net Value):", "value": "${netAmount} ${currency}" },
-        { "title": "Trạng thái phê duyệt:", "value": "${approvalStatus}" }
+        { "title": "Customer:", "value": "${customerName} (${customerId})" },
+        { "title": "Document Date:", "value": "${documentDate}" },
+        { "title": "Net Value:", "value": "${netAmount} ${currency}" },
+        { "title": "Approval Status:", "value": "${approvalStatus}" }
       ],
       "spacing": "Medium"
     },
     {
       "type": "TextBlock",
-      "text": "Danh sách sản phẩm trong đơn:",
+      "text": "Line Items:",
       "weight": "Bolder",
       "spacing": "Medium",
       "separator": true
@@ -30,8 +30,8 @@
     {
       "type": "FactSet",
       "facts": [
-        { "title": "Item 10: Vật tư A", "value": "Số lượng: 5 PC - Thành tiền: 500 USD" },
-        { "title": "Item 20: Vật tư B", "value": "Số lượng: 2 PC - Thành tiền: 200 USD" }
+        { "title": "Item 10: Material A", "value": "Quantity: 5 PC - Amount: 500 USD" },
+        { "title": "Item 20: Material B", "value": "Quantity: 2 PC - Amount: 200 USD" }
       ],
       "spacing": "Small"
     }
@@ -39,7 +39,7 @@
   "actions": [
     {
       "type": "Action.Submit",
-      "title": "✅ Phê duyệt đơn (Release)",
+      "title": "✅ Approve (Release)",
       "data": {
         "action": "release_so",
         "salesOrderId": "${salesOrderNumber}"
@@ -47,7 +47,7 @@
     },
     {
       "type": "Action.Submit",
-      "title": "❌ Từ chối (Reject)",
+      "title": "❌ Reject",
       "data": {
         "action": "reject_so",
         "salesOrderId": "${salesOrderNumber}"
