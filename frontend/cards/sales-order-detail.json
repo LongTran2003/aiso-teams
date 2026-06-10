@@ -1,0 +1,57 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "📦 CHI TIẾT ĐƠN HÀNG SAP: ${salesOrderNumber}",
+      "weight": "Bolder",
+      "size": "Large",
+      "color": "Accent"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Khách hàng (Customer):", "value": "${customerName} (${customerId})" },
+        { "title": "Ngày tạo đơn (Doc Date):", "value": "${documentDate}" },
+        { "title": "Tổng giá trị (Net Value):", "value": "${netAmount} ${currency}" },
+        { "title": "Trạng thái phê duyệt:", "value": "${approvalStatus}" }
+      ],
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Danh sách sản phẩm trong đơn:",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "separator": true
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Item 10: Vật tư A", "value": "Số lượng: 5 PC - Thành tiền: 500 USD" },
+        { "title": "Item 20: Vật tư B", "value": "Số lượng: 2 PC - Thành tiền: 200 USD" }
+      ],
+      "spacing": "Small"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "✅ Phê duyệt đơn (Release)",
+      "data": {
+        "action": "release_so",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "❌ Từ chối (Reject)",
+      "data": {
+        "action": "reject_so",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    }
+  ]
+}
