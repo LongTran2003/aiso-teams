@@ -1,0 +1,57 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "📦 SAP SALES ORDER DETAILS: ${salesOrderNumber}",
+      "weight": "Bolder",
+      "size": "Large",
+      "color": "Accent"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Customer:", "value": "${customerName} (${customerId})" },
+        { "title": "Document Date:", "value": "${documentDate}" },
+        { "title": "Net Value:", "value": "${netAmount} ${currency}" },
+        { "title": "Approval Status:", "value": "${approvalStatus}" }
+      ],
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Line Items:",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "separator": true
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Item 10: Material A", "value": "Quantity: 5 PC - Amount: 500 USD" },
+        { "title": "Item 20: Material B", "value": "Quantity: 2 PC - Amount: 200 USD" }
+      ],
+      "spacing": "Small"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "✅ Approve (Release)",
+      "data": {
+        "action": "release_so",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "❌ Reject",
+      "data": {
+        "action": "reject_so",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    }
+  ]
+}

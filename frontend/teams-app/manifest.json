@@ -1,0 +1,44 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.15/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.15",
+  "version": "1.0.0",
+  "id": "YOUR-AZURE-BOT-APP-ID", 
+  "developer": {
+    "name": "FPT University - Team AISO",
+    "websiteUrl": "https://fpt.edu.vn",
+    "privacyUrl": "https://fpt.edu.vn/privacy",
+    "termsOfUseUrl": "https://fpt.edu.vn/terms"
+  },
+  "icons": {
+    "color": "icons/color.png",
+    "outline": "icons/outline.png"
+  },
+  "name": {
+    "short": "AISO Bot",
+    "full": "AISO SAP Sales Order Management Bot"
+  },
+  "description": {
+    "short": "AI-Powered Bot for SAP Sales Order Management via Teams.",
+    "full": "AISO Bot giúp quản lý đơn hàng SAP, xem KPI báo cáo và duyệt quy trình tự động trực tiếp trên Microsoft Teams."
+  },
+  "accentColor": "#61A0FF",
+  "bots": [
+    {
+      "botId": "YOUR-AZURE-BOT-APP-ID",
+      "scopes": ["personal", "team", "groupchat"],
+      "supportsFiles": true,
+      "isNotificationOnly": false,
+      "commandLists": [
+        {
+          "scopes": ["personal", "team"],
+          "commands": [
+            { "title": "help", "description": "Xem danh sách các câu lệnh hướng dẫn" },
+            { "title": "recent orders", "description": "Hiển thị danh sách đơn hàng SAP gần đây" }
+          ]
+        }
+      ]
+    }
+  ],
+  "permissions": ["identity", "messageTeamMembers"],
+  "validDomains": []
+}

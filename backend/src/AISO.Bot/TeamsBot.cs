@@ -1,4 +1,6 @@
+
 using System.Diagnostics;
+using AdaptiveCards.Templating;
 using AISO.AiOrchestration;
 using AISO.Bot.Cards;
 using AISO.Domain.SalesOrders;
@@ -6,6 +8,7 @@ using AISO.Persistence.Auditing;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using Serilog.Context;
 
 namespace AISO.Bot;
@@ -31,6 +34,7 @@ public class TeamsBot : ActivityHandler
         CancellationToken cancellationToken)
     {
         var userMessage = turnContext.Activity.Text ?? string.Empty;
+        var normalizedMessage = userMessage.Trim();
         var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
         var conversationId = turnContext.Activity.Conversation?.Id;
         var activityId = turnContext.Activity.Id;
@@ -43,6 +47,14 @@ public class TeamsBot : ActivityHandler
         {
             _logger.LogInformation(
                 "Bot received message: {UserMessage}", userMessage);
+
+            if (string.Equals(normalizedMessage, "help", StringComparison.OrdinalIgnoreCase))
+            {
+                await turnContext.SendActivityAsync(
+                    MessageFactory.Attachment(BuildHelpCard()),
+                    cancellationToken);
+                return;
+            }
 
             var stopwatch = Stopwatch.StartNew();
             var dispatch = await _dispatcher.DispatchAsync(userMessage, cancellationToken);
@@ -123,10 +135,37 @@ public class TeamsBot : ActivityHandler
             if (member.Id != turnContext.Activity.Recipient.Id)
             {
                 await turnContext.SendActivityAsync(
-                    MessageFactory.Text("Welcome to AISO-Teams Bot! Try: \"show orders\""),
+                    MessageFactory.Attachment(
+                        BuildWelcomeCard(member.Name ?? "bạn")),
                     cancellationToken);
             }
         }
+    }
+
+    private static Attachment BuildWelcomeCard(string username)
+    {
+        var templateJson = CardTemplateFileLoader.LoadFromFrontendCards("welcome.json");
+        var template = new AdaptiveCardTemplate(templateJson);
+        var cardJson = template.Expand(new { username });
+
+        return new Attachment
+        {
+            ContentType = "application/vnd.microsoft.card.adaptive",
+            Content = JsonConvert.DeserializeObject(cardJson)
+        };
+    }
+
+    private static Attachment BuildHelpCard()
+    {
+        var templateJson = CardTemplateFileLoader.LoadFromFrontendCards("help.json");
+        var template = new AdaptiveCardTemplate(templateJson);
+        var cardJson = template.Expand(new { });
+
+        return new Attachment
+        {
+            ContentType = "application/vnd.microsoft.card.adaptive",
+            Content = JsonConvert.DeserializeObject(cardJson)
+        };
     }
 
     private static string DeriveStatus(DispatchResult d)

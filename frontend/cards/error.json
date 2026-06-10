@@ -1,0 +1,43 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Attention",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "⚠️ A SYSTEM ERROR HAS OCCURRED",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Attention"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "We are sorry, AISO Bot cannot complete this request at the moment.",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Error Code:", "value": "${errorCode}" },
+        { "title": "Details:", "value": "${errorMessage}" }
+      ],
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Please verify the connection status of the On-premises Data Gateway software or contact the system Administrator.",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small",
+      "spacing": "Large"
+    }
+  ]
+}
