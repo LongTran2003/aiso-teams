@@ -4,6 +4,7 @@ main.py – FastAPI application entry point.
 Start the server:
     uvicorn main:app --reload --port 8000
 """
+
 from __future__ import annotations
 
 import logging
@@ -35,6 +36,7 @@ logger = logging.getLogger(__name__)
 # Lifespan hooks
 # ---------------------------------------------------------------------------
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     logger.info("🚀  AI Orchestration Service starting up …")
@@ -62,7 +64,7 @@ app = FastAPI(
 # ── CORS ─────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],        # Thu hẹp lại trong môi trường production
+    allow_origins=["*"],  # Thu hẹp lại trong môi trường production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -72,6 +74,7 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
 
 @app.get("/", tags=["Health"])
 async def root() -> dict[str, str]:
@@ -125,6 +128,7 @@ async def orchestrate(payload: ChatRequest) -> ChatResponse:
 # ---------------------------------------------------------------------------
 # Global error handler
 # ---------------------------------------------------------------------------
+
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc: Exception) -> JSONResponse:
