@@ -1,0 +1,17 @@
+{
+  "type": "function",
+  "function": {
+    "name": "CheckOrderStatus",
+    "description": "Kiểm tra trạng thái đơn hàng từ hệ thống SAP dựa theo mã đơn hàng được cung cấp.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "order_id": {
+          "type": "string",
+          "description": "Mã định danh duy nhất của đơn hàng (ví dụ: ORD-20240001)."
+        }
+      },
+      "required": ["order_id"]
+    }
+  }
+}
