@@ -1,0 +1,29 @@
+{
+  "name": "GetSalesOrders",
+  "description": "Retrieve a list of sales orders from the SAP ERP system. Trigger this function when the user wants to query, filter, or view sales orders based on customer ID, order status, or creation date range.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "customer_id": {
+        "type": "string",
+        "description": "The unique identifier of the customer to filter orders for (e.g., 'CUST-1002'). Extract this if the user specifies a particular customer."
+      },
+      "date_from": {
+        "type": "string",
+        "format": "date",
+        "description": "The starting creation date for filtering orders, formatted strictly as YYYY-MM-DD (e.g., '2026-01-01'). Triggered when the user asks for orders created after or since a specific date."
+      },
+      "date_to": {
+        "type": "string",
+        "format": "date",
+        "description": "The ending creation date for filtering orders, formatted strictly as YYYY-MM-DD (e.g., '2026-06-30'). Triggered when the user asks for orders created before or until a specific date."
+      },
+      "status": {
+        "type": "string",
+        "enum": ["All", "Open", "Completed", "Canceled"],
+        "description": "Filter orders by their current workflow status. Allowed values: 'All' (include all orders), 'Open' (pending, processing, or unapproved orders), 'Completed' (fully processed/fulfilled orders), or 'Canceled' (voided/aborted orders)."
+      }
+    },
+    "required": []
+  }
+}
