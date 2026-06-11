@@ -100,6 +100,16 @@ public class TeamsBot : ActivityHandler
                 return;
             }
 
+            if (result.Payload is string textReply)
+            {
+                await turnContext.SendActivityAsync(
+                    textReply,
+                    cancellationToken: cancellationToken);
+
+                _logger.LogInformation("Bot replied with AI text response");
+                return;
+            }
+
             if (result.Payload is IReadOnlyList<SalesOrder> orders)
             {
                 if (orders.Count == 0)

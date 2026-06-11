@@ -1,6 +1,7 @@
 using AISO.AiOrchestration;
 using AISO.AiOrchestration.Functions;
 using AISO.AiOrchestration.Logging;
+using AISO.AiOrchestration.Services;
 using AISO.AiOrchestration.Stub;
 using AISO.Api.Middleware;
 using AISO.Bot;
@@ -50,12 +51,29 @@ try
 
     // --- AI Orchestration ---
     builder.Services.AddSingleton<IFunction, GetSalesOrdersFunction>();
+    builder.Services.AddSingleton<IFunction, CheckOrderStatusFunction>();
     builder.Services.AddSingleton<IFunctionRegistry, FunctionRegistry>();
-    builder.Services.AddSingleton<IFunctionDispatcher, KeywordFunctionDispatcher>();
 
-    // Decorate IFunctionDispatcher with structured logging. Scrutor's Decorate
-    // re-wires the registration so that any consumer of IFunctionDispatcher
-    // gets the LoggingFunctionDispatcher wrapping the inner KeywordFunctionDispatcher.
+    // AI Service integration: register HTTP client for AI microservice.
+    // Set AiService:UseKeywordFallback=true in config to bypass AI service
+    // and use keyword matching (e.g. when AI service is not running).
+    builder.Services.Configure<AiServiceOptions>(
+        builder.Configuration.GetSection(AiServiceOptions.SectionName));
+
+    var useKeywordFallback = builder.Configuration
+        .GetValue<bool>("AiService:UseKeywordFallback", false);
+
+    if (useKeywordFallback)
+    {
+        builder.Services.AddSingleton<IFunctionDispatcher, KeywordFunctionDispatcher>();
+    }
+    else
+    {
+        builder.Services.AddHttpClient<AiServiceClient>();
+        builder.Services.AddSingleton<IFunctionDispatcher, AiServiceDispatcher>();
+    }
+
+    // Decorate IFunctionDispatcher with structured logging.
     builder.Services.Decorate<IFunctionDispatcher, LoggingFunctionDispatcher>();
 
     // --- Health Checks ---
