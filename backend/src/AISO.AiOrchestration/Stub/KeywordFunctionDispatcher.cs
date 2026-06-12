@@ -1,12 +1,13 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace AISO.AiOrchestration.Stub;
 
 /// <summary>
 /// Placeholder dispatcher using simple keyword matching.
-/// Replaced by Azure OpenAI function-calling dispatcher in Sprint 3 by the AI team.
+/// Replaced by AI microservice dispatcher when AiService:UseKeywordFallback=false.
 /// </summary>
-public sealed class KeywordFunctionDispatcher : IFunctionDispatcher
+public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
 {
     private readonly IFunctionRegistry _registry;
 
@@ -19,6 +20,30 @@ public sealed class KeywordFunctionDispatcher : IFunctionDispatcher
     {
         var text = userMessage.Trim().ToLowerInvariant();
 
+        // Pattern 1: Check specific order — "kiểm tra đơn hàng 5001" or "check order 5001"
+        if (text.Contains("kiểm tra") || text.Contains("check"))
+        {
+            var match = OrderIdPattern().Match(text);
+            if (match.Success)
+            {
+                var orderId = match.Groups[1].Value.PadLeft(10, '0');
+                var fn = _registry.GetByName("CheckOrderStatus");
+                if (fn is not null)
+                {
+                    var paramsJson = JsonSerializer.Serialize(new { order_id = orderId });
+                    using var doc = JsonDocument.Parse(paramsJson);
+                    var result = await fn.ExecuteAsync(doc.RootElement, ct);
+                    return new DispatchResult
+                    {
+                        Handled = true,
+                        FunctionName = fn.Name,
+                        Result = result
+                    };
+                }
+            }
+        }
+
+        // Pattern 2: List orders — "show orders", "đơn hàng gần đây"
         if (text.Contains("order") || text.Contains("đơn"))
         {
             var fn = _registry.GetByName("getSalesOrders");
@@ -43,4 +68,7 @@ public sealed class KeywordFunctionDispatcher : IFunctionDispatcher
 
         return new DispatchResult { Handled = false, Reason = "intent unclear" };
     }
+
+    [GeneratedRegex(@"(\d{4,10})")]
+    private static partial Regex OrderIdPattern();
 }
