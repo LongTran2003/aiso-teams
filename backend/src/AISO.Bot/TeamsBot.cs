@@ -129,8 +129,25 @@ public class TeamsBot : ActivityHandler
                 return;
             }
 
+            // Workflow action results (Release, Reject, Forward) — extract message field
+            if (result.Payload is not null)
+            {
+                var json = System.Text.Json.JsonSerializer.Serialize(result.Payload);
+                using var doc = System.Text.Json.JsonDocument.Parse(json);
+                var message = doc.RootElement.TryGetProperty("message", out var msg)
+                    ? msg.GetString()
+                    : $"✅ Function {dispatch.FunctionName} executed successfully.";
+
+                await turnContext.SendActivityAsync(
+                    message, cancellationToken: cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with action result for {Function}", dispatch.FunctionName);
+                return;
+            }
+
             await turnContext.SendActivityAsync(
-                $"Function {dispatch.FunctionName} executed (no renderer for payload type).",
+                $"Function {dispatch.FunctionName} executed (no result).",
                 cancellationToken: cancellationToken);
         }
     }

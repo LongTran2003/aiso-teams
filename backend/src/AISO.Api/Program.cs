@@ -52,6 +52,9 @@ try
     // --- AI Orchestration ---
     builder.Services.AddSingleton<IFunction, GetSalesOrdersFunction>();
     builder.Services.AddSingleton<IFunction, CheckOrderStatusFunction>();
+    builder.Services.AddSingleton<IFunction, ReleaseOrderFunction>();
+    builder.Services.AddSingleton<IFunction, RejectOrderFunction>();
+    builder.Services.AddSingleton<IFunction, ForwardOrderFunction>();
     builder.Services.AddSingleton<IFunctionRegistry, FunctionRegistry>();
 
     // AI Service integration: register HTTP client for AI microservice.
