@@ -19,7 +19,7 @@ public sealed class GetSalesOrdersFunction : IFunction
         _logger = logger;
     }
 
-    public string Name => "getSalesOrders";
+    public string Name => "GetSalesOrders";
 
     public string Description =>
         "Retrieve sales orders. Supports filtering by customer (ID or partial name), " +
@@ -54,12 +54,16 @@ public sealed class GetSalesOrdersFunction : IFunction
     public async Task<FunctionResult> ExecuteAsync(
         JsonElement parameters, CancellationToken ct = default)
     {
+        // Support both BE param names and AI team param names
         var query = new SalesOrdersQuery
         {
-            CustomerIdOrName = GetString(parameters, "customerIdOrName"),
+            CustomerIdOrName = GetString(parameters, "customerIdOrName")
+                            ?? GetString(parameters, "customer_id"),
             SalesOrg = GetString(parameters, "salesOrg"),
-            FromDate = GetDate(parameters, "fromDate"),
-            ToDate = GetDate(parameters, "toDate"),
+            FromDate = GetDate(parameters, "fromDate")
+                    ?? GetDate(parameters, "date_from"),
+            ToDate = GetDate(parameters, "toDate")
+                  ?? GetDate(parameters, "date_to"),
             Status = GetEnum<SalesOrderStatus>(parameters, "status"),
             Top = GetInt(parameters, "top") ?? 10
         };
