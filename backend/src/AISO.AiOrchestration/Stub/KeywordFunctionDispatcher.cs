@@ -46,7 +46,7 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         // Pattern 2: List orders — "show orders", "đơn hàng gần đây"
         if (text.Contains("order") || text.Contains("đơn"))
         {
-            var fn = _registry.GetByName("getSalesOrders");
+            var fn = _registry.GetByName("GetSalesOrders");
             if (fn is null)
             {
                 return new DispatchResult
