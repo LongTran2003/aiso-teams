@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
     <ProjectReference Include="..\AISO.Bot\AISO.Bot.csproj" />
@@ -30,6 +30,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>50a6e6df-bd3f-4ff2-884d-af45a023b580</UserSecretsId>
   </PropertyGroup>
 
 </Project>
