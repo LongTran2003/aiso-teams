@@ -1,3 +1,4 @@
+using AISO.Domain.Entities;
 using AISO.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,8 +19,8 @@ public class AppDbContext : DbContext
             b.ToTable("user_mappings");
             b.HasKey(x => x.Id);
             b.Property(x => x.TeamsUserId).HasMaxLength(128).IsRequired();
-            b.Property(x => x.DisplayName).HasMaxLength(256).IsRequired();
-            b.Property(x => x.SapUserId).HasMaxLength(64);
+            b.Property(x => x.TeamsEmail).HasMaxLength(256);
+            b.Property(x => x.SapUsername).HasMaxLength(64).IsRequired();
             b.HasIndex(x => x.TeamsUserId).IsUnique();
         });
 
