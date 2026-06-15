@@ -5,6 +5,7 @@ using AISO.AiOrchestration.Services;
 using AISO.AiOrchestration.Stub;
 using AISO.Api.Middleware;
 using AISO.Bot;
+using AISO.Bot.Dialogs;
 using AISO.Persistence;
 using AISO.SapIntegration;
 using AISO.SapIntegration.Mock;
@@ -39,10 +40,19 @@ try
     // --- Bot Framework authentication + adapter ---
     builder.Services.AddSingleton<BotFrameworkAuthentication, ConfigurationBotFrameworkAuthentication>();
     builder.Services.AddSingleton<IBotFrameworkHttpAdapter, AdapterWithErrorHandler>();
-    builder.Services.AddTransient<IBot, TeamsBot>();
+    
+    // Create the storage we'll be using for User and Conversation state.
+    builder.Services.AddSingleton<IStorage, MemoryStorage>();
+    builder.Services.AddSingleton<UserState>();
+    builder.Services.AddSingleton<ConversationState>();
+    
+    // Register the MainDialog
+    builder.Services.AddTransient<MainDialog>();
+    builder.Services.AddTransient<IBot, TeamsBot<MainDialog>>();
 
     // --- Persistence (EF Core + PostgreSQL) + Audit logger ---
     builder.Services.AddPersistence(builder.Configuration);
+    builder.Services.AddScoped<AISO.Bot.Services.UserMappingService>();
 
     // --- SAP Integration ---
     // Sprint 2: mock client with seeded Global Bike data.
