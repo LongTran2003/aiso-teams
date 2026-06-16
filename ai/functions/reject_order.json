@@ -6,14 +6,14 @@
     "properties": {
       "order_id": {
         "type": "string",
-        "description": "The unique sales order identifier in SAP (e.g., 'ORD-20240001') to be rejected."
+        "description": "The unique sales order identifier in SAP (e.g., 'ORD-123456') to be rejected."
       },
       "reason_code": {
         "type": "string",
-        "enum": ["PRICE_ISSUE", "OUT_OF_STOCK", "OTHER"],
         "description": "The reason code for the rejection. Must be one of the following: 'PRICE_ISSUE' (pricing discrepancy or incorrect price), 'OUT_OF_STOCK' (item unavailable), or 'OTHER' (any other unlisted reason)."
       }
     },
-    "required": ["order_id", "reason_code"]
+    "required": ["order_id", "reason_code"],
+    "additionalProperties": false
   }
 }

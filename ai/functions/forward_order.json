@@ -6,13 +6,14 @@
     "properties": {
       "order_id": {
         "type": "string",
-        "description": "The unique sales order identifier in SAP (e.g., 'ORD-20240001') to be forwarded."
+        "description": "The unique sales order identifier in SAP (e.g., 'ORD-123456') to be forwarded."
       },
       "forward_to_user": {
         "type": "string",
-        "description": "The identifier of the target recipient, which can be their username, full name, or email address (e.g., 'jane.doe@example.com')."
+        "description": "The identifier of the target recipient, such as their username, full name, or email address (e.g., 'Alex Manager' or 'manager.alex')."
       }
     },
-    "required": ["order_id", "forward_to_user"]
+    "required": ["order_id", "forward_to_user"],
+    "additionalProperties": false
   }
 }

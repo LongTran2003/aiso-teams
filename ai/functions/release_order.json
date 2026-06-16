@@ -6,13 +6,14 @@
     "properties": {
       "order_id": {
         "type": "string",
-        "description": "The unique sales order identifier in SAP (e.g., 'ORD-20240001') that needs approval and release."
+        "description": "The unique sales order identifier in SAP (e.g., 'ORD-123456') that needs approval and release."
       },
       "comment": {
-        "type": "string",
-        "description": "An optional note, remark, or justification explaining the reason for approving and releasing the order."
+        "type": ["string", "null"],
+        "description": "An optional note, remark, or justification explaining the reason for approving and releasing the order. Use null or omit this property if the user did not provide any comment or note."
       }
     },
-    "required": ["order_id"]
+    "required": ["order_id"],
+    "additionalProperties": false
   }
 }
