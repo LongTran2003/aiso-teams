@@ -185,32 +185,51 @@ class AIOrchestrator:
             kwargs["tools"] = self._tools
             kwargs["tool_choice"] = "auto"
 
-        try:
-            response = self._client.chat.completions.create(**kwargs)
-        except openai.AuthenticationError as exc:
-            logger.error("Groq API Authentication Error (Invalid API Key): %s", exc)
-            raise
-        except openai.RateLimitError as exc:
-            logger.error("Groq API Rate Limit Exceeded: %s", exc)
-            raise
-        except openai.BadRequestError as exc:
-            logger.error("Groq API Bad Request (Invalid parameters/schema): %s", exc)
-            recovered = self._recover_failed_generation(exc, user_message)
-            if recovered is not None:
-                logger.info("Successfully recovered from Groq API Bad Request (tool_use_failed).")
-                return recovered
-            raise
-        except openai.APIConnectionError as exc:
-            logger.error("Groq API Connection Error: %s", exc)
-            raise
-        except openai.APIStatusError as exc:
-            logger.error("Groq API returned status code %s: %s", exc.status_code, exc)
-            raise
-        except Exception as exc:
-            logger.error("Groq API unexpected error: %s", exc)
-            raise
+        max_retries = 6
+        initial_backoff = 3
+        import time
 
-        return self._parse_response(response, user_message)
+        last_exc = None
+        for attempt in range(max_retries):
+            try:
+                response = self._client.chat.completions.create(**kwargs)
+                return self._parse_response(response, user_message)
+            except openai.RateLimitError as exc:
+                last_exc = exc
+                sleep_time = initial_backoff * (2 ** attempt)
+                logger.warning("Groq API Rate Limit hit. Retrying in %s seconds...", sleep_time)
+                time.sleep(sleep_time)
+            except openai.APIConnectionError as exc:
+                last_exc = exc
+                sleep_time = initial_backoff * (2 ** attempt)
+                logger.warning("Groq API Connection error. Retrying in %s seconds...", sleep_time)
+                time.sleep(sleep_time)
+            except openai.APIStatusError as exc:
+                if exc.status_code >= 500:
+                    last_exc = exc
+                    sleep_time = initial_backoff * (2 ** attempt)
+                    logger.warning("Groq API Server Error (%s). Retrying in %s seconds...", exc.status_code, sleep_time)
+                    time.sleep(sleep_time)
+                else:
+                    logger.error("Groq API returned status code %s: %s", exc.status_code, exc)
+                    raise
+            except openai.AuthenticationError as exc:
+                logger.error("Groq API Authentication Error (Invalid API Key): %s", exc)
+                raise
+            except openai.BadRequestError as exc:
+                logger.error("Groq API Bad Request (Invalid parameters/schema): %s", exc)
+                recovered = self._recover_failed_generation(exc, user_message)
+                if recovered is not None:
+                    logger.info("Successfully recovered from Groq API Bad Request (tool_use_failed).")
+                    return recovered
+                raise
+            except Exception as exc:
+                logger.error("Groq API unexpected error: %s", exc)
+                raise
+
+        if last_exc:
+            raise last_exc
+        raise Exception("Groq API call failed after max retries.")
 
     def _validate_and_build_response(self, fn_name: str, args: dict, user_message: str) -> ChatResponse | None:
         """
@@ -235,6 +254,16 @@ class AIOrchestrator:
                     intent="general_query",
                     tool_calls=[]
                 )
+
+        # 2. Phát hiện ảo tưởng forward_to_user (không xuất hiện trong user_message)
+        forward_to_user = args.get("forward_to_user")
+        if forward_to_user and str(forward_to_user).lower() not in user_message.lower():
+            logger.warning("Hallucinated forward_to_user detected: %s not in query: %s", forward_to_user, user_message)
+            return ChatResponse(
+                reply=f"Tôi chưa rõ bạn muốn chuyển tiếp đơn hàng {order_id} cho ai. Vui lòng cung cấp tên hoặc email người nhận.",
+                intent="general_query",
+                tool_calls=[]
+            )
         
         # 2. Kiểm tra tham số theo Quy tắc 1
         if fn_name == "CheckOrderStatus":

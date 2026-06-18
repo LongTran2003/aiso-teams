@@ -1,6 +1,6 @@
 {
   "name": "ForwardOrder",
-  "description": "Forward a sales order to another user, colleague, or handler in the system for further review, processing, or approval. Trigger this function when the user wants to hand over, transfer, or reassign an order.",
+  "description": "Forward a sales order to another user, colleague, or handler in the system for further review, processing, or approval. Trigger this function when the user wants to hand over, transfer, or reassign an order. DO NOT call this function if the target recipient (forward_to_user) is missing or not specified in the user message.",
   "parameters": {
     "type": "object",
     "properties": {
@@ -9,7 +9,7 @@
         "description": "The unique sales order identifier in SAP (e.g., 'ORD-123456') to be forwarded."
       },
       "forward_to_user": {
-        "type": "string",
+        "type": ["string", "null"],
         "description": "The identifier of the target recipient, such as their username, full name, or email address (e.g., 'Alex Manager' or 'manager.alex')."
       }
     },

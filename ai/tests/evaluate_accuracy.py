@@ -78,7 +78,12 @@ def load_tools() -> list[dict]:
 # API Query with Retry
 # ---------------------------------------------------------------------------
 
-def generate_content_with_retry(client, model, messages, tools, max_retries=3, initial_backoff=2):
+def generate_content_with_retry(client, model, messages, tools, max_retries=6, initial_backoff=3):
+    """
+    Calls the OpenAI client with robust retries, handling rate limits and connection errors.
+    If it fails after max_retries, it raises the last exception.
+    """
+    last_exc = None
     for attempt in range(max_retries):
         try:
             kwargs = {
@@ -92,35 +97,35 @@ def generate_content_with_retry(client, model, messages, tools, max_retries=3, i
                 
             return client.chat.completions.create(**kwargs)
         except openai.RateLimitError as exc:
+            last_exc = exc
             sleep_time = initial_backoff * (2 ** attempt)
             print(f"\n[Warning] Groq Rate limit hit. Waiting {sleep_time:.2f} seconds before retrying...", flush=True)
+            time.sleep(sleep_time)
+        except openai.APIConnectionError as exc:
+            last_exc = exc
+            sleep_time = initial_backoff * (2 ** attempt)
+            print(f"\n[Warning] Connection Error. Waiting {sleep_time:.2f} seconds before retrying...", flush=True)
             time.sleep(sleep_time)
         except openai.AuthenticationError as exc:
             print(f"\n[Error] Invalid Groq API Key: {exc}", file=sys.stderr)
             raise exc
         except openai.BadRequestError as exc:
-            print(f"\n[Error] Bad Request (Check your parameters/schemas): {exc}", file=sys.stderr)
             raise exc
-        except openai.APIConnectionError as exc:
-            sleep_time = initial_backoff * (2 ** attempt)
-            print(f"\n[Warning] Connection Error. Waiting {sleep_time:.2f} seconds before retrying...", flush=True)
-            time.sleep(sleep_time)
         except openai.APIStatusError as exc:
-            print(f"\n[Error] Groq API error status {exc.status_code}: {exc}", file=sys.stderr)
-            raise exc
+            if exc.status_code >= 500:
+                last_exc = exc
+                sleep_time = initial_backoff * (2 ** attempt)
+                print(f"\n[Warning] Groq Server Error ({exc.status_code}). Waiting {sleep_time:.2f} seconds before retrying...", flush=True)
+                time.sleep(sleep_time)
+            else:
+                print(f"\n[Error] Groq API error status {exc.status_code}: {exc}", file=sys.stderr)
+                raise exc
         except Exception as exc:
             raise exc
-            
-    # Final try
-    kwargs = {
-        "model": model,
-        "messages": messages,
-        "temperature": 0.1,
-    }
-    if tools:
-        kwargs["tools"] = tools
-        kwargs["tool_choice"] = "auto"
-    return client.chat.completions.create(**kwargs)
+
+    if last_exc:
+        raise last_exc
+    raise Exception("API call failed after max retries without specific exception.")
 
 def validate_parameters(fn_name: str, args: dict, user_message: str) -> tuple[str, dict] | None:
     """
@@ -133,6 +138,11 @@ def validate_parameters(fn_name: str, args: dict, user_message: str) -> tuple[st
     
     # 1. Hallucinated order_id check
     if order_id and str(order_id).lower() not in user_message.lower():
+        return None
+        
+    # 2. Hallucinated forward_to_user check
+    forward_to_user = args.get("forward_to_user")
+    if forward_to_user and str(forward_to_user).lower() not in user_message.lower():
         return None
         
     # 2. Schema rule checks
@@ -215,7 +225,7 @@ def parse_and_validate_failed_generation(exc: openai.BadRequestError, query: str
 # Main Evaluation Loop
 # ---------------------------------------------------------------------------
 
-def run_evaluation(live_mode: bool = False):
+def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
     # Load golden dataset
     if not GOLDEN_DATA_PATH.exists():
         print(f"Error: Golden dataset not found at {GOLDEN_DATA_PATH}", file=sys.stderr)
@@ -247,7 +257,7 @@ def run_evaluation(live_mode: bool = False):
     # Quota Safety Warning Checks
     needed_calls = len(test_cases) if live_mode else sum(1 for case in test_cases if case["query"] not in cache)
 
-    if needed_calls > 5:
+    if needed_calls > 5 and not skip_confirm:
         print(f"\n[CẢNH BÁO] Hệ thống sẽ thực hiện gọi API thực tế {needed_calls} lần.")
         print("Số lượng cuộc gọi này có thể làm cạn quota hoặc vượt quá giới hạn Rate Limit của tài khoản.")
         try:
@@ -350,7 +360,6 @@ def run_evaluation(live_mode: bool = False):
                     recovered = parse_and_validate_failed_generation(bad_req_exc, query)
                     if recovered is not None:
                         pred_fn, pred_args = recovered
-                        print(f"\n[Recovery] Query {idx} successfully recovered tool call: {pred_fn} with {pred_args}", flush=True)
                     else:
                         raise bad_req_exc
                         
@@ -449,6 +458,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate NLU Intent and Parameter Accuracy.")
     parser.add_argument("--live", action="store_true", help="Bypass local cache and perform live API calls for all cases.")
     parser.add_argument("--no-cache", action="store_true", help="Alias for --live.")
+    parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation warning for live API calls.")
     args = parser.parse_args()
     
-    run_evaluation(live_mode=(args.live or args.no_cache))
+    run_evaluation(live_mode=(args.live or args.no_cache), skip_confirm=args.yes)

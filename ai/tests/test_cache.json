@@ -42,6 +42,7 @@
   "Phê duyệt và giải phóng đơn hàng ORD-123456.": {
     "predicted_function": "ReleaseOrder",
     "predicted_args": {
+      "comment": null,
       "order_id": "ORD-123456"
     }
   },
@@ -108,6 +109,7 @@
   "Release order ORD-112233 right now.": {
     "predicted_function": "ReleaseOrder",
     "predicted_args": {
+      "comment": null,
       "order_id": "ORD-112233"
     }
   },
