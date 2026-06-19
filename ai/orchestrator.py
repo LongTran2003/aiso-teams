@@ -1,6 +1,4 @@
 """
-orchestrator.py – AI Orchestration Layer (Groq API edition).
-
 Chuyển đổi từ Google Gemini → Groq API (OpenAI-compatible SDK).
 Kiến trúc giữ nguyên: nạp system prompt, load dynamic function schemas
 từ /functions, gọi Groq với Function Calling, parse kết quả về
