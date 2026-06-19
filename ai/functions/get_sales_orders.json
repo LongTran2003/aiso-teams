@@ -1,29 +1,39 @@
 {
   "name": "GetSalesOrders",
-  "description": "Retrieve a list of sales orders from the SAP ERP system. Trigger this function when the user wants to query, filter, or view sales orders based on customer ID, order status, or creation date range.",
+  "description": "Retrieve a list of sales orders from the SAP ERP system. Trigger this function when the user wants to query, filter, or view sales orders based on customer ID/name, status, or creation date range.",
   "parameters": {
     "type": "object",
     "properties": {
-      "customer_id": {
-        "type": "string",
-        "description": "The unique identifier of the customer to filter orders for (e.g., 'CUST-1002'). Extract this if the user specifies a particular customer."
+      "customerIdOrName": {
+        "type": ["string", "null"],
+        "description": "Customer ID (e.g. 'CUST-1002') or partial customer name (e.g. 'Philly Bikes'). Use null or omit this property if the user does not specify a customer name or ID."
       },
-      "date_from": {
-        "type": "string",
+      "fromDate": {
+        "type": ["string", "null"],
         "format": "date",
-        "description": "The starting creation date for filtering orders, formatted strictly as YYYY-MM-DD (e.g., '2026-01-01'). Triggered when the user asks for orders created after or since a specific date."
+        "description": "The starting creation date for filtering orders, formatted strictly as YYYY-MM-DD. Use null or omit this property if the user does not specify a start date or date range."
       },
-      "date_to": {
-        "type": "string",
+      "toDate": {
+        "type": ["string", "null"],
         "format": "date",
-        "description": "The ending creation date for filtering orders, formatted strictly as YYYY-MM-DD (e.g., '2026-06-30'). Triggered when the user asks for orders created before or until a specific date."
+        "description": "The ending creation date for filtering orders, formatted strictly as YYYY-MM-DD. Use null or omit this property if the user does not specify an end date or date range."
       },
       "status": {
-        "type": "string",
-        "enum": ["All", "Open", "Completed", "Canceled"],
-        "description": "Filter orders by their current workflow status. Allowed values: 'All' (include all orders), 'Open' (pending, processing, or unapproved orders), 'Completed' (fully processed/fulfilled orders), or 'Canceled' (voided/aborted orders)."
+        "type": ["string", "null"],
+        "enum": ["Open", "Blocked", "PartiallyDelivered", "Delivered", "Invoiced", "Cancelled", null],
+        "description": "Filter orders by their current workflow status. Use null or omit this property if the user does not specify a status."
+      },
+      "salesOrg": {
+        "type": ["string", "null"],
+        "enum": ["UE00", "UW00", "DN00", "DS00", null],
+        "description": "Optional sales organization code. Use null or omit this property if not specified."
+      },
+      "top": {
+        "type": ["integer", "null"],
+        "description": "Optional limit on records returned. Use null or omit this property if not specified."
       }
     },
-    "required": []
+    "required": [],
+    "additionalProperties": false
   }
 }

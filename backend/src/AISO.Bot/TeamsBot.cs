@@ -1,13 +1,11 @@
+
 using System.Diagnostics;
 using AdaptiveCards.Templating;
 using AISO.AiOrchestration;
 using AISO.Bot.Cards;
-using AISO.Bot.Services;
 using AISO.Domain.SalesOrders;
 using AISO.Persistence.Auditing;
 using Microsoft.Bot.Builder;
-using Microsoft.Bot.Builder.Dialogs;
-using Microsoft.Bot.Builder.Teams;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -15,41 +13,20 @@ using Serilog.Context;
 
 namespace AISO.Bot;
 
-public class TeamsBot<T> : TeamsActivityHandler where T : Dialog
+public class TeamsBot : ActivityHandler
 {
     private readonly IFunctionDispatcher _dispatcher;
     private readonly IAuditLogger _audit;
-    private readonly ILogger<TeamsBot<T>> _logger;
-    private readonly ConversationState _conversationState;
-    private readonly UserState _userState;
-    private readonly T _dialog;
-    private readonly UserMappingService _userMappingService;
+    private readonly ILogger<TeamsBot> _logger;
 
     public TeamsBot(
         IFunctionDispatcher dispatcher,
         IAuditLogger audit,
-        ILogger<TeamsBot<T>> logger,
-        ConversationState conversationState,
-        UserState userState,
-        T dialog,
-        UserMappingService userMappingService)
+        ILogger<TeamsBot> logger)
     {
         _dispatcher = dispatcher;
         _audit = audit;
         _logger = logger;
-        _conversationState = conversationState;
-        _userState = userState;
-        _dialog = dialog;
-        _userMappingService = userMappingService;
-    }
-
-    public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default)
-    {
-        await base.OnTurnAsync(turnContext, cancellationToken);
-
-        // Save any state changes that might have occurred during the turn.
-        await _conversationState.SaveChangesAsync(turnContext, false, cancellationToken);
-        await _userState.SaveChangesAsync(turnContext, false, cancellationToken);
     }
 
     protected override async Task OnMessageActivityAsync(
@@ -76,19 +53,6 @@ public class TeamsBot<T> : TeamsActivityHandler where T : Dialog
                 await turnContext.SendActivityAsync(
                     MessageFactory.Attachment(BuildHelpCard()),
                     cancellationToken);
-                return;
-            }
-
-            var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
-
-            var dialogSet = new DialogSet(_conversationState.CreateProperty<DialogState>("DialogState"));
-            dialogSet.Add(_dialog);
-            var dialogContext = await dialogSet.CreateContextAsync(turnContext, cancellationToken);
-
-            if (dialogContext.ActiveDialog != null || string.IsNullOrEmpty(sapUsername))
-            {
-                // We are either in the middle of login/mapping OR we need to start it
-                await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
                 return;
             }
 
@@ -186,27 +150,6 @@ public class TeamsBot<T> : TeamsActivityHandler where T : Dialog
                 $"Function {dispatch.FunctionName} executed (no result).",
                 cancellationToken: cancellationToken);
         }
-    }
-
-    protected override async Task<InvokeResponse> OnInvokeActivityAsync(ITurnContext<IInvokeActivity> turnContext, CancellationToken cancellationToken)
-    {
-        _logger.LogInformation("Received Invoke Activity with Name: {InvokeName}", turnContext.Activity.Name);
-        
-        if (turnContext.Activity.Name == "signin/verifyState" || turnContext.Activity.Name == "signin/tokenExchange")
-        {
-            _logger.LogInformation("Received SSO Token Exchange Invoke Activity");
-            await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
-            return new InvokeResponse { Status = 200 };
-        }
-        
-        // When silent SSO fails, Teams sends "signin/failure". We MUST return 200 to tell Teams to show the Sign-in button.
-        if (turnContext.Activity.Name == "signin/failure")
-        {
-            _logger.LogWarning("SSO Token Exchange failed. Teams should now fallback to showing the OAuthCard.");
-            return new InvokeResponse { Status = 200 };
-        }
-        
-        return await base.OnInvokeActivityAsync(turnContext, cancellationToken);
     }
 
     protected override async Task OnMembersAddedAsync(

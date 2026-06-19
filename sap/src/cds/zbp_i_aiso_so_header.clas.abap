@@ -1,5 +1,0 @@
-CLASS zbp_i_aiso_so_header DEFINITION PUBLIC ABSTRACT FINAL FOR BEHAVIOR OF zi_aiso_so_header.
-ENDCLASS.
-
-CLASS zbp_i_aiso_so_header IMPLEMENTATION.
-ENDCLASS.
