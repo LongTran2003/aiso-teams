@@ -76,8 +76,8 @@ def _load_groq_tools() -> list[dict[str, Any]] | None:
                     "function": {
                         "name": raw["name"],
                         "description": raw.get("description", ""),
-                        "parameters": raw.get("parameters", {})
-                    }
+                        "parameters": raw.get("parameters", {}),
+                    },
                 }
             tools.append(tool)
             logger.debug("Loaded Groq Tool: %s", tool["function"]["name"])
@@ -156,8 +156,7 @@ class AIOrchestrator:
 
     def __init__(self) -> None:
         self._client = OpenAI(
-            api_key=_GROQ_API_KEY,
-            base_url="https://api.groq.com/openai/v1"
+            api_key=_GROQ_API_KEY, base_url="https://api.groq.com/openai/v1"
         )
         self._system_prompt = _load_system_prompt()
         self._tools = _load_groq_tools()
@@ -173,7 +172,7 @@ class AIOrchestrator:
         """
         messages = [
             {"role": "system", "content": self._system_prompt},
-            {"role": "user", "content": user_message}
+            {"role": "user", "content": user_message},
         ]
 
         kwargs: dict[str, Any] = {
@@ -196,31 +195,45 @@ class AIOrchestrator:
                 return self._parse_response(response, user_message)
             except openai.RateLimitError as exc:
                 last_exc = exc
-                sleep_time = initial_backoff * (2 ** attempt)
-                logger.warning("Groq API Rate Limit hit. Retrying in %s seconds...", sleep_time)
+                sleep_time = initial_backoff * (2**attempt)
+                logger.warning(
+                    "Groq API Rate Limit hit. Retrying in %s seconds...", sleep_time
+                )
                 time.sleep(sleep_time)
             except openai.APIConnectionError as exc:
                 last_exc = exc
-                sleep_time = initial_backoff * (2 ** attempt)
-                logger.warning("Groq API Connection error. Retrying in %s seconds...", sleep_time)
+                sleep_time = initial_backoff * (2**attempt)
+                logger.warning(
+                    "Groq API Connection error. Retrying in %s seconds...", sleep_time
+                )
                 time.sleep(sleep_time)
             except openai.APIStatusError as exc:
                 if exc.status_code >= 500:
                     last_exc = exc
-                    sleep_time = initial_backoff * (2 ** attempt)
-                    logger.warning("Groq API Server Error (%s). Retrying in %s seconds...", exc.status_code, sleep_time)
+                    sleep_time = initial_backoff * (2**attempt)
+                    logger.warning(
+                        "Groq API Server Error (%s). Retrying in %s seconds...",
+                        exc.status_code,
+                        sleep_time,
+                    )
                     time.sleep(sleep_time)
                 else:
-                    logger.error("Groq API returned status code %s: %s", exc.status_code, exc)
+                    logger.error(
+                        "Groq API returned status code %s: %s", exc.status_code, exc
+                    )
                     raise
             except openai.AuthenticationError as exc:
                 logger.error("Groq API Authentication Error (Invalid API Key): %s", exc)
                 raise
             except openai.BadRequestError as exc:
-                logger.error("Groq API Bad Request (Invalid parameters/schema): %s", exc)
+                logger.error(
+                    "Groq API Bad Request (Invalid parameters/schema): %s", exc
+                )
                 recovered = self._recover_failed_generation(exc, user_message)
                 if recovered is not None:
-                    logger.info("Successfully recovered from Groq API Bad Request (tool_use_failed).")
+                    logger.info(
+                        "Successfully recovered from Groq API Bad Request (tool_use_failed)."
+                    )
                     return recovered
                 raise
             except Exception as exc:
@@ -231,54 +244,64 @@ class AIOrchestrator:
             raise last_exc
         raise Exception("Groq API call failed after max retries.")
 
-    def _validate_and_build_response(self, fn_name: str, args: dict, user_message: str) -> ChatResponse | None:
+    def _validate_and_build_response(
+        self, fn_name: str, args: dict, user_message: str
+    ) -> ChatResponse | None:
         """
         Kiểm tra tính hợp lệ của tham số (bao gồm cả việc tự ý suy diễn order_id).
         Nếu không hợp lệ, trả về ChatResponse tương ứng (yêu cầu người dùng cung cấp thông tin).
         Nếu hợp lệ, trả về None.
         """
         order_id = args.get("order_id")
-        
+
         # 1. Phát hiện ảo tưởng order_id (không xuất hiện trong user_message)
         if order_id and str(order_id).lower() not in user_message.lower():
-            logger.warning("Hallucinated order_id detected: %s not in query: %s", order_id, user_message)
+            logger.warning(
+                "Hallucinated order_id detected: %s not in query: %s",
+                order_id,
+                user_message,
+            )
             if fn_name in ("CheckOrderStatus", "ReleaseOrder", "ForwardOrder"):
                 return ChatResponse(
                     reply="Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện.",
                     intent="general_query",
-                    tool_calls=[]
+                    tool_calls=[],
                 )
-            else: # RejectOrder
+            else:  # RejectOrder
                 return ChatResponse(
                     reply="Tôi chưa xác định được đơn hàng nào. Vui lòng cho tôi mã đơn hàng.",
                     intent="general_query",
-                    tool_calls=[]
+                    tool_calls=[],
                 )
 
         # 2. Phát hiện ảo tưởng forward_to_user (không xuất hiện trong user_message)
         forward_to_user = args.get("forward_to_user")
         if forward_to_user and str(forward_to_user).lower() not in user_message.lower():
-            logger.warning("Hallucinated forward_to_user detected: %s not in query: %s", forward_to_user, user_message)
+            logger.warning(
+                "Hallucinated forward_to_user detected: %s not in query: %s",
+                forward_to_user,
+                user_message,
+            )
             return ChatResponse(
                 reply=f"Tôi chưa rõ bạn muốn chuyển tiếp đơn hàng {order_id} cho ai. Vui lòng cung cấp tên hoặc email người nhận.",
                 intent="general_query",
-                tool_calls=[]
+                tool_calls=[],
             )
-        
+
         # 2. Kiểm tra tham số theo Quy tắc 1
         if fn_name == "CheckOrderStatus":
             if not order_id or order_id == "null" or str(order_id).strip() == "":
                 return ChatResponse(
                     reply="Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện.",
                     intent="general_query",
-                    tool_calls=[]
+                    tool_calls=[],
                 )
         elif fn_name == "ReleaseOrder":
             if not order_id or order_id == "null" or str(order_id).strip() == "":
                 return ChatResponse(
                     reply="Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện.",
                     intent="general_query",
-                    tool_calls=[]
+                    tool_calls=[],
                 )
         elif fn_name == "RejectOrder":
             reason_code = args.get("reason_code")
@@ -286,13 +309,17 @@ class AIOrchestrator:
                 return ChatResponse(
                     reply="Tôi chưa xác định được đơn hàng nào. Vui lòng cho tôi mã đơn hàng.",
                     intent="general_query",
-                    tool_calls=[]
+                    tool_calls=[],
                 )
-            if not reason_code or reason_code == "null" or str(reason_code).strip() == "":
+            if (
+                not reason_code
+                or reason_code == "null"
+                or str(reason_code).strip() == ""
+            ):
                 return ChatResponse(
                     reply=f"Tôi đã ghi nhận yêu cầu hủy đơn hàng {order_id}. Bạn vui lòng cho biết lý do hủy đơn là gì (do sai giá, hết hàng, hay lý do khác) để tôi cập nhật chính xác lên hệ thống SAP nhé?",
                     intent="general_query",
-                    tool_calls=[]
+                    tool_calls=[],
                 )
         elif fn_name == "ForwardOrder":
             forward_to_user = args.get("forward_to_user")
@@ -300,15 +327,19 @@ class AIOrchestrator:
                 return ChatResponse(
                     reply="Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện.",
                     intent="general_query",
-                    tool_calls=[]
+                    tool_calls=[],
                 )
-            if not forward_to_user or forward_to_user == "null" or str(forward_to_user).strip() == "":
+            if (
+                not forward_to_user
+                or forward_to_user == "null"
+                or str(forward_to_user).strip() == ""
+            ):
                 return ChatResponse(
                     reply=f"Tôi chưa rõ bạn muốn chuyển tiếp đơn hàng {order_id} cho ai. Vui lòng cung cấp tên hoặc email người nhận.",
                     intent="general_query",
-                    tool_calls=[]
+                    tool_calls=[],
                 )
-        
+
         return None
 
     def _recover_failed_generation(
@@ -325,7 +356,7 @@ class AIOrchestrator:
             body = getattr(exc, "body", None)
             if isinstance(body, dict):
                 failed_gen = body.get("error", {}).get("failed_generation")
-            
+
             if not failed_gen:
                 exc_str = str(exc)
                 func_idx = exc_str.find("<function=")
@@ -333,21 +364,25 @@ class AIOrchestrator:
                     match_func = re.search(
                         r"(<function=.*?>.*?<function>|<function=.*?>.*?</function>|<function=.*?>.*?(?=['\"]|\}))",
                         exc_str[func_idx:],
-                        re.DOTALL
+                        re.DOTALL,
                     )
                     if match_func:
                         failed_gen = match_func.group(1)
-            
+
             if not failed_gen:
                 return None
-            
-            match = re.search(r"<function=(\w+)>(.*?)(?:<function>|</function>|$)", failed_gen, re.DOTALL)
+
+            match = re.search(
+                r"<function=(\w+)>(.*?)(?:<function>|</function>|$)",
+                failed_gen,
+                re.DOTALL,
+            )
             if not match:
                 return None
-            
+
             fn_name = match.group(1)
             raw_args = match.group(2).strip()
-            
+
             try:
                 args = json.loads(raw_args) if raw_args else {}
             except json.JSONDecodeError:
@@ -355,31 +390,29 @@ class AIOrchestrator:
                     args = json.loads(raw_args.replace("'", '"'))
                 except Exception:
                     args = {}
-            
+
             # Validation các quy tắc
-            validation_resp = self._validate_and_build_response(fn_name, args, user_message)
+            validation_resp = self._validate_and_build_response(
+                fn_name, args, user_message
+            )
             if validation_resp is not None:
                 return validation_resp
-            
+
             if fn_name == "GetSalesOrders":
                 cleaned_args = {}
                 for k, v in args.items():
                     if v is not None and str(v).strip() != "" and str(v) != "null":
                         cleaned_args[k] = v
                 args = cleaned_args
-            
+
             recovered_tool_call = ToolCall(
-                id="recovered_" + fn_name.lower(),
-                function_name=fn_name,
-                arguments=args
+                id="recovered_" + fn_name.lower(), function_name=fn_name, arguments=args
             )
             intent = _function_name_to_intent(fn_name)
             reply_text = f"Đang thực thi hàm: {fn_name}"
-            
+
             return ChatResponse(
-                reply=reply_text,
-                intent=intent,
-                tool_calls=[recovered_tool_call]
+                reply=reply_text, intent=intent, tool_calls=[recovered_tool_call]
             )
         except Exception as e:
             logger.warning("Failed to recover from failed_generation: %s", e)
@@ -408,12 +441,20 @@ class AIOrchestrator:
             if tc.type == "function":
                 fn_name = tc.function.name
                 try:
-                    args = json.loads(tc.function.arguments) if tc.function.arguments else {}
+                    args = (
+                        json.loads(tc.function.arguments)
+                        if tc.function.arguments
+                        else {}
+                    )
                 except json.JSONDecodeError:
-                    logger.warning("Failed to parse function arguments: %s", tc.function.arguments)
+                    logger.warning(
+                        "Failed to parse function arguments: %s", tc.function.arguments
+                    )
                     args = {}
 
-                validation_resp = self._validate_and_build_response(fn_name, args, user_message)
+                validation_resp = self._validate_and_build_response(
+                    fn_name, args, user_message
+                )
                 if validation_resp is not None:
                     return validation_resp
 
