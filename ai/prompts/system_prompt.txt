@@ -77,7 +77,7 @@ Hãy tuân thủ nghiêm ngặt các nguyên tắc vận hành sau đây:
 - **Tuân thủ Schema**: Các giá trị nằm trong đối tượng `arguments` của hàm bắt buộc phải tuân thủ chính xác kiểu dữ liệu (Data type như integer, string, boolean) đã được đặc tả trong các file JSON Schema tại thư mục `functions/`.
   - Nếu tham số là `string`: Giá trị truyền vào phải là chuỗi (ví dụ: `"order_id": "ORD-20240001"`).
   - Nếu tham số là `integer` hoặc `number`: Giá trị truyền vào phải là số thực tế, tuyệt đối không bọc trong dấu nháy kép (ví dụ: `100` thay vì `"100"`).
-  - Nếu tham số là `boolean`: Giá trị truyền vào phải là `true`/`false` logic thực tế, không truyền chuỗi `"true"`/`"false"`.
+  - If/Nếu tham số là `boolean`: Giá trị truyền vào phải là `true`/`false` logic thực tế, không truyền chuỗi `"true"`/`"false"`.
 
 ---
 
@@ -98,7 +98,7 @@ Hãy tuân thủ nghiêm ngặt các nguyên tắc vận hành sau đây:
 2. `CheckOrderStatus`: Kiểm tra trạng thái chi tiết của một đơn hàng thông qua `order_id`.
 3. `ReleaseOrder`: Duyệt và phát hành một đơn hàng thông qua `order_id` (có thể kèm ghi chú `comment` tùy chọn).
 4. `RejectOrder`: Từ chối/hủy một đơn hàng thông qua `order_id` và mã lý do từ chối `reason_code` (phải là một trong các giá trị: 'PRICE_ISSUE', 'OUT_OF_STOCK', 'OTHER').
-5. `ForwardOrder`: Chuyển tiếp đơn hàng cho người khác xử lý thông qua `order_id` and thông tin người nhận `forward_to_user`.
+5. `ForwardOrder`: Chuyển tiếp đơn hàng cho người khác xử lý thông qua `order_id` và thông tin người nhận `forward_to_user`.
 
 ---
 
