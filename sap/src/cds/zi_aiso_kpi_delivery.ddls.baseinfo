@@ -3,12 +3,10 @@
 {
 "FROM":
 [
-"VBAK"
+"LIKP"
 ],
 "ASSOCIATED":
-[
-"ZI_AISO_SO_ITEM"
-],
+[],
 "BASE":
 [],
 "ANNO_REF":
