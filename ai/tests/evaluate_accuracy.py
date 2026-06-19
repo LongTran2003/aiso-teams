@@ -39,6 +39,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 # Schema and Tool Loading
 # ---------------------------------------------------------------------------
 
+
 def _load_system_prompt() -> str:
     """Load system prompt from disk; fallback to default if missing."""
     try:
@@ -46,10 +47,13 @@ def _load_system_prompt() -> str:
     except FileNotFoundError:
         return "Bạn là trợ lý AI xử lý hệ thống SAP. Hãy đọc câu hỏi và trả về dữ liệu định dạng JSON để hệ thống gọi hàm."
 
+
 def load_tools() -> list[dict]:
     """Load all JSON function schemas from the functions directory in OpenAI tool format."""
     if not FUNCTIONS_DIR.exists():
-        print(f"Error: Functions directory not found at {FUNCTIONS_DIR}", file=sys.stderr)
+        print(
+            f"Error: Functions directory not found at {FUNCTIONS_DIR}", file=sys.stderr
+        )
         sys.exit(1)
 
     tools = []
@@ -65,8 +69,8 @@ def load_tools() -> list[dict]:
                     "function": {
                         "name": raw["name"],
                         "description": raw.get("description", ""),
-                        "parameters": raw.get("parameters", {})
-                    }
+                        "parameters": raw.get("parameters", {}),
+                    },
                 }
             tools.append(tool)
         except Exception as exc:
@@ -74,11 +78,15 @@ def load_tools() -> list[dict]:
 
     return tools
 
+
 # ---------------------------------------------------------------------------
 # API Query with Retry
 # ---------------------------------------------------------------------------
 
-def generate_content_with_retry(client, model, messages, tools, max_retries=6, initial_backoff=3):
+
+def generate_content_with_retry(
+    client, model, messages, tools, max_retries=6, initial_backoff=3
+):
     """
     Calls the OpenAI client with robust retries, handling rate limits and connection errors.
     If it fails after max_retries, it raises the last exception.
@@ -94,17 +102,23 @@ def generate_content_with_retry(client, model, messages, tools, max_retries=6, i
             if tools:
                 kwargs["tools"] = tools
                 kwargs["tool_choice"] = "auto"
-                
+
             return client.chat.completions.create(**kwargs)
         except openai.RateLimitError as exc:
             last_exc = exc
-            sleep_time = initial_backoff * (2 ** attempt)
-            print(f"\n[Warning] Groq Rate limit hit. Waiting {sleep_time:.2f} seconds before retrying...", flush=True)
+            sleep_time = initial_backoff * (2**attempt)
+            print(
+                f"\n[Warning] Groq Rate limit hit. Waiting {sleep_time:.2f} seconds before retrying...",
+                flush=True,
+            )
             time.sleep(sleep_time)
         except openai.APIConnectionError as exc:
             last_exc = exc
-            sleep_time = initial_backoff * (2 ** attempt)
-            print(f"\n[Warning] Connection Error. Waiting {sleep_time:.2f} seconds before retrying...", flush=True)
+            sleep_time = initial_backoff * (2**attempt)
+            print(
+                f"\n[Warning] Connection Error. Waiting {sleep_time:.2f} seconds before retrying...",
+                flush=True,
+            )
             time.sleep(sleep_time)
         except openai.AuthenticationError as exc:
             print(f"\n[Error] Invalid Groq API Key: {exc}", file=sys.stderr)
@@ -114,11 +128,17 @@ def generate_content_with_retry(client, model, messages, tools, max_retries=6, i
         except openai.APIStatusError as exc:
             if exc.status_code >= 500:
                 last_exc = exc
-                sleep_time = initial_backoff * (2 ** attempt)
-                print(f"\n[Warning] Groq Server Error ({exc.status_code}). Waiting {sleep_time:.2f} seconds before retrying...", flush=True)
+                sleep_time = initial_backoff * (2**attempt)
+                print(
+                    f"\n[Warning] Groq Server Error ({exc.status_code}). Waiting {sleep_time:.2f} seconds before retrying...",
+                    flush=True,
+                )
                 time.sleep(sleep_time)
             else:
-                print(f"\n[Error] Groq API error status {exc.status_code}: {exc}", file=sys.stderr)
+                print(
+                    f"\n[Error] Groq API error status {exc.status_code}: {exc}",
+                    file=sys.stderr,
+                )
                 raise exc
         except Exception as exc:
             raise exc
@@ -127,7 +147,10 @@ def generate_content_with_retry(client, model, messages, tools, max_retries=6, i
         raise last_exc
     raise Exception("API call failed after max retries without specific exception.")
 
-def validate_parameters(fn_name: str, args: dict, user_message: str) -> tuple[str, dict] | None:
+
+def validate_parameters(
+    fn_name: str, args: dict, user_message: str
+) -> tuple[str, dict] | None:
     """
     Validates parameters based on logic rules:
     - Hallucinated order_id detection (must be present in user_message).
@@ -135,16 +158,16 @@ def validate_parameters(fn_name: str, args: dict, user_message: str) -> tuple[st
     Returns (fn_name, args) if valid, or None if invalid.
     """
     order_id = args.get("order_id")
-    
+
     # 1. Hallucinated order_id check
     if order_id and str(order_id).lower() not in user_message.lower():
         return None
-        
+
     # 2. Hallucinated forward_to_user check
     forward_to_user = args.get("forward_to_user")
     if forward_to_user and str(forward_to_user).lower() not in user_message.lower():
         return None
-        
+
     # 2. Schema rule checks
     if fn_name == "CheckOrderStatus":
         if not order_id or order_id == "null" or str(order_id).strip() == "":
@@ -162,7 +185,11 @@ def validate_parameters(fn_name: str, args: dict, user_message: str) -> tuple[st
         forward_to_user = args.get("forward_to_user")
         if not order_id or order_id == "null" or str(order_id).strip() == "":
             return None
-        if not forward_to_user or forward_to_user == "null" or str(forward_to_user).strip() == "":
+        if (
+            not forward_to_user
+            or forward_to_user == "null"
+            or str(forward_to_user).strip() == ""
+        ):
             return None
     elif fn_name == "GetSalesOrders":
         cleaned_args = {}
@@ -170,10 +197,13 @@ def validate_parameters(fn_name: str, args: dict, user_message: str) -> tuple[st
             if v is not None and str(v).strip() != "" and str(v) != "null":
                 cleaned_args[k] = v
         args = cleaned_args
-        
+
     return fn_name, args
 
-def parse_and_validate_failed_generation(exc: openai.BadRequestError, query: str) -> tuple[str | None, dict] | None:
+
+def parse_and_validate_failed_generation(
+    exc: openai.BadRequestError, query: str
+) -> tuple[str | None, dict] | None:
     """
     Extracts function name and arguments from failed_generation inside a BadRequestError,
     performs parameter validation, and returns (pred_fn, pred_args) or None if it cannot parse/recover.
@@ -183,7 +213,7 @@ def parse_and_validate_failed_generation(exc: openai.BadRequestError, query: str
         body = getattr(exc, "body", None)
         if isinstance(body, dict):
             failed_gen = body.get("error", {}).get("failed_generation")
-        
+
         if not failed_gen:
             exc_str = str(exc)
             func_idx = exc_str.find("<function=")
@@ -191,21 +221,23 @@ def parse_and_validate_failed_generation(exc: openai.BadRequestError, query: str
                 match_func = re.search(
                     r"(<function=.*?>.*?<function>|<function=.*?>.*?</function>|<function=.*?>.*?(?=['\"]|\}))",
                     exc_str[func_idx:],
-                    re.DOTALL
+                    re.DOTALL,
                 )
                 if match_func:
                     failed_gen = match_func.group(1)
-        
+
         if not failed_gen:
             return None
-        
-        match = re.search(r"<function=(\w+)>(.*?)(?:<function>|</function>|$)", failed_gen, re.DOTALL)
+
+        match = re.search(
+            r"<function=(\w+)>(.*?)(?:<function>|</function>|$)", failed_gen, re.DOTALL
+        )
         if not match:
             return None
-        
+
         fn_name = match.group(1)
         raw_args = match.group(2).strip()
-        
+
         try:
             args = json.loads(raw_args) if raw_args else {}
         except json.JSONDecodeError:
@@ -213,7 +245,7 @@ def parse_and_validate_failed_generation(exc: openai.BadRequestError, query: str
                 args = json.loads(raw_args.replace("'", '"'))
             except Exception:
                 args = {}
-        
+
         validated = validate_parameters(fn_name, args, query)
         if validated is None:
             return None, {}
@@ -221,9 +253,11 @@ def parse_and_validate_failed_generation(exc: openai.BadRequestError, query: str
     except Exception:
         return None
 
+
 # ---------------------------------------------------------------------------
 # Main Evaluation Loop
 # ---------------------------------------------------------------------------
+
 
 def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
     # Load golden dataset
@@ -240,7 +274,10 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
             try:
                 test_cases.append(json.loads(line))
             except Exception as e:
-                print(f"Error parsing line {idx} in {GOLDEN_DATA_PATH.name}: {e}", file=sys.stderr)
+                print(
+                    f"Error parsing line {idx} in {GOLDEN_DATA_PATH.name}: {e}",
+                    file=sys.stderr,
+                )
                 sys.exit(1)
 
     print(f"Loaded {len(test_cases)} test cases from {GOLDEN_DATA_PATH.name}")
@@ -255,13 +292,21 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
             cache = {}
 
     # Quota Safety Warning Checks
-    needed_calls = len(test_cases) if live_mode else sum(1 for case in test_cases if case["query"] not in cache)
+    needed_calls = (
+        len(test_cases)
+        if live_mode
+        else sum(1 for case in test_cases if case["query"] not in cache)
+    )
 
     if needed_calls > 5 and not skip_confirm:
         print(f"\n[CẢNH BÁO] Hệ thống sẽ thực hiện gọi API thực tế {needed_calls} lần.")
-        print("Số lượng cuộc gọi này có thể làm cạn quota hoặc vượt quá giới hạn Rate Limit của tài khoản.")
+        print(
+            "Số lượng cuộc gọi này có thể làm cạn quota hoặc vượt quá giới hạn Rate Limit của tài khoản."
+        )
         try:
-            confirm = input("Bạn có chắc chắn muốn tiếp tục không? (y/N): ").strip().lower()
+            confirm = (
+                input("Bạn có chắc chắn muốn tiếp tục không? (y/N): ").strip().lower()
+            )
             if confirm not in ("y", "yes"):
                 print("Đã hủy bởi người dùng.")
                 sys.exit(0)
@@ -278,15 +323,15 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
     model_name = ""
 
     if not GROQ_API_KEY or "your_" in GROQ_API_KEY:
-        print("Error: GROQ_API_KEY is missing/placeholder. API key is required to run the evaluation.", file=sys.stderr)
+        print(
+            "Error: GROQ_API_KEY is missing/placeholder. API key is required to run the evaluation.",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     print("Initializing Groq Client...")
     try:
-        client = OpenAI(
-            api_key=GROQ_API_KEY,
-            base_url="https://api.groq.com/openai/v1"
-        )
+        client = OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
         system_prompt = _load_system_prompt()
         tools = load_tools()
         model_name = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
@@ -302,7 +347,11 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
     # Format printing helpers
     row_format = "{:<3} | {:<40} | {:<20} | {:<20} | {:<6} | {:<6}"
     print("-" * 110)
-    print(row_format.format("No", "Query", "Expected Function", "Predicted Function", "Intent", "Args"))
+    print(
+        row_format.format(
+            "No", "Query", "Expected Function", "Predicted Function", "Intent", "Args"
+        )
+    )
     print("-" * 110)
 
     for idx, case in enumerate(test_cases, 1):
@@ -323,29 +372,31 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
             try:
                 # Random backoff sleep between 0.5s and 2.0s
                 import random
+
                 sleep_time = random.uniform(0.5, 2.0)
                 time.sleep(sleep_time)
-                
+
                 messages = [
                     {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": query}
+                    {"role": "user", "content": query},
                 ]
                 try:
                     response = generate_content_with_retry(
-                        client=client,
-                        model=model_name,
-                        messages=messages,
-                        tools=tools
+                        client=client, model=model_name, messages=messages, tools=tools
                     )
                     choice = response.choices[0]
                     tool_calls = getattr(choice.message, "tool_calls", None) or []
                     if tool_calls and tool_calls[0].type == "function":
                         pred_fn = tool_calls[0].function.name
                         try:
-                            pred_args = json.loads(tool_calls[0].function.arguments) if tool_calls[0].function.arguments else {}
+                            pred_args = (
+                                json.loads(tool_calls[0].function.arguments)
+                                if tool_calls[0].function.arguments
+                                else {}
+                            )
                         except json.JSONDecodeError:
                             pred_args = {}
-                        
+
                         # Validate parameters
                         validated = validate_parameters(pred_fn, pred_args, query)
                         if validated is None:
@@ -362,65 +413,81 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
                         pred_fn, pred_args = recovered
                     else:
                         raise bad_req_exc
-                        
+
                 # Save successful result to cache
                 cache[query] = {
                     "predicted_function": pred_fn,
-                    "predicted_args": pred_args
+                    "predicted_args": pred_args,
                 }
                 try:
-                    CACHE_PATH.write_text(json.dumps(cache, indent=2, ensure_ascii=False), encoding="utf-8")
+                    CACHE_PATH.write_text(
+                        json.dumps(cache, indent=2, ensure_ascii=False),
+                        encoding="utf-8",
+                    )
                 except Exception as e:
                     print(f"Warning: Failed to save cache: {e}", file=sys.stderr)
             except Exception as exc:
                 print(f"\n[ERR] Query {idx} failed (API error): {exc}", file=sys.stderr)
                 import traceback
+
                 traceback.print_exc(file=sys.stderr)
                 pred_fn = "API_FAIL"
                 pred_args = {}
 
         # Evaluate matches
-        intent_match = (pred_fn == expected_fn)
-        
+        intent_match = pred_fn == expected_fn
+
         # Normalize types to string for comparison, filtering out None / null values
-        normalized_pred_args = {k: str(v) for k, v in pred_args.items() if v is not None and str(v).lower() != 'none'}
-        normalized_expected_args = {k: str(v) for k, v in expected_args.items() if v is not None and str(v).lower() != 'none'}
-        
+        normalized_pred_args = {
+            k: str(v)
+            for k, v in pred_args.items()
+            if v is not None and str(v).lower() != "none"
+        }
+        normalized_expected_args = {
+            k: str(v)
+            for k, v in expected_args.items()
+            if v is not None and str(v).lower() != "none"
+        }
+
         if not intent_match:
             args_match = False
         else:
-            args_match = (normalized_pred_args == normalized_expected_args)
+            args_match = normalized_pred_args == normalized_expected_args
 
         if intent_match:
             correct_intents += 1
         if args_match:
             correct_args += 1
 
-        results.append({
-            "query": query,
-            "expected_fn": expected_fn,
-            "expected_args": expected_args,
-            "pred_fn": pred_fn,
-            "pred_args": pred_args,
-            "intent_match": intent_match,
-            "args_match": args_match,
-        })
+        results.append(
+            {
+                "query": query,
+                "expected_fn": expected_fn,
+                "expected_args": expected_args,
+                "pred_fn": pred_fn,
+                "pred_args": pred_args,
+                "intent_match": intent_match,
+                "args_match": args_match,
+            }
+        )
 
         # Truncate query for terminal display if too long
         disp_query = query[:37] + "..." if len(query) > 40 else query
         disp_exp_fn = str(expected_fn)
         disp_pred_fn = str(pred_fn)
-        print(row_format.format(
-            idx, 
-            disp_query, 
-            disp_exp_fn, 
-            disp_pred_fn, 
-            "PASS" if intent_match else "FAIL", 
-            "PASS" if args_match else "FAIL"
-        ))
+        print(
+            row_format.format(
+                idx,
+                disp_query,
+                disp_exp_fn,
+                disp_pred_fn,
+                "PASS" if intent_match else "FAIL",
+                "PASS" if args_match else "FAIL",
+            )
+        )
 
     print("-" * 110)
-    
+
     # Detailed mismatch summary
     mismatches = [r for r in results if not r["intent_match"] or not r["args_match"]]
     if mismatches:
@@ -428,18 +495,20 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
         for idx, m in enumerate(mismatches, 1):
             print(f"\nMismatch #{idx}:")
             print(f"  Query:      {m['query']}")
-            print(f"  Expected:   Function: {m['expected_fn']}, Args: {m['expected_args']}")
+            print(
+                f"  Expected:   Function: {m['expected_fn']}, Args: {m['expected_args']}"
+            )
             print(f"  Predicted:  Function: {m['pred_fn']}, Args: {m['pred_args']}")
             print(f"  Mismatch:   Intent: {m['intent_match']}, Args: {m['args_match']}")
         print("-" * 110)
 
     # Compute final statistics
     total = len(test_cases)
-    
+
     error_count = sum(1 for r in results if r["pred_fn"] in ("API_FAIL", "ERROR"))
     pass_count = sum(1 for r in results if r["intent_match"] and r["args_match"])
     fail_count = total - pass_count - error_count
-    
+
     intent_accuracy = (correct_intents / total) * 100
     args_accuracy = (correct_args / total) * 100
 
@@ -447,18 +516,32 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
     print(f"Tổng số test cases:                                {total}")
     print(f"Số câu đúng hoàn toàn (Intent & Args khớp - PASS):  {pass_count} / {total}")
     print(f"Số câu sai lệch logic (AI logic mismatch - FAIL):   {fail_count} / {total}")
-    print(f"Số câu lỗi API/Mạng (API/Network error - ERROR):    {error_count} / {total}")
+    print(
+        f"Số câu lỗi API/Mạng (API/Network error - ERROR):    {error_count} / {total}"
+    )
     print(f"Tỷ lệ chính xác về chọn hàm (KPI: >= 85%):          {intent_accuracy:.2f}%")
     print(f"Tỷ lệ chính xác về bóc tách tham số (KPI: >= 80%):  {args_accuracy:.2f}%")
     print(f"Cache Hits (Số lượng lấy từ cache):                {cache_hits}")
     print(f"Actual API Calls (Số lượng gọi API):               {api_calls}")
     print("-" * 110)
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate NLU Intent and Parameter Accuracy.")
-    parser.add_argument("--live", action="store_true", help="Bypass local cache and perform live API calls for all cases.")
+    parser = argparse.ArgumentParser(
+        description="Evaluate NLU Intent and Parameter Accuracy."
+    )
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Bypass local cache and perform live API calls for all cases.",
+    )
     parser.add_argument("--no-cache", action="store_true", help="Alias for --live.")
-    parser.add_argument("-y", "--yes", action="store_true", help="Skip confirmation warning for live API calls.")
+    parser.add_argument(
+        "-y",
+        "--yes",
+        action="store_true",
+        help="Skip confirmation warning for live API calls.",
+    )
     args = parser.parse_args()
-    
+
     run_evaluation(live_mode=(args.live or args.no_cache), skip_confirm=args.yes)
