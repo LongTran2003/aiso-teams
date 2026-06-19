@@ -109,7 +109,6 @@
   "Release order ORD-112233 right now.": {
     "predicted_function": "ReleaseOrder",
     "predicted_args": {
-      "comment": null,
       "order_id": "ORD-112233"
     }
   },
