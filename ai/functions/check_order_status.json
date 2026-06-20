@@ -8,10 +8,11 @@
       "properties": {
         "order_id": {
           "type": "string",
-          "description": "Mã định danh duy nhất của đơn hàng (ví dụ: ORD-20240001)."
+          "description": "Mã định danh duy nhất của đơn hàng trong hệ thống SAP (ví dụ: ORD-123456)."
         }
       },
-      "required": ["order_id"]
+      "required": ["order_id"],
+      "additionalProperties": false
     }
   }
 }
