@@ -42,7 +42,7 @@ public sealed class CheckOrderStatusFunction : IFunction
         """;
 
     public async Task<FunctionResult> ExecuteAsync(
-        JsonElement parameters, CancellationToken ct = default)
+        JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
     {
         var orderId = parameters.TryGetProperty("order_id", out var p)
                       && p.ValueKind == JsonValueKind.String
