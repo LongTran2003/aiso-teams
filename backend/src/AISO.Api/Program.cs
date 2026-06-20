@@ -15,6 +15,7 @@ using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Connector.Authentication;
 using Serilog;
+using Polly;
 
 // --- Bootstrap Serilog before host is built so startup errors are captured ---
 Log.Logger = new LoggerConfiguration()
@@ -36,6 +37,15 @@ try
     // --- ASP.NET Core basics ---
     builder.Services.AddHttpClient();
     builder.Services.AddControllers().AddNewtonsoftJson();
+    
+    var aiConnStr = builder.Configuration.GetConnectionString("ApplicationInsights");
+    if (!string.IsNullOrEmpty(aiConnStr))
+    {
+        builder.Services.AddApplicationInsightsTelemetry(options => 
+        {
+            options.ConnectionString = aiConnStr;
+        });
+    }
 
     // --- Bot Framework authentication + adapter ---
     builder.Services.AddSingleton<BotFrameworkAuthentication, ConfigurationBotFrameworkAuthentication>();
@@ -45,6 +55,13 @@ try
     builder.Services.AddSingleton<IStorage, MemoryStorage>();
     builder.Services.AddSingleton<UserState>();
     builder.Services.AddSingleton<ConversationState>();
+    
+    // Add Redis distributed cache
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = builder.Configuration.GetConnectionString("Redis");
+        options.InstanceName = "AisoBot_";
+    });
     
     // Register the MainDialog
     builder.Services.AddTransient<MainDialog>();
@@ -57,7 +74,24 @@ try
     // --- SAP Integration ---
     // Sprint 2: mock client with seeded Global Bike data.
     // Sprint 3: replaced by a real OData client calling SAP via Cloud Connector.
-    builder.Services.AddSingleton<ISapClient, MockSapClient>();
+    builder.Services.Configure<SapOptions>(builder.Configuration.GetSection(SapOptions.SectionName));
+    builder.Services.AddHttpClient<ISapClient, SapClient>((sp, client) =>
+    {
+        var sapOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SapOptions>>().Value;
+        if (!string.IsNullOrEmpty(sapOptions.BaseUrl))
+        {
+            client.BaseAddress = new Uri(sapOptions.BaseUrl);
+        }
+        
+        if (!string.IsNullOrEmpty(sapOptions.Username) && !string.IsNullOrEmpty(sapOptions.Password))
+        {
+            var authHeader = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{sapOptions.Username}:{sapOptions.Password}"));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
+        }
+        
+        client.Timeout = TimeSpan.FromSeconds(sapOptions.TimeoutSeconds > 0 ? sapOptions.TimeoutSeconds : 30);
+    })
+    .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));
 
     // --- AI Orchestration ---
     builder.Services.AddSingleton<IFunction, GetSalesOrdersFunction>();
