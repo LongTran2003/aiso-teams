@@ -21,8 +21,7 @@ public sealed class LoggingFunctionDispatcher : IFunctionDispatcher
         _logger = logger;
     }
 
-    public async Task<DispatchResult> DispatchAsync(
-        string userMessage, CancellationToken ct = default)
+    public async Task<DispatchResult> DispatchAsync(string userMessage, string requestingSapUser, CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();
         _logger.LogInformation(
@@ -31,7 +30,7 @@ public sealed class LoggingFunctionDispatcher : IFunctionDispatcher
 
         try
         {
-            var result = await _inner.DispatchAsync(userMessage, ct);
+            var result = await _inner.DispatchAsync(userMessage, requestingSapUser, ct);
             sw.Stop();
 
             if (result.Handled)
@@ -59,3 +58,5 @@ public sealed class LoggingFunctionDispatcher : IFunctionDispatcher
         }
     }
 }
+
+

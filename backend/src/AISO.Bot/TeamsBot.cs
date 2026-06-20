@@ -96,7 +96,7 @@ public class TeamsBot : TeamsActivityHandler
             }
 
             var stopwatch = Stopwatch.StartNew();
-            var dispatch = await _dispatcher.DispatchAsync(userMessage, cancellationToken);
+            var dispatch = await _dispatcher.DispatchAsync(userMessage, sapUsername, cancellationToken);
             stopwatch.Stop();
 
             // Audit — best-effort: a write failure must not break the bot.

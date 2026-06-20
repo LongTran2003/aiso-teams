@@ -15,6 +15,41 @@ public interface ISapClient
     Task<SalesOrder?> GetSalesOrderByIdAsync(
         string soNumber,
         CancellationToken ct = default);
+
+    Task<SalesOrder> CreateSalesOrderAsync(
+        CreateSalesOrderDto dto,
+        CancellationToken ct = default);
+
+    Task<SalesOrder> UpdateReferenceAsync(
+        string soNumber,
+        string newReference,
+        string requestingSapUser,
+        CancellationToken ct = default);
+
+    Task<SalesOrder> CancelOrderAsync(
+        string soNumber,
+        string reason,
+        string requestingSapUser,
+        CancellationToken ct = default);
+}
+
+public sealed record CreateSalesOrderDto
+{
+    public required string DocType { get; init; }
+    public required string SalesOrg { get; init; }
+    public required string DistChannel { get; init; }
+    public required string Division { get; init; }
+    public required string Customer { get; init; }
+    public required string Currency { get; init; }
+    public required IReadOnlyList<CreateSalesOrderItemDto> Items { get; init; }
+}
+
+public sealed record CreateSalesOrderItemDto
+{
+    public required string Material { get; init; }
+    public required string Plant { get; init; }
+    public required decimal OrderQty { get; init; }
+    public required string Unit { get; init; }
 }
 
 /// <summary>

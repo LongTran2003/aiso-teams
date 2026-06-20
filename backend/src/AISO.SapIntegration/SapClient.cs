@@ -111,6 +111,95 @@ public class SapClient : ISapClient
         }
     }
 
+    public async Task<SalesOrder> CreateSalesOrderAsync(CreateSalesOrderDto dto, CancellationToken ct = default)
+    {
+        var url = "SalesOrder/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.createSalesOrder?sap-client=324&$format=json";
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        var payload = new
+        {
+            DOC_TYPE = dto.DocType,
+            SALES_ORG = dto.SalesOrg,
+            DIST_CHANNEL = dto.DistChannel,
+            DIVISION = dto.Division,
+            CUSTOMER = dto.Customer,
+            CURRENCY = dto.Currency,
+            ITEMS = dto.Items.Select(i => new
+            {
+                MATERIAL = i.Material,
+                PLANT = i.Plant,
+                ORDER_QTY = i.OrderQty,
+                UNIT = i.Unit
+            }).ToList()
+        };
+
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(url, payload, ct);
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<SapSalesOrderDto>(cancellationToken: ct);
+            return result == null ? throw new InvalidOperationException("Failed to deserialize created order.") : MapToDomain(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling SAP OData CreateSalesOrderAsync");
+            throw;
+        }
+    }
+
+    public async Task<SalesOrder> UpdateReferenceAsync(string soNumber, string newReference, string requestingSapUser, CancellationToken ct = default)
+    {
+        var url = $"SalesOrder('{soNumber}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.updateReference?sap-client=324&$format=json";
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        var payload = new
+        {
+            REQUESTING_TEAMS_USER = requestingSapUser,
+            NEW_REFERENCE = newReference
+        };
+
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(url, payload, ct);
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<SapSalesOrderDto>(cancellationToken: ct);
+            return result == null ? throw new InvalidOperationException("Failed to deserialize updated order.") : MapToDomain(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling SAP OData UpdateReferenceAsync for {SoNumber}", soNumber);
+            throw;
+        }
+    }
+
+    public async Task<SalesOrder> CancelOrderAsync(string soNumber, string reason, string requestingSapUser, CancellationToken ct = default)
+    {
+        var url = $"SalesOrder('{soNumber}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.cancelOrder?sap-client=324&$format=json";
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        var payload = new
+        {
+            REQUESTING_TEAMS_USER = requestingSapUser,
+            REASON = reason
+        };
+
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(url, payload, ct);
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.Content.ReadFromJsonAsync<SapSalesOrderDto>(cancellationToken: ct);
+            return result == null ? throw new InvalidOperationException("Failed to deserialize canceled order.") : MapToDomain(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling SAP OData CancelOrderAsync for {SoNumber}", soNumber);
+            throw;
+        }
+    }
+
     private SalesOrder MapToDomain(SapSalesOrderDto dto)
     {
         return new SalesOrder
