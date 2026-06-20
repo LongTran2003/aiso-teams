@@ -62,6 +62,10 @@ try
         options.InstanceName = "AisoBot_";
     });
 
+    // Register the SSO Dialog and User Mapping Service
+    builder.Services.AddTransient<AISO.Bot.Services.UserMappingService>();
+    builder.Services.AddTransient<AISO.Bot.Dialogs.SsoDialog>();
+
     // Register the Bot
     builder.Services.AddTransient<IBot, TeamsBot>();
 
@@ -72,6 +76,27 @@ try
     // Sprint 2: mock client with seeded Global Bike data.
     // Sprint 3: replaced by a real OData client calling SAP via Cloud Connector.
     builder.Services.Configure<SapOptions>(builder.Configuration.GetSection(SapOptions.SectionName));
+    
+    // Register SapTokenManager
+    builder.Services.AddHttpClient<ISapTokenManager, SapTokenManager>((sp, client) =>
+    {
+        var sapOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SapOptions>>().Value;
+        if (!string.IsNullOrEmpty(sapOptions.BaseUrl))
+        {
+            client.BaseAddress = new Uri(sapOptions.BaseUrl);
+        }
+        
+        if (!string.IsNullOrEmpty(sapOptions.Username) && !string.IsNullOrEmpty(sapOptions.Password))
+        {
+            var authHeader = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{sapOptions.Username}:{sapOptions.Password}"));
+            client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
+        }
+        
+        client.Timeout = TimeSpan.FromSeconds(sapOptions.TimeoutSeconds > 0 ? sapOptions.TimeoutSeconds : 30);
+    })
+    .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));
+
+    // Register SapClient
     builder.Services.AddHttpClient<ISapClient, SapClient>((sp, client) =>
     {
         var sapOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SapOptions>>().Value;
@@ -79,13 +104,13 @@ try
         {
             client.BaseAddress = new Uri(sapOptions.BaseUrl);
         }
-
+        
         if (!string.IsNullOrEmpty(sapOptions.Username) && !string.IsNullOrEmpty(sapOptions.Password))
         {
             var authHeader = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{sapOptions.Username}:{sapOptions.Password}"));
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
         }
-
+        
         client.Timeout = TimeSpan.FromSeconds(sapOptions.TimeoutSeconds > 0 ? sapOptions.TimeoutSeconds : 30);
     })
     .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));

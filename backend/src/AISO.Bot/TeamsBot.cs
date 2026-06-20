@@ -11,22 +11,48 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Serilog.Context;
 
+using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Builder.Teams;
+using AISO.Bot.Dialogs;
+using AISO.Bot.Services;
+
 namespace AISO.Bot;
 
-public class TeamsBot : ActivityHandler
+public class TeamsBot : TeamsActivityHandler
 {
     private readonly IFunctionDispatcher _dispatcher;
     private readonly IAuditLogger _audit;
     private readonly ILogger<TeamsBot> _logger;
+    private readonly ConversationState _conversationState;
+    private readonly UserState _userState;
+    private readonly SsoDialog _dialog;
+    private readonly UserMappingService _userMappingService;
 
     public TeamsBot(
         IFunctionDispatcher dispatcher,
         IAuditLogger audit,
-        ILogger<TeamsBot> logger)
+        ILogger<TeamsBot> logger,
+        ConversationState conversationState,
+        UserState userState,
+        SsoDialog dialog,
+        UserMappingService userMappingService)
     {
         _dispatcher = dispatcher;
         _audit = audit;
         _logger = logger;
+        _conversationState = conversationState;
+        _userState = userState;
+        _dialog = dialog;
+        _userMappingService = userMappingService;
+    }
+
+    public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default)
+    {
+        await base.OnTurnAsync(turnContext, cancellationToken);
+
+        // Save any state changes that might have occurred during the turn.
+        await _conversationState.SaveChangesAsync(turnContext, false, cancellationToken);
+        await _userState.SaveChangesAsync(turnContext, false, cancellationToken);
     }
 
     protected override async Task OnMessageActivityAsync(
@@ -53,6 +79,19 @@ public class TeamsBot : ActivityHandler
                 await turnContext.SendActivityAsync(
                     MessageFactory.Attachment(BuildHelpCard()),
                     cancellationToken);
+                return;
+            }
+
+            var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+
+            var dialogSet = new DialogSet(_conversationState.CreateProperty<DialogState>("DialogState"));
+            dialogSet.Add(_dialog);
+            var dialogContext = await dialogSet.CreateContextAsync(turnContext, cancellationToken);
+
+            if (dialogContext.ActiveDialog != null || string.IsNullOrEmpty(sapUsername))
+            {
+                // We are either in the middle of login/mapping OR we need to start it
+                await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
                 return;
             }
 
@@ -150,6 +189,27 @@ public class TeamsBot : ActivityHandler
                 $"Function {dispatch.FunctionName} executed (no result).",
                 cancellationToken: cancellationToken);
         }
+    }
+
+    protected override async Task<InvokeResponse> OnInvokeActivityAsync(ITurnContext<IInvokeActivity> turnContext, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Received Invoke Activity with Name: {InvokeName}", turnContext.Activity.Name);
+        
+        if (turnContext.Activity.Name == "signin/verifyState" || turnContext.Activity.Name == "signin/tokenExchange")
+        {
+            _logger.LogInformation("Received SSO Token Exchange Invoke Activity");
+            await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
+            return new InvokeResponse { Status = 200 };
+        }
+        
+        // When silent SSO fails, Teams sends "signin/failure". We MUST return 200 to tell Teams to show the Sign-in button.
+        if (turnContext.Activity.Name == "signin/failure")
+        {
+            _logger.LogWarning("SSO Token Exchange failed. Teams should now fallback to showing the OAuthCard.");
+            return new InvokeResponse { Status = 200 };
+        }
+        
+        return await base.OnInvokeActivityAsync(turnContext, cancellationToken);
     }
 
     protected override async Task OnMembersAddedAsync(
