@@ -62,9 +62,8 @@ try
         options.InstanceName = "AisoBot_";
     });
     
-    // Register the MainDialog
-    builder.Services.AddTransient<MainDialog>();
-    builder.Services.AddTransient<IBot, TeamsBot<MainDialog>>();
+    // Register the Bot
+    builder.Services.AddTransient<IBot, TeamsBot>();
 
     // --- Persistence (EF Core + PostgreSQL) + Audit logger ---
     builder.Services.AddPersistence(builder.Configuration);
