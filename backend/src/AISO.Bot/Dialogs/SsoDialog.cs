@@ -35,7 +35,7 @@ public class SsoDialog : ComponentDialog
             }));
 
         AddDialog(new TextPrompt(nameof(TextPrompt)));
-        
+
         AddDialog(new WaterfallDialog(nameof(WaterfallDialog), new WaterfallStep[]
         {
             PromptStepAsync,
@@ -62,7 +62,7 @@ public class SsoDialog : ComponentDialog
             {
                 // We have the token! Now check if user is mapped.
                 var teamsId = stepContext.Context.Activity.From.Id;
-                
+
                 // Decode token to get email or name
                 var displayName = stepContext.Context.Activity.From.Name ?? "Unknown User";
                 try
@@ -117,7 +117,7 @@ public class SsoDialog : ComponentDialog
     private async Task<DialogTurnResult> FinalStepAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
     {
         var sapUsername = stepContext.Result as string;
-        
+
         // Return the sapUsername to the caller
         return await stepContext.EndDialogAsync(sapUsername, cancellationToken);
     }
