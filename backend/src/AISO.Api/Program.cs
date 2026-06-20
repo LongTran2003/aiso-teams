@@ -121,6 +121,8 @@ try
     builder.Services.AddSingleton<IFunction, ReleaseOrderFunction>();
     builder.Services.AddSingleton<IFunction, RejectOrderFunction>();
     builder.Services.AddSingleton<IFunction, ForwardOrderFunction>();
+    builder.Services.AddSingleton<IFunction, CreateOrderFunction>();
+    builder.Services.AddSingleton<IFunction, UpdateOrderReferenceFunction>();
     builder.Services.AddSingleton<IFunctionRegistry, FunctionRegistry>();
 
     // AI Service integration: register HTTP client for AI microservice.

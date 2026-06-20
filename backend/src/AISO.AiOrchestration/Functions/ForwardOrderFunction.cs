@@ -39,8 +39,7 @@ public sealed class ForwardOrderFunction : IFunction
         }
         """;
 
-    public Task<FunctionResult> ExecuteAsync(
-        JsonElement parameters, CancellationToken ct = default)
+    public Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
     {
         var orderId = parameters.TryGetProperty("order_id", out var p)
                       && p.ValueKind == JsonValueKind.String
@@ -77,3 +76,4 @@ public sealed class ForwardOrderFunction : IFunction
         return Task.FromResult(FunctionResult.Ok(result));
     }
 }
+

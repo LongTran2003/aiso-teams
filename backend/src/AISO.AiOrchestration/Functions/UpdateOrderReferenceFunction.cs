@@ -5,25 +5,24 @@ using Microsoft.Extensions.Logging;
 namespace AISO.AiOrchestration.Functions;
 
 /// <summary>
-/// Rejects a Sales Order in SAP with a reason code.
-/// Maps to AI function schema <c>RejectOrder</c>.
-/// Sprint 3: calls SAP RAP action.
+/// Updates the reference number (e.g. Customer PO) of a Sales Order in SAP.
+/// Maps to AI function schema <c>UpdateOrderReference</c>.
 /// </summary>
-public sealed class RejectOrderFunction : IFunction
+public sealed class UpdateOrderReferenceFunction : IFunction
 {
     private readonly ISapClient _sap;
-    private readonly ILogger<RejectOrderFunction> _logger;
+    private readonly ILogger<UpdateOrderReferenceFunction> _logger;
 
-    public RejectOrderFunction(ISapClient sap, ILogger<RejectOrderFunction> logger)
+    public UpdateOrderReferenceFunction(ISapClient sap, ILogger<UpdateOrderReferenceFunction> logger)
     {
         _sap = sap;
         _logger = logger;
     }
 
-    public string Name => "RejectOrder";
+    public string Name => "UpdateOrderReference";
 
     public string Description =>
-        "Reject or cancel a sales order in the SAP ERP system with a reason code.";
+        "Update the reference number (like a Customer PO) on an existing sales order in SAP.";
 
     public string ParametersJsonSchema => """
         {
@@ -33,13 +32,12 @@ public sealed class RejectOrderFunction : IFunction
               "type": "string",
               "description": "The unique sales order identifier (e.g. '0000005001')."
             },
-            "reason_code": {
+            "new_reference": {
               "type": "string",
-              "enum": ["PRICE_ISSUE", "OUT_OF_STOCK", "OTHER"],
-              "description": "The reason for rejection."
+              "description": "The new reference string or PO number."
             }
           },
-          "required": ["order_id", "reason_code"]
+          "required": ["order_id", "new_reference"]
         }
         """;
 
@@ -50,7 +48,7 @@ public sealed class RejectOrderFunction : IFunction
             ? p.GetString()
             : null;
 
-        var reasonCode = parameters.TryGetProperty("reason_code", out var r)
+        var newRef = parameters.TryGetProperty("new_reference", out var r)
                          && r.ValueKind == JsonValueKind.String
             ? r.GetString()
             : null;
@@ -60,31 +58,31 @@ public sealed class RejectOrderFunction : IFunction
             return FunctionResult.Fail("Missing required parameter: order_id");
         }
 
-        if (string.IsNullOrWhiteSpace(reasonCode))
+        if (string.IsNullOrWhiteSpace(newRef))
         {
-            return FunctionResult.Fail("Missing required parameter: reason_code");
+            return FunctionResult.Fail("Missing required parameter: new_reference");
         }
 
         _logger.LogInformation(
-            "RejectOrder: orderId={OrderId}, reasonCode={ReasonCode}, sapUser={SapUser}", orderId, reasonCode, requestingSapUser);
+            "UpdateOrderReference: orderId={OrderId}, newRef={NewRef}, sapUser={SapUser}", orderId, newRef, requestingSapUser);
 
         try
         {
-            var updatedOrder = await _sap.CancelOrderAsync(orderId, reasonCode, requestingSapUser, ct);
+            var updatedOrder = await _sap.UpdateReferenceAsync(orderId, newRef, requestingSapUser, ct);
             var result = new
             {
                 order_id = updatedOrder.SoNumber,
-                action = "Canceled",
-                reason_code = reasonCode,
-                message = $"Sales order {updatedOrder.SoNumber} has been canceled (reason: {reasonCode}). Status is now {updatedOrder.Status}."
+                action = "ReferenceUpdated",
+                new_reference = newRef,
+                message = $"Sales order {updatedOrder.SoNumber} reference has been updated to {newRef}."
             };
 
             return FunctionResult.Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to cancel order {OrderId}", orderId);
-            return FunctionResult.Fail($"Failed to cancel order in SAP: {ex.Message}");
+            _logger.LogError(ex, "Failed to update reference for order {OrderId}", orderId);
+            return FunctionResult.Fail($"Failed to update order reference in SAP: {ex.Message}");
         }
     }
 }

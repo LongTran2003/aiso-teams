@@ -51,8 +51,7 @@ public sealed class GetSalesOrdersFunction : IFunction
         }
         """;
 
-    public async Task<FunctionResult> ExecuteAsync(
-        JsonElement parameters, CancellationToken ct = default)
+    public async Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
     {
         // Support both BE param names and AI team param names
         var query = new SalesOrdersQuery
@@ -107,3 +106,4 @@ public sealed class GetSalesOrdersFunction : IFunction
         return s is not null && Enum.TryParse<T>(s, ignoreCase: true, out var v) ? v : null;
     }
 }
+
