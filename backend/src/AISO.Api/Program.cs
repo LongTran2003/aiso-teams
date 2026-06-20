@@ -76,7 +76,7 @@ try
     // Sprint 2: mock client with seeded Global Bike data.
     // Sprint 3: replaced by a real OData client calling SAP via Cloud Connector.
     builder.Services.Configure<SapOptions>(builder.Configuration.GetSection(SapOptions.SectionName));
-    
+
     // Register SapTokenManager
     builder.Services.AddHttpClient<ISapTokenManager, SapTokenManager>((sp, client) =>
     {
@@ -85,13 +85,13 @@ try
         {
             client.BaseAddress = new Uri(sapOptions.BaseUrl);
         }
-        
+
         if (!string.IsNullOrEmpty(sapOptions.Username) && !string.IsNullOrEmpty(sapOptions.Password))
         {
             var authHeader = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{sapOptions.Username}:{sapOptions.Password}"));
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
         }
-        
+
         client.Timeout = TimeSpan.FromSeconds(sapOptions.TimeoutSeconds > 0 ? sapOptions.TimeoutSeconds : 30);
     })
     .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));
@@ -104,13 +104,13 @@ try
         {
             client.BaseAddress = new Uri(sapOptions.BaseUrl);
         }
-        
+
         if (!string.IsNullOrEmpty(sapOptions.Username) && !string.IsNullOrEmpty(sapOptions.Password))
         {
             var authHeader = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{sapOptions.Username}:{sapOptions.Password}"));
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
         }
-        
+
         client.Timeout = TimeSpan.FromSeconds(sapOptions.TimeoutSeconds > 0 ? sapOptions.TimeoutSeconds : 30);
     })
     .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));
