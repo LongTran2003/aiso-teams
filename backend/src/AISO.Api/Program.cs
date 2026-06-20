@@ -36,11 +36,11 @@ try
     // --- ASP.NET Core basics ---
     builder.Services.AddHttpClient();
     builder.Services.AddControllers().AddNewtonsoftJson();
-    
+
     var aiConnStr = builder.Configuration.GetConnectionString("ApplicationInsights");
     if (!string.IsNullOrEmpty(aiConnStr))
     {
-        builder.Services.AddApplicationInsightsTelemetry(options => 
+        builder.Services.AddApplicationInsightsTelemetry(options =>
         {
             options.ConnectionString = aiConnStr;
         });
@@ -49,19 +49,19 @@ try
     // --- Bot Framework authentication + adapter ---
     builder.Services.AddSingleton<BotFrameworkAuthentication, ConfigurationBotFrameworkAuthentication>();
     builder.Services.AddSingleton<IBotFrameworkHttpAdapter, AdapterWithErrorHandler>();
-    
+
     // Create the storage we'll be using for User and Conversation state.
     builder.Services.AddSingleton<IStorage, MemoryStorage>();
     builder.Services.AddSingleton<UserState>();
     builder.Services.AddSingleton<ConversationState>();
-    
+
     // Add Redis distributed cache
     builder.Services.AddStackExchangeRedisCache(options =>
     {
         options.Configuration = builder.Configuration.GetConnectionString("Redis");
         options.InstanceName = "AisoBot_";
     });
-    
+
     // Register the Bot
     builder.Services.AddTransient<IBot, TeamsBot>();
 
@@ -79,13 +79,13 @@ try
         {
             client.BaseAddress = new Uri(sapOptions.BaseUrl);
         }
-        
+
         if (!string.IsNullOrEmpty(sapOptions.Username) && !string.IsNullOrEmpty(sapOptions.Password))
         {
             var authHeader = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{sapOptions.Username}:{sapOptions.Password}"));
             client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
         }
-        
+
         client.Timeout = TimeSpan.FromSeconds(sapOptions.TimeoutSeconds > 0 ? sapOptions.TimeoutSeconds : 30);
     })
     .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));

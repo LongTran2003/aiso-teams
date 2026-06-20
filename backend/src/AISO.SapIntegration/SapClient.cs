@@ -21,14 +21,14 @@ public class SapClient : ISapClient
     public async Task<IReadOnlyList<SalesOrder>> GetSalesOrdersAsync(SalesOrdersQuery query, CancellationToken ct = default)
     {
         var urlBuilder = new StringBuilder("SalesOrder?sap-client=324&$format=json");
-        
+
         var filters = new List<string>();
-        
+
         if (!string.IsNullOrWhiteSpace(query.CustomerIdOrName))
         {
             filters.Add($"SoldToParty eq '{query.CustomerIdOrName}'");
         }
-        
+
         if (!string.IsNullOrWhiteSpace(query.SalesOrg))
         {
             filters.Add($"SalesOrganization eq '{query.SalesOrg}'");
@@ -43,7 +43,7 @@ public class SapClient : ISapClient
         {
             filters.Add($"SalesOrderDate le {query.ToDate.Value:yyyy-MM-dd}");
         }
-        
+
         // Status mapping (approximated for demo purposes)
         if (query.Status.HasValue)
         {
@@ -72,7 +72,7 @@ public class SapClient : ISapClient
             _logger.LogInformation("SAP Raw Response: {RawJson}", rawJson);
 
             var result = JsonSerializer.Deserialize<ODataResponse<SapSalesOrderDto>>(rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            
+
             if (result?.Value == null)
                 return Array.Empty<SalesOrder>();
 
@@ -97,7 +97,7 @@ public class SapClient : ISapClient
             {
                 if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
                     return null;
-                
+
                 response.EnsureSuccessStatusCode();
             }
 
