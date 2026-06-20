@@ -11,14 +11,14 @@ namespace AISO.SapIntegration;
 public class SapTokenManager : ISapTokenManager
 {
     private const string CacheKey = "SapCsrfToken";
-    
+
     private readonly HttpClient _httpClient;
     private readonly IDistributedCache _cache;
     private readonly ILogger<SapTokenManager> _logger;
 
     public SapTokenManager(
-        HttpClient httpClient, 
-        IDistributedCache cache, 
+        HttpClient httpClient,
+        IDistributedCache cache,
         ILogger<SapTokenManager> logger)
     {
         _httpClient = httpClient;
@@ -41,13 +41,13 @@ public class SapTokenManager : ISapTokenManager
     public async Task<string> RefreshCsrfTokenAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Fetching new SAP CSRF token from server");
-        
+
         // To get a CSRF token, we must send a GET request with header x-csrf-token: fetch
         var request = new HttpRequestMessage(HttpMethod.Get, "$metadata");
         request.Headers.Add("x-csrf-token", "fetch");
 
         var response = await _httpClient.SendAsync(request, cancellationToken);
-        
+
         // We do not throw if not success, because sometimes SAP returns 401/403 but STILL returns the CSRF token in headers.
         // However, usually we expect 200 OK for $metadata.
         response.EnsureSuccessStatusCode();
@@ -62,10 +62,10 @@ public class SapTokenManager : ISapTokenManager
                 {
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
                 };
-                
+
                 await _cache.SetStringAsync(CacheKey, token, options, cancellationToken);
                 _logger.LogInformation("Successfully fetched and cached new SAP CSRF token");
-                
+
                 return token;
             }
         }

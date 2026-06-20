@@ -194,21 +194,21 @@ public class TeamsBot : TeamsActivityHandler
     protected override async Task<InvokeResponse> OnInvokeActivityAsync(ITurnContext<IInvokeActivity> turnContext, CancellationToken cancellationToken)
     {
         _logger.LogInformation("Received Invoke Activity with Name: {InvokeName}", turnContext.Activity.Name);
-        
+
         if (turnContext.Activity.Name == "signin/verifyState" || turnContext.Activity.Name == "signin/tokenExchange")
         {
             _logger.LogInformation("Received SSO Token Exchange Invoke Activity");
             await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
             return new InvokeResponse { Status = 200 };
         }
-        
+
         // When silent SSO fails, Teams sends "signin/failure". We MUST return 200 to tell Teams to show the Sign-in button.
         if (turnContext.Activity.Name == "signin/failure")
         {
             _logger.LogWarning("SSO Token Exchange failed. Teams should now fallback to showing the OAuthCard.");
             return new InvokeResponse { Status = 200 };
         }
-        
+
         return await base.OnInvokeActivityAsync(turnContext, cancellationToken);
     }
 
