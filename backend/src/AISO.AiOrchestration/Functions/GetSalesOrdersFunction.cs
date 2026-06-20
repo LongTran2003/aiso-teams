@@ -78,7 +78,47 @@ public sealed class GetSalesOrdersFunction : IFunction
         _logger.LogInformation(
             "getSalesOrders returned {Count} orders", orders.Count);
 
-        return FunctionResult.Ok(orders);
+        // Generate a professional QuickChart.io URL for the FE
+        string? chartUrl = null;
+        if (orders.Any())
+        {
+            var statusCounts = orders.GroupBy(o => o.Status)
+                                     .Select(g => new { Status = g.Key.ToString(), Count = g.Count() })
+                                     .ToList();
+
+            var labels = string.Join(",", statusCounts.Select(x => $"'{x.Status}'"));
+            var data = string.Join(",", statusCounts.Select(x => x.Count));
+
+            var chartConfig = $$"""
+            {
+              type: 'doughnut',
+              data: {
+                labels: [{{labels}}],
+                datasets: [{
+                  data: [{{data}}]
+                }]
+              },
+              options: {
+                plugins: {
+                  title: { display: true, text: 'Order Status Distribution' },
+                  datalabels: { display: true, color: '#fff', font: { weight: 'bold' } }
+                }
+              }
+            }
+            """;
+
+            // Remove whitespace to shorten URL
+            chartConfig = System.Text.RegularExpressions.Regex.Replace(chartConfig, @"\s+", "");
+            chartUrl = $"https://quickchart.io/chart?c={Uri.EscapeDataString(chartConfig)}";
+        }
+
+        var response = new
+        {
+            Orders = orders,
+            ChartUrl = chartUrl
+        };
+
+        return FunctionResult.Ok(response);
     }
 
     private static string? GetString(JsonElement el, string name) =>
