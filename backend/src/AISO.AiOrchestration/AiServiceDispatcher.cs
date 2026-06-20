@@ -34,8 +34,7 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
         _logger = logger;
     }
 
-    public async Task<DispatchResult> DispatchAsync(
-        string userMessage, CancellationToken ct = default)
+    public async Task<DispatchResult> DispatchAsync(string userMessage, string requestingSapUser, CancellationToken ct = default)
     {
         AiOrchestratorResponse aiResponse;
 
@@ -104,7 +103,7 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
             "Executing function {FunctionName} with parameters: {Parameters}",
             function.Name, argsJson);
 
-        var result = await function.ExecuteAsync(argsDoc.RootElement, ct);
+        var result = await function.ExecuteAsync(argsDoc.RootElement, requestingSapUser, ct);
 
         return new DispatchResult
         {
@@ -114,3 +113,5 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
         };
     }
 }
+
+

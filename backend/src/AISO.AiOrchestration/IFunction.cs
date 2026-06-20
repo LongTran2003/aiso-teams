@@ -20,7 +20,7 @@ public interface IFunction
     string ParametersJsonSchema { get; }
 
     /// <summary>Execute the function with parameters extracted by the LLM.</summary>
-    Task<FunctionResult> ExecuteAsync(JsonElement parameters, CancellationToken ct = default);
+    Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default);
 }
 
 /// <summary>

@@ -16,7 +16,7 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         _registry = registry;
     }
 
-    public async Task<DispatchResult> DispatchAsync(string userMessage, CancellationToken ct = default)
+    public async Task<DispatchResult> DispatchAsync(string userMessage, string requestingSapUser, CancellationToken ct = default)
     {
         var text = userMessage.Trim().ToLowerInvariant();
 
@@ -32,7 +32,7 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 {
                     var paramsJson = JsonSerializer.Serialize(new { order_id = orderId });
                     using var doc = JsonDocument.Parse(paramsJson);
-                    var result = await fn.ExecuteAsync(doc.RootElement, ct);
+                    var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
                     return new DispatchResult
                     {
                         Handled = true,
@@ -57,7 +57,7 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
 
             using var emptyParams = JsonDocument.Parse("{}");
-            var result = await fn.ExecuteAsync(emptyParams.RootElement, ct);
+            var result = await fn.ExecuteAsync(emptyParams.RootElement, requestingSapUser, ct);
             return new DispatchResult
             {
                 Handled = true,
@@ -72,3 +72,5 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
     [GeneratedRegex(@"(\d{4,10})")]
     private static partial Regex OrderIdPattern();
 }
+
+

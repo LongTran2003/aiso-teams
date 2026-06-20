@@ -132,6 +132,37 @@ public sealed class MockSapClient : ISapClient
         string soNumber, CancellationToken ct = default)
     {
         _logger?.LogDebug("MockSapClient.GetSalesOrderByIdAsync called: soNumber={SoNumber}", soNumber);
-        return Task.FromResult(SeedData.FirstOrDefault(o => o.SoNumber == soNumber));
+        return Task.FromResult<SalesOrder?>(
+            SeedData.FirstOrDefault(x => x.SoNumber == soNumber));
+    }
+
+    public Task<SalesOrder> CreateSalesOrderAsync(CreateSalesOrderDto dto, CancellationToken ct = default)
+    {
+        return Task.FromResult(new SalesOrder
+        {
+            SoNumber = "9999999999",
+            CustomerId = dto.Customer,
+            CustomerName = "Mock Customer",
+            SalesOrg = dto.SalesOrg,
+            OrderDate = DateOnly.FromDateTime(DateTime.Now),
+            NetValue = 1000m,
+            Currency = dto.Currency,
+            Status = SalesOrderStatus.Open,
+            Items = Array.Empty<SalesOrderItem>()
+        });
+    }
+
+    public Task<SalesOrder> UpdateReferenceAsync(string soNumber, string newReference, string requestingSapUser, CancellationToken ct = default)
+    {
+        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
+            ?? throw new InvalidOperationException($"Order {soNumber} not found.");
+        return Task.FromResult(order);
+    }
+
+    public Task<SalesOrder> CancelOrderAsync(string soNumber, string reason, string requestingSapUser, CancellationToken ct = default)
+    {
+        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
+            ?? throw new InvalidOperationException($"Order {soNumber} not found.");
+        return Task.FromResult(order);
     }
 }
