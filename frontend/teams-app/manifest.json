@@ -1,8 +1,8 @@
 {
   "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.15/MicrosoftTeams.schema.json",
   "manifestVersion": "1.15",
-  "version": "1.0.0",
-  "id": "YOUR-AZURE-BOT-APP-ID", 
+  "version": "1.0.1",
+  "id": "14577298-67e2-4d76-a0f8-909f1ea454b8",
   "developer": {
     "name": "FPT University - Team AISO",
     "websiteUrl": "https://fpt.edu.vn",
@@ -10,8 +10,8 @@
     "termsOfUseUrl": "https://fpt.edu.vn/terms"
   },
   "icons": {
-    "color": "icons/color.png",
-    "outline": "icons/outline.png"
+    "color": "color.png",
+    "outline": "outline.png"
   },
   "name": {
     "short": "AISO Bot",
@@ -24,21 +24,44 @@
   "accentColor": "#61A0FF",
   "bots": [
     {
-      "botId": "YOUR-AZURE-BOT-APP-ID",
-      "scopes": ["personal", "team", "groupchat"],
+      "botId": "14577298-67e2-4d76-a0f8-909f1ea454b8",
+      "scopes": [
+        "personal",
+        "team",
+        "groupchat"
+      ],
       "supportsFiles": true,
       "isNotificationOnly": false,
       "commandLists": [
         {
-          "scopes": ["personal", "team"],
+          "scopes": [
+            "personal",
+            "team"
+          ],
           "commands": [
-            { "title": "help", "description": "Xem danh sách các câu lệnh hướng dẫn" },
-            { "title": "recent orders", "description": "Hiển thị danh sách đơn hàng SAP gần đây" }
+            {
+              "title": "help",
+              "description": "Xem danh sách các câu lệnh hướng dẫn"
+            },
+            {
+              "title": "recent orders",
+              "description": "Hiển thị danh sách đơn hàng SAP gần đây"
+            }
           ]
         }
       ]
     }
   ],
-  "permissions": ["identity", "messageTeamMembers"],
-  "validDomains": []
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "token.botframework.com",
+    "ztd0vnrg-3978.asse.devtunnels.ms"
+  ],
+  "webApplicationInfo": {
+    "id": "14577298-67e2-4d76-a0f8-909f1ea454b8",
+    "resource": "api://ztd0vnrg-3978.asse.devtunnels.ms/14577298-67e2-4d76-a0f8-909f1ea454b8"
+  }
 }
