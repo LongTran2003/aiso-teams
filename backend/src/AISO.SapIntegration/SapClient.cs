@@ -182,10 +182,11 @@ public class SapClient : ISapClient
 
     private async Task<TResult?> SendPostRequestAsync<TResult, TPayload>(string url, TPayload payload, CancellationToken ct)
     {
-        var request = new HttpRequestMessage(HttpMethod.Post, url)
-        {
-            Content = JsonContent.Create(payload)
-        };
+        var request = new HttpRequestMessage(HttpMethod.Post, url);
+        var jsonContent = JsonContent.Create(payload);
+        jsonContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
+        request.Content = jsonContent;
+        request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
         var authContext = await _tokenManager.GetAuthContextAsync(ct);
         if (!string.IsNullOrEmpty(authContext.CsrfToken))
