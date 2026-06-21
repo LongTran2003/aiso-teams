@@ -118,7 +118,8 @@ public class SapClient : ISapClient
                 ITEM_NO = ((index + 1) * 10).ToString().PadLeft(6, '0'),
                 MATERIAL = i.Material,
                 PLANT = i.Plant,
-                ORDER_QTY = i.OrderQty
+                ORDER_QTY = i.OrderQty,
+                UNIT = i.Unit
             }).ToList()
         };
 
@@ -183,9 +184,10 @@ public class SapClient : ISapClient
     private async Task<TResult?> SendPostRequestAsync<TResult, TPayload>(string url, TPayload payload, CancellationToken ct)
     {
         var request = new HttpRequestMessage(HttpMethod.Post, url);
-        var jsonContent = JsonContent.Create(payload);
-        jsonContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/json");
-        request.Content = jsonContent;
+        var jsonString = System.Text.Json.JsonSerializer.Serialize(payload);
+        var stringContent = new StringContent(jsonString, System.Text.Encoding.UTF8, "application/json");
+        stringContent.Headers.ContentType.CharSet = string.Empty;
+        request.Content = stringContent;
         request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
         var authContext = await _tokenManager.GetAuthContextAsync(ct);
