@@ -10,57 +10,46 @@ namespace AISO.SapIntegration;
 public class SapClient : ISapClient
 {
     private readonly HttpClient _httpClient;
+    private readonly ISapTokenManager _tokenManager;
     private readonly ILogger<SapClient> _logger;
 
-    public SapClient(HttpClient httpClient, ILogger<SapClient> logger)
+    public SapClient(HttpClient httpClient, ISapTokenManager tokenManager, ILogger<SapClient> logger)
     {
         _httpClient = httpClient;
+        _tokenManager = tokenManager;
         _logger = logger;
     }
 
     public async Task<IReadOnlyList<SalesOrder>> GetSalesOrdersAsync(SalesOrdersQuery query, CancellationToken ct = default)
     {
-        var urlBuilder = new StringBuilder("SalesOrder?sap-client=324&$format=json");
-
-        var filters = new List<string>();
+        var builder = new ODataQueryBuilder("SalesOrder")
+            .AddCustomParam("sap-client", "324")
+            .Top(query.Top);
 
         if (!string.IsNullOrWhiteSpace(query.CustomerIdOrName))
         {
-            filters.Add($"SoldToParty eq '{query.CustomerIdOrName}'");
+            builder.Filter("SoldToParty", "eq", query.CustomerIdOrName);
         }
 
         if (!string.IsNullOrWhiteSpace(query.SalesOrg))
         {
-            filters.Add($"SalesOrganization eq '{query.SalesOrg}'");
+            builder.Filter("SalesOrganization", "eq", query.SalesOrg);
         }
 
         if (query.FromDate.HasValue)
         {
-            filters.Add($"SalesOrderDate ge {query.FromDate.Value:yyyy-MM-dd}");
+            builder.FilterRaw($"SalesOrderDate ge {query.FromDate.Value:yyyy-MM-dd}");
         }
 
         if (query.ToDate.HasValue)
         {
-            filters.Add($"SalesOrderDate le {query.ToDate.Value:yyyy-MM-dd}");
+            builder.FilterRaw($"SalesOrderDate le {query.ToDate.Value:yyyy-MM-dd}");
         }
 
-        // Status mapping (approximated for demo purposes)
-        if (query.Status.HasValue)
-        {
-            // OData logic depends on SAP fields (e.g., OverallDeliveryStatus, OverallSDProcessStatus)
-            // Example mapping:
-            // if (query.Status == SalesOrderStatus.Open) filters.Add("OverallSDProcessStatus eq 'A'");
-            // We will omit strict status filtering for now since SAP schema details are missing
-        }
+        // We expand ITEMS by default to map domain items if available
+        builder.Expand("ITEMS");
 
-        if (filters.Any())
-        {
-            urlBuilder.Append("&$filter=").Append(Uri.EscapeDataString(string.Join(" and ", filters)));
-        }
-
-        urlBuilder.Append($"&$top={query.Top}");
-
-        var url = urlBuilder.ToString();
+        var url = builder.Build();
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
         try
@@ -135,10 +124,7 @@ public class SapClient : ISapClient
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(url, payload, ct);
-            response.EnsureSuccessStatusCode();
-
-            var result = await response.Content.ReadFromJsonAsync<SapSalesOrderDto>(cancellationToken: ct);
+            var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
             return result == null ? throw new InvalidOperationException("Failed to deserialize created order.") : MapToDomain(result);
         }
         catch (Exception ex)
@@ -161,10 +147,7 @@ public class SapClient : ISapClient
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(url, payload, ct);
-            response.EnsureSuccessStatusCode();
-
-            var result = await response.Content.ReadFromJsonAsync<SapSalesOrderDto>(cancellationToken: ct);
+            var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
             return result == null ? throw new InvalidOperationException("Failed to deserialize updated order.") : MapToDomain(result);
         }
         catch (Exception ex)
@@ -187,10 +170,7 @@ public class SapClient : ISapClient
 
         try
         {
-            var response = await _httpClient.PostAsJsonAsync(url, payload, ct);
-            response.EnsureSuccessStatusCode();
-
-            var result = await response.Content.ReadFromJsonAsync<SapSalesOrderDto>(cancellationToken: ct);
+            var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
             return result == null ? throw new InvalidOperationException("Failed to deserialize canceled order.") : MapToDomain(result);
         }
         catch (Exception ex)
@@ -198,6 +178,30 @@ public class SapClient : ISapClient
             _logger.LogError(ex, "Error calling SAP OData CancelOrderAsync for {SoNumber}", soNumber);
             throw;
         }
+    }
+
+    private async Task<TResult?> SendPostRequestAsync<TResult, TPayload>(string url, TPayload payload, CancellationToken ct)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Post, url)
+        {
+            Content = JsonContent.Create(payload)
+        };
+
+        var authContext = await _tokenManager.GetAuthContextAsync(ct);
+        if (!string.IsNullOrEmpty(authContext.CsrfToken))
+        {
+            request.Headers.Add("x-csrf-token", authContext.CsrfToken);
+        }
+
+        if (!string.IsNullOrEmpty(authContext.SessionCookie))
+        {
+            request.Headers.Add("Cookie", authContext.SessionCookie);
+        }
+
+        var response = await _httpClient.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadFromJsonAsync<TResult>(cancellationToken: ct);
     }
 
     private SalesOrder MapToDomain(SapSalesOrderDto dto)
