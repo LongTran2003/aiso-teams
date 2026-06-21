@@ -43,6 +43,66 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
+        // Pattern: Create Order
+        if (text.Contains("tạo") && text.Contains("đơn"))
+        {
+            var fn = _registry.GetByName("CreateOrder");
+            if (fn is not null)
+            {
+                var custMatch = Regex.Match(text, @"(uscu_[a-z0-9]+)", RegexOptions.IgnoreCase);
+                var matMatch = Regex.Match(text, @"mặt hàng ([a-z0-9]+)", RegexOptions.IgnoreCase);
+                var qtyMatch = Regex.Match(text, @"số lượng (\d+)");
+
+                var customerId = custMatch.Success ? custMatch.Groups[1].Value.ToUpperInvariant() : "10100001";
+                var material = matMatch.Success ? matMatch.Groups[1].Value.ToUpperInvariant() : "TG11";
+                var qty = qtyMatch.Success ? int.Parse(qtyMatch.Groups[1].Value) : 1;
+
+                var paramsObj = new {
+                    customer = customerId,
+                    items = new[] { new { material = material, qty = qty } }
+                };
+
+                using var doc = JsonDocument.Parse(JsonSerializer.Serialize(paramsObj));
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result };
+            }
+        }
+
+        // Pattern: Update Reference
+        if (text.Contains("cập nhật") && text.Contains("reference"))
+        {
+            var fn = _registry.GetByName("UpdateOrderReference");
+            if (fn is not null)
+            {
+                var orderMatch = OrderIdPattern().Match(text);
+                var refMatch = Regex.Match(text, @"thành '([^']+)'", RegexOptions.IgnoreCase);
+                
+                var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
+                var newRef = refMatch.Success ? refMatch.Groups[1].Value : "Updated Reference";
+
+                var paramsObj = new { order_id = orderId, new_reference = newRef };
+                using var doc = JsonDocument.Parse(JsonSerializer.Serialize(paramsObj));
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result };
+            }
+        }
+
+        // Pattern: Cancel Order
+        if ((text.Contains("hủy") || text.Contains("huỷ")) && text.Contains("đơn"))
+        {
+            var fn = _registry.GetByName("RejectOrder");
+            if (fn is not null)
+            {
+                var orderMatch = OrderIdPattern().Match(text);
+                var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
+
+                var paramsObj = new { order_id = orderId, reason_code = "OTHER" };
+                using var doc = JsonDocument.Parse(JsonSerializer.Serialize(paramsObj));
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result };
+            }
+        }
+
         // Pattern 2: List orders — "show orders", "đơn hàng gần đây"
         if (text.Contains("order") || text.Contains("đơn"))
         {
