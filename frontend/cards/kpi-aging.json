@@ -1,0 +1,51 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "⏳ Sales Order Aging",
+      "weight": "Bolder",
+      "size": "Medium",
+      "color": "Accent"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Overdue Orders:", "value": "${overdueCount}" },
+        { "title": "Aging > 30 days:", "value": "${aging30Count}" },
+        { "title": "Total Value:", "value": "${agingTotalValue}" }
+      ],
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Overdue ratio",
+      "weight": "Bolder",
+      "spacing": "Small"
+    },
+    {
+      "type": "ProgressBar",
+      "value": "${overduePercent}",
+      "max": 100,
+      "label": "${overduePercent}%"
+    },
+    {
+      "type": "Image",
+      "url": "${chartUrl}",
+      "altText": "Aging chart",
+      "spacing": "Medium",
+      "horizontalAlignment": "Center"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Review Aging Orders",
+      "data": {
+        "action": "review_aging"
+      }
+    }
+  ]
+}
