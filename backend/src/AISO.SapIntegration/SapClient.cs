@@ -112,12 +112,13 @@ public class SapClient : ISapClient
             DIVISION = dto.Division,
             CUSTOMER = dto.Customer,
             CURRENCY = dto.Currency,
-            ITEMS = dto.Items.Select(i => new
+            ITEMS = dto.Items.Select((i, index) => new
             {
+                SO_NUMBER = "0000000000",
+                ITEM_NO = ((index + 1) * 10).ToString().PadLeft(6, '0'),
                 MATERIAL = i.Material,
                 PLANT = i.Plant,
-                ORDER_QTY = i.OrderQty,
-                UNIT = i.Unit
+                ORDER_QTY = i.OrderQty
             }).ToList()
         };
 
@@ -198,7 +199,11 @@ public class SapClient : ISapClient
         }
 
         var response = await _httpClient.SendAsync(request, ct);
-        response.EnsureSuccessStatusCode();
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorBody = await response.Content.ReadAsStringAsync(ct);
+            throw new HttpRequestException($"Response status code does not indicate success: {(int)response.StatusCode} ({response.ReasonPhrase}). Body: {errorBody}");
+        }
 
         return await response.Content.ReadFromJsonAsync<TResult>(cancellationToken: ct);
     }
