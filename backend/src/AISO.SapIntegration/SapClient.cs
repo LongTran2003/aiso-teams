@@ -28,22 +28,22 @@ public class SapClient : ISapClient
 
         if (!string.IsNullOrWhiteSpace(query.CustomerIdOrName))
         {
-            builder.Filter("SoldToParty", "eq", query.CustomerIdOrName);
+            builder.Filter("Customer", "eq", query.CustomerIdOrName);
         }
 
         if (!string.IsNullOrWhiteSpace(query.SalesOrg))
         {
-            builder.Filter("SalesOrganization", "eq", query.SalesOrg);
+            builder.Filter("SalesOrg", "eq", query.SalesOrg);
         }
 
         if (query.FromDate.HasValue)
         {
-            builder.FilterRaw($"SalesOrderDate ge {query.FromDate.Value:yyyy-MM-dd}");
+            builder.FilterRaw($"DocDate ge {query.FromDate.Value:yyyy-MM-dd}");
         }
 
         if (query.ToDate.HasValue)
         {
-            builder.FilterRaw($"SalesOrderDate le {query.ToDate.Value:yyyy-MM-dd}");
+            builder.FilterRaw($"DocDate le {query.ToDate.Value:yyyy-MM-dd}");
         }
 
         // Note: The SalesOrder view in this SAP OData V4 service is flat and does not support Expand("ITEMS")
