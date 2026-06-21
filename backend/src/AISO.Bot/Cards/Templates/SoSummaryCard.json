@@ -12,7 +12,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "${count} order(s) found · Mock data",
+      "text": "${count} order(s) found",
       "size": "Small",
       "isSubtle": true,
       "spacing": "None",
