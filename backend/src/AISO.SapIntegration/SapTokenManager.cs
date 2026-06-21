@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Net.Http;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Caching.Distributed;
@@ -10,7 +11,7 @@ namespace AISO.SapIntegration;
 
 public class SapTokenManager : ISapTokenManager
 {
-    private const string CacheKey = "SapCsrfToken";
+    private const string CacheKey = "SapCsrfContext";
 
     private readonly HttpClient _httpClient;
     private readonly IDistributedCache _cache;
@@ -26,30 +27,37 @@ public class SapTokenManager : ISapTokenManager
         _logger = logger;
     }
 
-    public async Task<string> GetCsrfTokenAsync(CancellationToken cancellationToken = default)
+    public async Task<SapAuthContext> GetAuthContextAsync(CancellationToken cancellationToken = default)
     {
-        var cachedToken = await _cache.GetStringAsync(CacheKey, cancellationToken);
-        if (!string.IsNullOrEmpty(cachedToken))
+        var cachedJson = await _cache.GetStringAsync(CacheKey, cancellationToken);
+        if (!string.IsNullOrEmpty(cachedJson))
         {
-            _logger.LogDebug("Retrieved SAP CSRF token from Redis cache");
-            return cachedToken;
+            try
+            {
+                var context = JsonSerializer.Deserialize<SapAuthContext>(cachedJson);
+                if (context != null)
+                {
+                    _logger.LogDebug("Retrieved SAP CSRF token from Redis cache");
+                    return context;
+                }
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogWarning(ex, "Failed to deserialize cached SAP auth context. Refreshing...");
+            }
         }
 
-        return await RefreshCsrfTokenAsync(cancellationToken);
+        return await RefreshAuthContextAsync(cancellationToken);
     }
 
-    public async Task<string> RefreshCsrfTokenAsync(CancellationToken cancellationToken = default)
+    public async Task<SapAuthContext> RefreshAuthContextAsync(CancellationToken cancellationToken = default)
     {
         _logger.LogInformation("Fetching new SAP CSRF token from server");
 
-        // To get a CSRF token, we must send a GET request with header x-csrf-token: fetch
         var request = new HttpRequestMessage(HttpMethod.Get, "$metadata");
         request.Headers.Add("x-csrf-token", "fetch");
 
         var response = await _httpClient.SendAsync(request, cancellationToken);
-
-        // We do not throw if not success, because sometimes SAP returns 401/403 but STILL returns the CSRF token in headers.
-        // However, usually we expect 200 OK for $metadata.
         response.EnsureSuccessStatusCode();
 
         if (response.Headers.TryGetValues("x-csrf-token", out var tokenValues))
@@ -57,16 +65,24 @@ public class SapTokenManager : ISapTokenManager
             var token = tokenValues.FirstOrDefault();
             if (!string.IsNullOrEmpty(token))
             {
-                // Cache the token. Usually SAP tokens are valid for 30 minutes to 2 hours. We use 30 minutes to be safe.
+                var cookie = string.Empty;
+                if (response.Headers.TryGetValues("set-cookie", out var cookieValues))
+                {
+                    // Basic handling: join all set-cookie values
+                    cookie = string.Join("; ", cookieValues);
+                }
+
+                var context = new SapAuthContext(token, cookie);
+
                 var options = new DistributedCacheEntryOptions
                 {
                     AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(30)
                 };
 
-                await _cache.SetStringAsync(CacheKey, token, options, cancellationToken);
-                _logger.LogInformation("Successfully fetched and cached new SAP CSRF token");
+                await _cache.SetStringAsync(CacheKey, JsonSerializer.Serialize(context), options, cancellationToken);
+                _logger.LogInformation("Successfully fetched and cached new SAP CSRF token and cookie");
 
-                return token;
+                return context;
             }
         }
 
