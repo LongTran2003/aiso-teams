@@ -1,0 +1,59 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "📊 KPI Summary",
+      "weight": "Bolder",
+      "size": "Medium",
+      "color": "Accent"
+    },
+    {
+      "type": "ColumnSet",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Revenue",
+              "weight": "Bolder"
+            },
+            {
+              "type": "TextBlock",
+              "text": "${revenueValue}",
+              "size": "Large",
+              "color": "Good"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Orders",
+              "weight": "Bolder"
+            },
+            {
+              "type": "TextBlock",
+              "text": "${orderCount}",
+              "size": "Large"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Image",
+      "url": "${chartUrl}",
+      "altText": "KPI summary chart",
+      "spacing": "Medium",
+      "horizontalAlignment": "Center"
+    }
+  ]
+}
