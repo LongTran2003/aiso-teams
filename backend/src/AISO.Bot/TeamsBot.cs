@@ -149,8 +149,9 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
-            if (result.Payload is IReadOnlyList<SalesOrder> orders)
+            if (result.Payload is AISO.AiOrchestration.Functions.GetSalesOrdersResponse getOrdersResponse)
             {
+                var orders = getOrdersResponse.Orders;
                 if (orders.Count == 0)
                 {
                     await turnContext.SendActivityAsync(
