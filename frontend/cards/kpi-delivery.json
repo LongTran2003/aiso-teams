@@ -1,0 +1,45 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "🚚 Delivery Performance",
+      "weight": "Bolder",
+      "size": "Medium",
+      "color": "Accent"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "On-time Delivery:", "value": "${onTimeRate}" },
+        { "title": "Delayed Orders:", "value": "${delayedCount}" },
+        { "title": "Completed Today:", "value": "${completedToday}" }
+      ],
+      "spacing": "Medium"
+    },
+    {
+      "type": "ProgressBar",
+      "value": "${deliveryProgress}",
+      "max": 100,
+      "label": "${deliveryProgress}%"
+    },
+    {
+      "type": "Image",
+      "url": "${chartUrl}",
+      "altText": "Delivery performance chart",
+      "spacing": "Medium",
+      "horizontalAlignment": "Center"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Open Delivery KPI",
+      "data": {
+        "action": "view_delivery_kpi"
+      }
+    }
+  ]
+}
