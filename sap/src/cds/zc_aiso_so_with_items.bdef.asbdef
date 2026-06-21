@@ -1,0 +1,9 @@
+projection;
+strict ( 1 );
+
+define behavior for ZC_AISO_SO_WITH_ITEMS alias SalesOrder
+{
+  use action cancelOrder;
+  use action updateReference;
+  use action createSalesOrder;
+}

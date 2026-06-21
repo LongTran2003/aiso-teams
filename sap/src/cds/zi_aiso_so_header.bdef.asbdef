@@ -1,0 +1,14 @@
+unmanaged implementation in class zbp_i_aiso_so_header unique;
+strict ( 1 );
+
+define behavior for ZI_AISO_SO_HEADER alias SalesOrder
+authorization master ( instance )
+lock master
+{
+  action cancelOrder parameter zaiso_a_cancel_so result [1] $self;
+  action updateReference parameter zaiso_a_update_ref result [1] $self;
+  static action createSalesOrder parameter zaiso_a_create_so result [1] $self;
+  action releaseOrder parameter zaiso_s_release_params  result [1] $self;
+  action forwardOrder parameter zaiso_s_forward_params result [1] $self;
+  field ( readonly ) SoNumber, OverallStatus, Customer, SalesOrg, DistChannel, Division, Currency, NetValue, DocDate, CreatedBy, CreatedDate;
+}
