@@ -56,8 +56,17 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 };
             }
 
-            using var emptyParams = JsonDocument.Parse("{}");
-            var result = await fn.ExecuteAsync(emptyParams.RootElement, requestingSapUser, ct);
+            var customerIdMatch = Regex.Match(text, @"(uscu_[a-z0-9]+)", RegexOptions.IgnoreCase);
+            var customerId = customerIdMatch.Success ? customerIdMatch.Groups[1].Value.ToUpperInvariant() : null;
+
+            var paramsObj = customerId != null 
+                ? new { customer_id_or_name = customerId } 
+                : (object)new { };
+                
+            var paramsJson = JsonSerializer.Serialize(paramsObj);
+            using var doc = JsonDocument.Parse(paramsJson);
+            
+            var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
             return new DispatchResult
             {
                 Handled = true,
