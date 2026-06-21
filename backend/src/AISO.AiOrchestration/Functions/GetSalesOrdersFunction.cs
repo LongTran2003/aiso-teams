@@ -112,11 +112,7 @@ public sealed class GetSalesOrdersFunction : IFunction
             chartUrl = $"https://quickchart.io/chart?c={Uri.EscapeDataString(chartConfig)}";
         }
 
-        var response = new
-        {
-            Orders = orders,
-            ChartUrl = chartUrl
-        };
+        var response = new GetSalesOrdersResponse(orders, chartUrl);
 
         return FunctionResult.Ok(response);
     }
@@ -146,4 +142,6 @@ public sealed class GetSalesOrdersFunction : IFunction
         return s is not null && Enum.TryParse<T>(s, ignoreCase: true, out var v) ? v : null;
     }
 }
+
+public record GetSalesOrdersResponse(IReadOnlyList<SalesOrder> Orders, string? ChartUrl);
 
