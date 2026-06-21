@@ -58,10 +58,10 @@
   ],
   "validDomains": [
     "token.botframework.com",
-    "ztd0vnrg-3978.asse.devtunnels.ms"
+    "aiso-backend-api-eqfxfnhybcchdgc8.southeastasia-01.azurewebsites.net"
   ],
   "webApplicationInfo": {
     "id": "14577298-67e2-4d76-a0f8-909f1ea454b8",
-    "resource": "api://ztd0vnrg-3978.asse.devtunnels.ms/14577298-67e2-4d76-a0f8-909f1ea454b8"
+    "resource": "api://aiso-backend-api-eqfxfnhybcchdgc8.southeastasia-01.azurewebsites.net/14577298-67e2-4d76-a0f8-909f1ea454b8"
   }
 }

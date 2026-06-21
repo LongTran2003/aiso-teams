@@ -6,6 +6,8 @@ obj/
 .vs/
 *.cache
 TestResults/
+Properties/PublishProfiles/
+Properties/ServiceDependencies/
 
 # Node / Frontend
 node_modules/
