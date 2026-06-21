@@ -60,7 +60,7 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             var customerId = customerIdMatch.Success ? customerIdMatch.Groups[1].Value.ToUpperInvariant() : null;
 
             var paramsObj = customerId != null 
-                ? new { customer_id_or_name = customerId } 
+                ? new { customerIdOrName = customerId } 
                 : (object)new { };
                 
             var paramsJson = JsonSerializer.Serialize(paramsObj);
