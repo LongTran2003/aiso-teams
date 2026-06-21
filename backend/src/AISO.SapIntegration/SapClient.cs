@@ -46,8 +46,7 @@ public class SapClient : ISapClient
             builder.FilterRaw($"SalesOrderDate le {query.ToDate.Value:yyyy-MM-dd}");
         }
 
-        // We expand ITEMS by default to map domain items if available
-        builder.Expand("ITEMS");
+        // Note: The SalesOrder view in this SAP OData V4 service is flat and does not support Expand("ITEMS")
 
         var url = builder.Build();
         _logger.LogInformation("Calling SAP OData: {Url}", url);
