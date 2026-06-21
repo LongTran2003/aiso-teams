@@ -25,7 +25,7 @@ public class ODataQueryBuilder
     public ODataQueryBuilder Filter(string field, string op, string? value, bool isString = true)
     {
         if (string.IsNullOrWhiteSpace(value)) return this;
-        
+
         var formattedValue = isString ? $"'{value}'" : value;
         _filters.Add($"{field} {op} {formattedValue}");
         return this;
