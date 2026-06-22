@@ -34,5 +34,11 @@
     "predicted_args": {
       "order_id": "ORD-777000"
     }
+  },
+  "Can you check order ORD-456789 for me?": {
+    "predicted_function": "CheckOrderStatus",
+    "predicted_args": {
+      "order_id": "ORD-456789"
+    }
   }
 }
