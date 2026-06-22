@@ -1,0 +1,34 @@
+{
+  "name": "GetKpiByCustomer",
+  "description": "Get KPI metrics per customer from SAP: revenue, order count, AOV, cancellation rate. Trigger when user asks about customer performance, top customers by revenue, or per-client sales analysis. All params optional.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "customerIdOrName": {
+        "type": ["string", "null"],
+        "description": "Customer ID or partial name. Null to return all customers."
+      },
+      "fromDate": {
+        "type": ["string", "null"],
+        "format": "date",
+        "description": "Start date YYYY-MM-DD. Null if not specified."
+      },
+      "toDate": {
+        "type": ["string", "null"],
+        "format": "date",
+        "description": "End date YYYY-MM-DD. Null if not specified."
+      },
+      "salesOrg": {
+        "type": ["string", "null"],
+        "enum": ["UE00", "UW00", "DN00", "DS00", null],
+        "description": "Sales org filter. Null if not specified."
+      },
+      "top": {
+        "type": ["integer", "null"],
+        "description": "Return top N customers by revenue. Null if not specified."
+      }
+    },
+    "required": [],
+    "additionalProperties": false
+  }
+}

@@ -24,7 +24,10 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 AI_DIR = SCRIPT_DIR.parent
 ENV_PATH = AI_DIR / ".env"
 FUNCTIONS_DIR = AI_DIR / "functions"
-SYSTEM_PROMPT_PATH = AI_DIR / "prompts" / "system_prompt.txt"
+# Eval uses the condensed prompt (no few-shot) to stay within llama-3.1-8b-instant
+# 6K TPM limit. Production uses the full system_prompt.txt with few-shot examples.
+SYSTEM_PROMPT_PATH = AI_DIR / "prompts" / "system_prompt_eval.txt"
+SYSTEM_PROMPT_FALLBACK_PATH = AI_DIR / "prompts" / "system_prompt.txt"
 GOLDEN_DATA_PATH = SCRIPT_DIR / "golden.jsonl"
 
 # Load environment variables
@@ -41,11 +44,20 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 
 def _load_system_prompt() -> str:
-    """Load system prompt from disk; fallback to default if missing."""
-    try:
-        return SYSTEM_PROMPT_PATH.read_text(encoding="utf-8").strip()
-    except FileNotFoundError:
-        return "Bạn là trợ lý AI xử lý hệ thống SAP. Hãy đọc câu hỏi và trả về dữ liệu định dạng JSON để hệ thống gọi hàm."
+    """
+    Load condensed eval prompt (system_prompt_eval.txt) to fit within
+    llama-3.1-8b-instant 6K TPM limit. Falls back to full system_prompt.txt
+    if the eval file is missing.
+    """
+    for path in (SYSTEM_PROMPT_PATH, SYSTEM_PROMPT_FALLBACK_PATH):
+        try:
+            content = path.read_text(encoding="utf-8").strip()
+            label = path.name
+            print(f"[Info] Loaded system prompt: {label} ({len(content)} chars)", flush=True)
+            return content
+        except FileNotFoundError:
+            continue
+    return "Bạn là trợ lý AI xử lý hệ thống SAP. Hãy đọc câu hỏi và trả về dữ liệu định dạng JSON để hệ thống gọi hàm."
 
 
 def load_tools() -> list[dict]:
@@ -126,7 +138,14 @@ def generate_content_with_retry(
         except openai.BadRequestError as exc:
             raise exc
         except openai.APIStatusError as exc:
-            if exc.status_code >= 500:
+            if exc.status_code == 413:
+                # Request too large – cannot retry, skip this query
+                print(
+                    f"\n[Error] Groq API error status 413: {exc}",
+                    file=sys.stderr,
+                )
+                raise exc
+            elif exc.status_code >= 500:
                 last_exc = exc
                 sleep_time = initial_backoff * (2**attempt)
                 print(
@@ -154,21 +173,38 @@ def validate_parameters(
     """
     Validates parameters based on logic rules:
     - Hallucinated order_id detection (must be present in user_message).
+    - Hallucinated reason_code detection (must be inferable from user_message).
     - Required parameters checks.
+    - Null-cleaning + hallucination-stripping for optional-only param functions.
     Returns (fn_name, args) if valid, or None if invalid.
     """
+    lower_msg = user_message.lower()
     order_id = args.get("order_id")
 
     # 1. Hallucinated order_id check
-    if order_id and str(order_id).lower() not in user_message.lower():
+    if order_id and str(order_id).lower() not in lower_msg:
         return None
 
     # 2. Hallucinated forward_to_user check
     forward_to_user = args.get("forward_to_user")
-    if forward_to_user and str(forward_to_user).lower() not in user_message.lower():
+    if forward_to_user and str(forward_to_user).lower() not in lower_msg:
         return None
 
-    # 2. Schema rule checks
+    # 3. Hallucinated reason_code check for RejectOrder
+    # reason_code must be inferable from the user message; never guessed silently.
+    if fn_name == "RejectOrder":
+        reason_code = args.get("reason_code")
+        if reason_code and str(reason_code).lower() not in ("null", ""):
+            REASON_KEYWORDS = {
+                "PRICE_ISSUE": ["giá", "price", "sai giá", "pricing", "giá cả"],
+                "OUT_OF_STOCK": ["hết hàng", "out of stock", "hết", "stock"],
+                "OTHER": ["khác", "other reason", "lý do khác"],
+            }
+            expected_keywords = REASON_KEYWORDS.get(str(reason_code).upper(), [])
+            if not any(kw in lower_msg for kw in expected_keywords):
+                return None  # reason_code was guessed; should have asked user
+
+    # 4. Schema rule checks (required fields)
     if fn_name == "CheckOrderStatus":
         if not order_id or order_id == "null" or str(order_id).strip() == "":
             return None
@@ -191,12 +227,68 @@ def validate_parameters(
             or str(forward_to_user).strip() == ""
         ):
             return None
-    elif fn_name == "GetSalesOrders":
-        cleaned_args = {}
+
+    # 5. Smart hallucination-stripping for optional-only param functions
+    NO_REQUIRED_FUNCS = {
+        "GetSalesOrders", "GetKpiSummary", "GetKpiByCustomer",
+        "GetKpiByProduct", "GetOverdueOrders",
+    }
+    if fn_name in NO_REQUIRED_FUNCS:
+        cleaned = {}
+        # Keywords that indicate user explicitly mentioned a time range
+        DATE_KEYWORDS = [
+            "hôm nay", "today", "hôm qua", "yesterday", "ngày mai", "tomorrow",
+            "tuần này", "this week", "tuần trước", "last week",
+            "tháng này", "this month", "tháng trước", "last month", "tháng sau",
+            "quý này", "this quarter", "quý trước", "last quarter",
+            "năm nay", "this year", "năm ngoái", "last year",
+            "ngày", "month", "week", "year", "quarter",
+            "202",  # catches any explicit year like 2026-xx-xx
+        ]
+        user_mentioned_date = any(kw in lower_msg for kw in DATE_KEYWORDS)
+
+        # Keywords for granularity
+        GRANULARITY_KEYWORDS = [
+            "daily", "weekly", "monthly", "theo ngày", "theo tuần", "theo tháng",
+            "hàng ngày", "hàng tuần", "hàng tháng", "chia theo",
+        ]
+        user_mentioned_granularity = any(kw in lower_msg for kw in GRANULARITY_KEYWORDS)
+
+        # salesOrg codes
+        SALES_ORG_CODES = ["ue00", "uw00", "dn00", "ds00"]
+        user_mentioned_sales_org = any(code in lower_msg for code in SALES_ORG_CODES)
+
+        # top N – user must mention a number with limit intent
+        import re as _re
+        TOP_PATTERNS = [r"top\s*\d+", r"\d+\s*(cái|kết quả|records?|items?|entries?)",
+                        r"(lấy|hiển thị|lọc)\s*\d+"]
+        _top_val = str(args.get("top", ""))
+        user_mentioned_top = bool(
+            _re.search(r"top\s*\d+", lower_msg) or
+            _re.search(r"\d+\s*(cái|kết quả|records?|items?)", lower_msg) or
+            (_top_val.isdigit() and _top_val in lower_msg) or
+            # Superlative forms imply top-1: "nhất" (VN), "most", "best", "highest", "lowest"
+            any(kw in lower_msg for kw in ["nh\u1ea5t", "most ", "best-", "best ", "highest", "lowest", "top "])
+        )
+
         for k, v in args.items():
-            if v is not None and str(v).strip() != "" and str(v) != "null":
-                cleaned_args[k] = v
-        args = cleaned_args
+            # Skip None / null / empty
+            if v is None or str(v).strip() == "" or str(v).lower() == "null":
+                continue
+            # Strip hallucinated date params
+            if k in ("fromDate", "toDate") and not user_mentioned_date:
+                continue
+            # Strip hallucinated granularity
+            if k == "granularity" and not user_mentioned_granularity:
+                continue
+            # Strip hallucinated salesOrg
+            if k == "salesOrg" and not user_mentioned_sales_org:
+                continue
+            # Strip hallucinated top
+            if k == "top" and not user_mentioned_top:
+                continue
+            cleaned[k] = v
+        args = cleaned
 
     return fn_name, args
 

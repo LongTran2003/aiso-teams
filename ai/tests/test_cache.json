@@ -11,125 +11,28 @@
       "order_id": "ORD-998877"
     }
   },
-  "Xem danh sách các đơn hàng của khách hàng CUST-5002.": {
-    "predicted_function": "GetSalesOrders",
-    "predicted_args": {
-      "customerIdOrName": "CUST-5002"
-    }
-  },
-  "Lấy tất cả đơn hàng đã hoàn thành được tạo từ ngày 2026-01-01 đến 2026-06-01.": {
-    "predicted_function": "GetSalesOrders",
-    "predicted_args": {
-      "fromDate": "2026-01-01",
-      "status": "Delivered",
-      "toDate": "2026-06-01"
-    }
-  },
-  "Tìm giúp tôi các đơn hàng Open của khách hàng CUST-8888 phát sinh kể từ hôm 2026-05-15.": {
-    "predicted_function": "GetSalesOrders",
-    "predicted_args": {
-      "customerIdOrName": "CUST-8888",
-      "fromDate": "2026-05-15",
-      "status": "Open"
-    }
-  },
-  "Cho tôi xem toàn bộ đơn hàng đang xử lý (Open) trong hệ thống.": {
-    "predicted_function": "GetSalesOrders",
-    "predicted_args": {
-      "status": "Open"
-    }
-  },
-  "Phê duyệt và giải phóng đơn hàng ORD-123456.": {
-    "predicted_function": "ReleaseOrder",
-    "predicted_args": {
-      "comment": null,
-      "order_id": "ORD-123456"
-    }
-  },
-  "Duyệt gấp đơn hàng ORD-777888 kèm ghi chú: 'Khách hàng VIP cần giao sớm'.": {
-    "predicted_function": "ReleaseOrder",
-    "predicted_args": {
-      "comment": "Khách hàng VIP cần giao sớm",
-      "order_id": "ORD-777888"
-    }
-  },
-  "Hủy đơn hàng ORD-888999 do hết hàng rồi.": {
-    "predicted_function": "RejectOrder",
-    "predicted_args": {
-      "order_id": "ORD-888999",
-      "reason_code": "OUT_OF_STOCK"
-    }
-  },
-  "Từ chối đơn hàng ORD-443322 vì sai giá.": {
-    "predicted_function": "RejectOrder",
-    "predicted_args": {
-      "order_id": "ORD-443322",
-      "reason_code": "PRICE_ISSUE"
-    }
-  },
-  "Chuyển tiếp đơn hàng ORD-777777 cho Jane Doe xử lý tiếp nhé.": {
-    "predicted_function": "ForwardOrder",
-    "predicted_args": {
-      "forward_to_user": "Jane Doe",
-      "order_id": "ORD-777777"
-    }
-  },
-  "Forward đơn ORD-555555 tới email john.smith@company.com dùm.": {
-    "predicted_function": "ForwardOrder",
-    "predicted_args": {
-      "forward_to_user": "john.smith@company.com",
-      "order_id": "ORD-555555"
-    }
-  },
-  "Duyệt đơn này đi": {
-    "predicted_function": null,
-    "predicted_args": {}
-  },
-  "Hủy giùm tôi đơn hàng này với, hết hàng rồi": {
-    "predicted_function": null,
-    "predicted_args": {}
-  },
-  "Bàn giao đơn hàng ORD-444555 này đi": {
-    "predicted_function": null,
-    "predicted_args": {}
-  },
   "Check the status of order ORD-554433 please.": {
     "predicted_function": "CheckOrderStatus",
     "predicted_args": {
       "order_id": "ORD-554433"
     }
   },
-  "List out all completed sales orders created since 2026-04-01.": {
-    "predicted_function": "GetSalesOrders",
+  "What is the current status of ORD-112200?": {
+    "predicted_function": "CheckOrderStatus",
     "predicted_args": {
-      "fromDate": "2026-04-01",
-      "status": "Delivered"
+      "order_id": "ORD-112200"
     }
   },
-  "Release order ORD-112233 right now.": {
-    "predicted_function": "ReleaseOrder",
+  "Cho tôi biết tình trạng của đơn ORD-303030.": {
+    "predicted_function": "CheckOrderStatus",
     "predicted_args": {
-      "order_id": "ORD-112233"
+      "order_id": "ORD-303030"
     }
   },
-  "Reject order ORD-999000 due to out of stock.": {
-    "predicted_function": "RejectOrder",
+  "ORD-777000 đang ở trạng thái gì vậy?": {
+    "predicted_function": "CheckOrderStatus",
     "predicted_args": {
-      "order_id": "ORD-999000",
-      "reason_code": "OUT_OF_STOCK"
-    }
-  },
-  "Forward order ORD-333333 to manager.alex.": {
-    "predicted_function": "ForwardOrder",
-    "predicted_args": {
-      "forward_to_user": "manager.alex",
-      "order_id": "ORD-333333"
-    }
-  },
-  "Tìm đơn của Philly Bikes": {
-    "predicted_function": "GetSalesOrders",
-    "predicted_args": {
-      "customerIdOrName": "Philly Bikes"
+      "order_id": "ORD-777000"
     }
   }
 }
