@@ -1,6 +1,6 @@
-# SAP Code
+# AISO-Teams SAP Module
 
-ABAP development synchronized via abapGit. See `/docs/sap-setup.md` for connection instructions.
+SAP S/4HANA ABAP development and integration artifacts, synchronized via abapGit.
 
 ## Structure
 
@@ -16,3 +16,7 @@ ABAP development synchronized via abapGit. See `/docs/sap-setup.md` for connecti
 2. Configure online repo: `https://github.com/<org>/aiso-teams.git` with sub-path `/sap/abap/`
 3. After activating ABAP code, Push from abapGit
 4. Standard Git workflow from there
+
+## More docs
+
+Please refer to the `docs/sap-management/` and `docs/specifications/` folders at the root of the repository for comprehensive documentation and SAP configuration instructions.
