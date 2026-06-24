@@ -1,0 +1,43 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Attention",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "⚠️ No data found",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Attention"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "There are no matching records for your request. Please check the input and try again.",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "You can try a different sales order number or ask for a broader search.",
+      "wrap": true,
+      "isSubtle": true,
+      "spacing": "Small"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Show Help",
+      "data": {
+        "command": "help"
+      }
+    }
+  ]
+}

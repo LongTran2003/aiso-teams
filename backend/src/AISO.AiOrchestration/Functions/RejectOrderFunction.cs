@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.AiOrchestration.Functions;
@@ -6,14 +7,16 @@ namespace AISO.AiOrchestration.Functions;
 /// <summary>
 /// Rejects a Sales Order in SAP with a reason code.
 /// Maps to AI function schema <c>RejectOrder</c>.
-/// Sprint 2-3: returns mock success. Sprint 4: calls SAP RAP action.
+/// Sprint 3: calls SAP RAP action.
 /// </summary>
 public sealed class RejectOrderFunction : IFunction
 {
+    private readonly ISapClient _sap;
     private readonly ILogger<RejectOrderFunction> _logger;
 
-    public RejectOrderFunction(ILogger<RejectOrderFunction> logger)
+    public RejectOrderFunction(ISapClient sap, ILogger<RejectOrderFunction> logger)
     {
+        _sap = sap;
         _logger = logger;
     }
 
@@ -40,8 +43,7 @@ public sealed class RejectOrderFunction : IFunction
         }
         """;
 
-    public Task<FunctionResult> ExecuteAsync(
-        JsonElement parameters, CancellationToken ct = default)
+    public async Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
     {
         var orderId = parameters.TryGetProperty("order_id", out var p)
                       && p.ValueKind == JsonValueKind.String
@@ -55,26 +57,35 @@ public sealed class RejectOrderFunction : IFunction
 
         if (string.IsNullOrWhiteSpace(orderId))
         {
-            return Task.FromResult(FunctionResult.Fail("Missing required parameter: order_id"));
+            return FunctionResult.Fail("Missing required parameter: order_id");
         }
 
         if (string.IsNullOrWhiteSpace(reasonCode))
         {
-            return Task.FromResult(FunctionResult.Fail("Missing required parameter: reason_code"));
+            return FunctionResult.Fail("Missing required parameter: reason_code");
         }
 
         _logger.LogInformation(
-            "RejectOrder: orderId={OrderId}, reasonCode={ReasonCode}", orderId, reasonCode);
+            "RejectOrder: orderId={OrderId}, reasonCode={ReasonCode}, sapUser={SapUser}", orderId, reasonCode, requestingSapUser);
 
-        // Sprint 2-3: mock success. Sprint 4: call SAP RAP action.
-        var result = new
+        try
         {
-            order_id = orderId,
-            action = "Rejected",
-            reason_code = reasonCode,
-            message = $"Sales order {orderId} has been rejected (reason: {reasonCode})."
-        };
+            var updatedOrder = await _sap.CancelOrderAsync(orderId, reasonCode, requestingSapUser, ct);
+            var result = new
+            {
+                order_id = updatedOrder.SoNumber,
+                action = "Canceled",
+                reason_code = reasonCode,
+                message = $"Sales order {updatedOrder.SoNumber} has been canceled (reason: {reasonCode}). Status is now {updatedOrder.Status}."
+            };
 
-        return Task.FromResult(FunctionResult.Ok(result));
+            return FunctionResult.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to cancel order {OrderId}", orderId);
+            return FunctionResult.Fail($"Failed to cancel order in SAP: {ex.Message}");
+        }
     }
 }
+

@@ -11,22 +11,48 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using Serilog.Context;
 
+using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Builder.Teams;
+using AISO.Bot.Dialogs;
+using AISO.Bot.Services;
+
 namespace AISO.Bot;
 
-public class TeamsBot : ActivityHandler
+public class TeamsBot : TeamsActivityHandler
 {
     private readonly IFunctionDispatcher _dispatcher;
     private readonly IAuditLogger _audit;
     private readonly ILogger<TeamsBot> _logger;
+    private readonly ConversationState _conversationState;
+    private readonly UserState _userState;
+    private readonly SsoDialog _dialog;
+    private readonly UserMappingService _userMappingService;
 
     public TeamsBot(
         IFunctionDispatcher dispatcher,
         IAuditLogger audit,
-        ILogger<TeamsBot> logger)
+        ILogger<TeamsBot> logger,
+        ConversationState conversationState,
+        UserState userState,
+        SsoDialog dialog,
+        UserMappingService userMappingService)
     {
         _dispatcher = dispatcher;
         _audit = audit;
         _logger = logger;
+        _conversationState = conversationState;
+        _userState = userState;
+        _dialog = dialog;
+        _userMappingService = userMappingService;
+    }
+
+    public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default)
+    {
+        await base.OnTurnAsync(turnContext, cancellationToken);
+
+        // Save any state changes that might have occurred during the turn.
+        await _conversationState.SaveChangesAsync(turnContext, false, cancellationToken);
+        await _userState.SaveChangesAsync(turnContext, false, cancellationToken);
     }
 
     protected override async Task OnMessageActivityAsync(
@@ -34,6 +60,21 @@ public class TeamsBot : ActivityHandler
         CancellationToken cancellationToken)
     {
         var userMessage = turnContext.Activity.Text ?? string.Empty;
+
+        // If Text is empty but we have Value (e.g. from an Adaptive Card Action.Submit button)
+        if (string.IsNullOrWhiteSpace(userMessage) && turnContext.Activity.Value != null)
+        {
+            try
+            {
+                var valueObj = Newtonsoft.Json.Linq.JObject.FromObject(turnContext.Activity.Value);
+                if (valueObj.TryGetValue("command", StringComparison.OrdinalIgnoreCase, out var cmdToken))
+                {
+                    userMessage = cmdToken.ToString();
+                }
+            }
+            catch { /* Ignore parsing errors, userMessage stays empty */ }
+        }
+
         var normalizedMessage = userMessage.Trim();
         var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
         var conversationId = turnContext.Activity.Conversation?.Id;
@@ -56,8 +97,29 @@ public class TeamsBot : ActivityHandler
                 return;
             }
 
+            if (string.Equals(normalizedMessage, "cancel", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(normalizedMessage, "thoát", StringComparison.OrdinalIgnoreCase))
+            {
+                await _conversationState.ClearStateAsync(turnContext, cancellationToken);
+                await turnContext.SendActivityAsync("Đã huỷ các tiến trình đang chạy. Bạn có thể bắt đầu lại.", cancellationToken: cancellationToken);
+                return;
+            }
+
+            var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+
+            var dialogSet = new DialogSet(_conversationState.CreateProperty<DialogState>("DialogState"));
+            dialogSet.Add(_dialog);
+            var dialogContext = await dialogSet.CreateContextAsync(turnContext, cancellationToken);
+
+            if (dialogContext.ActiveDialog != null || string.IsNullOrEmpty(sapUsername))
+            {
+                // We are either in the middle of login/mapping OR we need to start it
+                await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
+                return;
+            }
+
             var stopwatch = Stopwatch.StartNew();
-            var dispatch = await _dispatcher.DispatchAsync(userMessage, cancellationToken);
+            var dispatch = await _dispatcher.DispatchAsync(userMessage, sapUsername, cancellationToken);
             stopwatch.Stop();
 
             // Audit — best-effort: a write failure must not break the bot.
@@ -110,8 +172,9 @@ public class TeamsBot : ActivityHandler
                 return;
             }
 
-            if (result.Payload is IReadOnlyList<SalesOrder> orders)
+            if (result.Payload is AISO.AiOrchestration.Functions.GetSalesOrdersResponse getOrdersResponse)
             {
+                var orders = getOrdersResponse.Orders;
                 if (orders.Count == 0)
                 {
                     await turnContext.SendActivityAsync(
@@ -150,6 +213,27 @@ public class TeamsBot : ActivityHandler
                 $"Function {dispatch.FunctionName} executed (no result).",
                 cancellationToken: cancellationToken);
         }
+    }
+
+    protected override async Task<InvokeResponse> OnInvokeActivityAsync(ITurnContext<IInvokeActivity> turnContext, CancellationToken cancellationToken)
+    {
+        _logger.LogInformation("Received Invoke Activity with Name: {InvokeName}", turnContext.Activity.Name);
+
+        if (turnContext.Activity.Name == "signin/verifyState" || turnContext.Activity.Name == "signin/tokenExchange")
+        {
+            _logger.LogInformation("Received SSO Token Exchange Invoke Activity");
+            await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
+            return new InvokeResponse { Status = 200 };
+        }
+
+        // When silent SSO fails, Teams sends "signin/failure". We MUST return 200 to tell Teams to show the Sign-in button.
+        if (turnContext.Activity.Name == "signin/failure")
+        {
+            _logger.LogWarning("SSO Token Exchange failed. Teams should now fallback to showing the OAuthCard.");
+            return new InvokeResponse { Status = 200 };
+        }
+
+        return await base.OnInvokeActivityAsync(turnContext, cancellationToken);
     }
 
     protected override async Task OnMembersAddedAsync(

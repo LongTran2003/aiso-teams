@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\AISO.AiOrchestration\AISO.AiOrchestration.csproj" />
@@ -8,12 +8,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Cards\Templates\SoSummaryCard.json" />
+    <EmbeddedResource Include="Cards\Templates\*.json" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="AdaptiveCards.Templating" Version="2.0.6" />
     <PackageReference Include="Microsoft.Bot.Builder" Version="4.23.1" />
+    <PackageReference Include="Microsoft.Bot.Builder.Dialogs" Version="4.23.1" />
     <PackageReference Include="Microsoft.Bot.Builder.Integration.AspNet.Core" Version="4.23.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.8" />
     <PackageReference Include="Serilog" Version="4.3.1" />

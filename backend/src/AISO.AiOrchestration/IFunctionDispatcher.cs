@@ -8,7 +8,7 @@ namespace AISO.AiOrchestration;
 /// </summary>
 public interface IFunctionDispatcher
 {
-    Task<DispatchResult> DispatchAsync(string userMessage, CancellationToken ct = default);
+    Task<DispatchResult> DispatchAsync(string userMessage, string requestingSapUser, CancellationToken ct = default);
 }
 
 public sealed record DispatchResult
