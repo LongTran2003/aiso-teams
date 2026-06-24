@@ -1,8 +1,8 @@
 
 using System.Diagnostics;
-using AdaptiveCards.Templating;
 using AISO.AiOrchestration;
 using AISO.Bot.Cards;
+using AISO.Bot.Cards.Builders;
 using AISO.Domain.SalesOrders;
 using AISO.Persistence.Auditing;
 using Microsoft.Bot.Builder;
@@ -71,6 +71,60 @@ public class TeamsBot : TeamsActivityHandler
                 {
                     userMessage = cmdToken.ToString();
                 }
+                else if (valueObj.TryGetValue("action", StringComparison.OrdinalIgnoreCase, out var actionToken))
+                {
+                    var action = actionToken.ToString();
+                    if (string.Equals(action, "view_details", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken)
+                            ? idToken.ToString()
+                            : "UNKNOWN";
+
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
+                            {
+                                salesOrderNumber = salesOrderId,
+                                customerName = "Sample Customer",
+                                customerId = "1000",
+                                documentDate = DateTime.Now.ToString("dd MMM yyyy"),
+                                netAmount = "$12,500",
+                                currency = "USD",
+                                approvalStatus = "Pending"
+                            })),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "view_revenue_kpi", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildKpiRevenueCard(new
+                            {
+                                period = "This month",
+                                totalRevenue = "$245K",
+                                growthRate = "+12%",
+                                targetRevenue = "$220K",
+                                chartUrl = "https://quickchart.io/chart?c=eyJ0eXBlIjoiZG91Z2hudXQiLCJkYXRhIjp7ImxhYmVscyI6WyJNYXJjaCJdLCJkYXRhc2V0cyI6W3siZGF0YSI6WzI0NSJdfV19"
+                            })),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "view_delivery_kpi", StringComparison.OrdinalIgnoreCase))
+                    {
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildKpiDeliveryCard(new
+                            {
+                                onTimeRate = "94%",
+                                delayedCount = "12",
+                                completedToday = "24",
+                                deliveryProgress = 94,
+                                chartUrl = "https://quickchart.io/chart?c=eyJ0eXBlIjoicG9sYXIiLCJkYXRhIjp7ImxhYmVscyI6WyJQcm9ncmVzcyJdLCJkYXRhc2V0cyI6W3siZGF0YSI6Wzk0XX1dfQ=="
+                            })),
+                            cancellationToken);
+                        return;
+                    }
+                }
             }
             catch { /* Ignore parsing errors, userMessage stays empty */ }
         }
@@ -92,7 +146,7 @@ public class TeamsBot : TeamsActivityHandler
             if (string.Equals(normalizedMessage, "help", StringComparison.OrdinalIgnoreCase))
             {
                 await turnContext.SendActivityAsync(
-                    MessageFactory.Attachment(BuildHelpCard()),
+                    MessageFactory.Attachment(TeamsCardBuilder.BuildHelpCard()),
                     cancellationToken);
                 return;
             }
@@ -117,6 +171,10 @@ public class TeamsBot : TeamsActivityHandler
                 await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
                 return;
             }
+
+            await turnContext.SendActivityAsync(
+                MessageFactory.Attachment(TeamsCardBuilder.BuildLoadingCard()),
+                cancellationToken);
 
             var stopwatch = Stopwatch.StartNew();
             var dispatch = await _dispatcher.DispatchAsync(userMessage, sapUsername, cancellationToken);
@@ -144,9 +202,8 @@ public class TeamsBot : TeamsActivityHandler
             if (!dispatch.Handled)
             {
                 await turnContext.SendActivityAsync(
-                    $"Xin lỗi, mình chưa hiểu yêu cầu. ({dispatch.Reason})\n" +
-                    "Thử gõ: \"show orders\" hoặc \"đơn hàng gần đây\"",
-                    cancellationToken: cancellationToken);
+                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("UNHANDLED", dispatch.Reason ?? "Unknown request")),
+                    cancellationToken);
                 return;
             }
 
@@ -157,8 +214,8 @@ public class TeamsBot : TeamsActivityHandler
                     dispatch.FunctionName, dispatch.Result?.ErrorMessage);
 
                 await turnContext.SendActivityAsync(
-                    $"Function failed: {dispatch.Result?.ErrorMessage}",
-                    cancellationToken: cancellationToken);
+                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("FUNCTION_FAILED", dispatch.Result?.ErrorMessage ?? "Unknown error")),
+                    cancellationToken);
                 return;
             }
 
@@ -178,8 +235,21 @@ public class TeamsBot : TeamsActivityHandler
                 if (orders.Count == 0)
                 {
                     await turnContext.SendActivityAsync(
-                        "Không có sales order nào phù hợp với truy vấn.",
-                        cancellationToken: cancellationToken);
+                        MessageFactory.Attachment(TeamsCardBuilder.BuildEmptyCard()),
+                        cancellationToken);
+                    return;
+                }
+
+                var kpiCard = TeamsCardBuilder.BuildKpiCardForRequest(normalizedMessage, orders, getOrdersResponse.ChartUrl);
+                if (kpiCard is not null)
+                {
+                    await turnContext.SendActivityAsync(
+                        MessageFactory.Attachment(kpiCard),
+                        cancellationToken);
+
+                    _logger.LogInformation(
+                        "Bot replied with KPI card for request '{Request}' using data from GetSalesOrdersFunction",
+                        normalizedMessage);
                     return;
                 }
 
@@ -192,11 +262,23 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
-            // Workflow action results (Release, Reject, Forward) — extract message field
+            // Workflow action results (Release, Reject, Forward) — show a success card when applicable
             if (result.Payload is not null)
             {
                 var json = System.Text.Json.JsonSerializer.Serialize(result.Payload);
                 using var doc = System.Text.Json.JsonDocument.Parse(json);
+
+                if (TeamsCardBuilder.TryBuildWorkflowSuccessCard(doc.RootElement, dispatch.FunctionName, out var workflowCard))
+                {
+                    await turnContext.SendActivityAsync(
+                        MessageFactory.Attachment(workflowCard),
+                        cancellationToken);
+
+                    _logger.LogInformation(
+                        "Bot replied with workflow success card for {Function}", dispatch.FunctionName);
+                    return;
+                }
+
                 var message = doc.RootElement.TryGetProperty("message", out var msg)
                     ? msg.GetString()
                     : $"✅ Function {dispatch.FunctionName} executed successfully.";
@@ -247,36 +329,10 @@ public class TeamsBot : TeamsActivityHandler
             {
                 await turnContext.SendActivityAsync(
                     MessageFactory.Attachment(
-                        BuildWelcomeCard(member.Name ?? "bạn")),
+                        TeamsCardBuilder.BuildWelcomeCard(member.Name ?? "bạn")),
                     cancellationToken);
             }
         }
-    }
-
-    private static Attachment BuildWelcomeCard(string username)
-    {
-        var templateJson = CardTemplateFileLoader.LoadFromFrontendCards("welcome.json");
-        var template = new AdaptiveCardTemplate(templateJson);
-        var cardJson = template.Expand(new { username });
-
-        return new Attachment
-        {
-            ContentType = "application/vnd.microsoft.card.adaptive",
-            Content = JsonConvert.DeserializeObject(cardJson)
-        };
-    }
-
-    private static Attachment BuildHelpCard()
-    {
-        var templateJson = CardTemplateFileLoader.LoadFromFrontendCards("help.json");
-        var template = new AdaptiveCardTemplate(templateJson);
-        var cardJson = template.Expand(new { });
-
-        return new Attachment
-        {
-            ContentType = "application/vnd.microsoft.card.adaptive",
-            Content = JsonConvert.DeserializeObject(cardJson)
-        };
     }
 
     private static string DeriveStatus(DispatchResult d)

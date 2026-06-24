@@ -1,4 +1,7 @@
 using System.Reflection;
+using AdaptiveCards.Templating;
+using Microsoft.Bot.Schema;
+using Newtonsoft.Json;
 
 namespace AISO.Bot.Cards;
 
@@ -35,5 +38,18 @@ internal static class CardTemplateFileLoader
 
         throw new FileNotFoundException(
             $"Could not find card template '{fileName}' as embedded resource '{resourceName}' or under any parent of '{AppContext.BaseDirectory}'.");
+    }
+
+    public static Attachment BuildAdaptiveCardAttachment(string fileName, object? data = null)
+    {
+        var templateJson = LoadFromFrontendCards(fileName);
+        var template = new AdaptiveCardTemplate(templateJson);
+        var cardJson = data is null ? template.Expand(new { }) : template.Expand(data);
+
+        return new Attachment
+        {
+            ContentType = "application/vnd.microsoft.card.adaptive",
+            Content = JsonConvert.DeserializeObject(cardJson)
+        };
     }
 }
