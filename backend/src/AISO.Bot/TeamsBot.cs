@@ -60,6 +60,21 @@ public class TeamsBot : TeamsActivityHandler
         CancellationToken cancellationToken)
     {
         var userMessage = turnContext.Activity.Text ?? string.Empty;
+
+        // If Text is empty but we have Value (e.g. from an Adaptive Card Action.Submit button)
+        if (string.IsNullOrWhiteSpace(userMessage) && turnContext.Activity.Value != null)
+        {
+            try
+            {
+                var valueObj = Newtonsoft.Json.Linq.JObject.FromObject(turnContext.Activity.Value);
+                if (valueObj.TryGetValue("command", StringComparison.OrdinalIgnoreCase, out var cmdToken))
+                {
+                    userMessage = cmdToken.ToString();
+                }
+            }
+            catch { /* Ignore parsing errors, userMessage stays empty */ }
+        }
+
         var normalizedMessage = userMessage.Trim();
         var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
         var conversationId = turnContext.Activity.Conversation?.Id;
