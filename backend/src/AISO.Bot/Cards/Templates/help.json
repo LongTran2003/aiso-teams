@@ -22,17 +22,17 @@
         {
           "type": "Action.Submit",
           "title": "🔍 Find Recent Orders",
-          "data": { "msteams": { "type": "imBack" }, "command": "recent orders" }
+          "data": { "msteams": { "type": "imBack", "value": "recent orders" } }
         },
         {
           "type": "Action.Submit",
           "title": "📊 View Revenue KPI Dashboard",
-          "data": { "msteams": { "type": "imBack" }, "command": "show revenue kpi" }
+          "data": { "msteams": { "type": "imBack", "value": "show revenue kpi" } }
         },
         {
           "type": "Action.Submit",
           "title": "📑 Register Substitute (Substitution)",
-          "data": { "msteams": { "type": "imBack" }, "command": "setup substitution" }
+          "data": { "msteams": { "type": "imBack", "value": "setup substitution" } }
         }
       ],
       "spacing": "Large"
