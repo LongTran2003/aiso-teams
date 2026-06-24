@@ -28,5 +28,5 @@ SAP ABAP code synchronization is primarily handled via abapGit rather than GitHu
 
 ## More docs
 
-- [SAP Setup Guide](../docs/sap-management/) — Connection instructions and system setup
+- [SAP Setup Guide](../docs/sap-management/sap-dev-setup.md) — Connection instructions and system setup
 - [Technical Specification](../docs/specifications/) — Integration specs and OData contract

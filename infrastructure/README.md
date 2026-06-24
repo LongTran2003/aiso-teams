@@ -26,5 +26,5 @@ The infrastructure folder provides the foundational services required for backen
 
 ## More docs
 
-- [Development setup](../docs/foundation/dev-setup.md) — environment, Docker, run & debug, troubleshooting
+- [Backend Development setup](../docs/foundation/backend-dev-setup.md) — environment, Docker, run & debug, troubleshooting
 - [Architecture](../docs/foundation/architecture.md)
