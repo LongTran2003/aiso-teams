@@ -30,5 +30,5 @@ Currently, the Teams App package is built manually. Automated packaging and depl
 
 ## More docs
 
-- [Development setup](../docs/foundation/dev-setup.md) — environment, Docker, run & debug, troubleshooting
+- [Frontend Development setup](../docs/foundation/frontend-dev-setup.md) — build, zip, and sideloading Teams app
 - [Architecture](../docs/foundation/architecture.md)

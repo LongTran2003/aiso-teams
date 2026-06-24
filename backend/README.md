@@ -19,7 +19,7 @@ for SAP Sales Order management. Built as a **modular monolith**.
 ## Quick start
 
 Full environment setup (toolchain, Docker, IDE, troubleshooting) lives in
-[`docs/foundation/dev-setup.md`](../docs/foundation/dev-setup.md). Once your environment is ready:
+[`docs/foundation/backend-dev-setup.md`](../docs/foundation/backend-dev-setup.md). Once your environment is ready:
 
 ```bash
 # 1. Start PostgreSQL + Redis (compose file lives in infrastructure/docker/)
@@ -54,7 +54,7 @@ dotnet test --configuration Release --no-build
 
 ## More docs
 
-- [Development setup](../docs/foundation/dev-setup.md) — environment, Docker, run & debug, troubleshooting
+- [Development setup](../docs/foundation/backend-dev-setup.md) — environment, Docker, run & debug, troubleshooting
 - [Architecture](../docs/foundation/architecture.md)
 - [Git workflow](../docs/foundation/git-workflow.md)
 - [Sprint plan](../docs/planning/sprint-plan.md)
