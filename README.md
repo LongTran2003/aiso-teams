@@ -16,7 +16,7 @@ Supervisors: Mr. Nguyen Ba Le
 
 ## Architecture
 
-Modular monolith pattern, deployed to Azure App Service. See [`docs/01-foundation/architecture.md`](docs/01-foundation/architecture.md) for details.
+Modular monolith pattern, deployed to Azure App Service. See [`docs/foundation/architecture.md`](docs/foundation/architecture.md) for details.
 
 **Stack:** ASP.NET Core 8, Azure OpenAI, SAP S/4HANA, Microsoft Teams, Redis, PostgreSQL.
 
@@ -48,4 +48,4 @@ All work goes through Pull Request review.
 
 Sprint 2 complete — backend vertical slice (Teams bot → mock SAP → Adaptive Card),
 observability (audit logging, health checks, Serilog), and CI (GitHub Actions) are merged.
-See [`docs/00-planning/sprint-plan.md`](docs/00-planning/sprint-plan.md).
+See [`docs/planning/sprint-plan.md`](docs/planning/sprint-plan.md).
