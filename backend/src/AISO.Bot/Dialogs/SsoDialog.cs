@@ -32,7 +32,6 @@ public class SsoDialog : ComponentDialog
                 Text = "Vui lòng đăng nhập để sử dụng tính năng của bot.",
                 Title = "Đăng nhập",
                 Timeout = 300000, // User has 5 minutes to login
-                RetryPrompt = MessageFactory.Text("Đăng nhập không thành công. Vui lòng thử lại.")
             }));
 
         AddDialog(new TextPrompt(nameof(TextPrompt)));
