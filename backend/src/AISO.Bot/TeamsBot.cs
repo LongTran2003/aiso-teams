@@ -253,7 +253,7 @@ public class TeamsBot : TeamsActivityHandler
                     return;
                 }
 
-                var card = SoSummaryCardBuilder.Build(orders);
+                var card = TeamsCardBuilder.BuildSoSummaryCard(orders);
                 await turnContext.SendActivityAsync(
                     MessageFactory.Attachment(card), cancellationToken);
 
