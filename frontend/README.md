@@ -2,25 +2,33 @@
 
 Microsoft Teams app package and Adaptive Card templates for the AISO-Teams bot.
 
-## Structure
+## Modules
 
-- `teams-app/manifest.json` — Teams app manifest
-- `teams-app/icons/` — App icons (color.png, outline.png)
-- `cards/` — Adaptive Card templates (JSON) used by the backend builder
+| Component | Purpose |
+|---|---|
+| `teams-app/manifest.json` | Teams app manifest definition |
+| `teams-app/icons/` | App icons (color.png, outline.png) |
+| `cards/` | Adaptive Card templates (JSON) used by the backend builder |
 
-## Build app package
+## Quick start
+
+To build and package the Teams app for sideloading:
 
 ```bash
+# 1. Navigate to the teams-app directory
 cd frontend/teams-app
+
+# 2. Create the zip package
 zip -r ../aiso-bot.zip manifest.json icons/
 ```
 
-Sideload `aiso-bot.zip` into Teams via "Upload custom app".
+Sideload `aiso-bot.zip` into Teams via "Upload custom app". Use the [Adaptive Cards Designer](https://adaptivecards.io/designer/) to design and test new card templates. Note that the backend `TeamsCardBuilder` will inject real data into these templates.
 
-## Card templates
+## CI
 
-Use [Adaptive Cards Designer](https://adaptivecards.io/designer/) to design and test. Note that the backend `TeamsCardBuilder` will inject real data into these templates before sending them to Teams.
+Currently, the Teams App package is built manually. Automated packaging and deployment CI will be added in future sprints.
 
 ## More docs
 
-Please refer to the `docs/` folder at the root of the repository for comprehensive documentation.
+- [Development setup](../docs/foundation/dev-setup.md) — environment, Docker, run & debug, troubleshooting
+- [Architecture](../docs/foundation/architecture.md)

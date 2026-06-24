@@ -1,22 +1,32 @@
 # AISO-Teams SAP Module
 
-SAP S/4HANA ABAP development and integration artifacts, synchronized via abapGit.
+SAP S/4HANA ABAP development and integration artifacts for the AISO-Teams bot, synchronized via abapGit.
 
-## Structure
+## Modules
 
-- `abap/cds-views/` — CDS view definitions
-- `abap/amdp/` — AMDP procedures
-- `abap/rap/` — RAP service definitions and behaviors
-- `abap/tables/` — Z-table definitions
-- `postman/` — Postman collections for OData testing
+| Folder / Resource | Purpose |
+|---|---|
+| `abap/cds-views/` | CDS view definitions for data modeling |
+| `abap/amdp/` | AMDP procedures for complex data logic |
+| `abap/rap/` | RAP service definitions and behaviors for OData endpoints |
+| `abap/tables/` | Z-table definitions (custom tables) |
+| `postman/` | Postman collections for OData API testing |
 
-## abapGit workflow
+## Quick start
+
+To sync and activate the ABAP code using abapGit:
 
 1. In SAP GUI, run tcode `ZABAPGIT`
 2. Configure online repo: `https://github.com/<org>/aiso-teams.git` with sub-path `/sap/abap/`
-3. After activating ABAP code, Push from abapGit
-4. Standard Git workflow from there
+3. Pull the latest code and activate the ABAP objects.
+4. After making changes and activating ABAP code, Push from abapGit.
+5. Follow the standard Git workflow from there.
+
+## CI
+
+SAP ABAP code synchronization is primarily handled via abapGit rather than GitHub Actions. CI pipelines for SAP artifacts will be added if required in future sprints.
 
 ## More docs
 
-Please refer to the `docs/sap-management/` and `docs/specifications/` folders at the root of the repository for comprehensive documentation and SAP configuration instructions.
+- [SAP Setup Guide](../docs/sap-management/) — Connection instructions and system setup
+- [Technical Specification](../docs/specifications/) — Integration specs and OData contract
