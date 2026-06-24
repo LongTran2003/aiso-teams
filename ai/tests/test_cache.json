@@ -4,41 +4,5 @@
     "predicted_args": {
       "order_id": "ORD-20261001"
     }
-  },
-  "Đơn ORD-998877 hiện tại thế nào rồi bạn?": {
-    "predicted_function": "CheckOrderStatus",
-    "predicted_args": {
-      "order_id": "ORD-998877"
-    }
-  },
-  "Check the status of order ORD-554433 please.": {
-    "predicted_function": "CheckOrderStatus",
-    "predicted_args": {
-      "order_id": "ORD-554433"
-    }
-  },
-  "What is the current status of ORD-112200?": {
-    "predicted_function": "CheckOrderStatus",
-    "predicted_args": {
-      "order_id": "ORD-112200"
-    }
-  },
-  "Cho tôi biết tình trạng của đơn ORD-303030.": {
-    "predicted_function": "CheckOrderStatus",
-    "predicted_args": {
-      "order_id": "ORD-303030"
-    }
-  },
-  "ORD-777000 đang ở trạng thái gì vậy?": {
-    "predicted_function": "CheckOrderStatus",
-    "predicted_args": {
-      "order_id": "ORD-777000"
-    }
-  },
-  "Can you check order ORD-456789 for me?": {
-    "predicted_function": "CheckOrderStatus",
-    "predicted_args": {
-      "order_id": "ORD-456789"
-    }
   }
 }

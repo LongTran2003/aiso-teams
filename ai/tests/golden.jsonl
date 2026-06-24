@@ -10,18 +10,18 @@
 {"query": "Lấy tất cả đơn hàng đã hoàn thành được tạo từ ngày 2026-01-01 đến 2026-06-01.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Delivered", "fromDate": "2026-01-01", "toDate": "2026-06-01"}}
 {"query": "Tìm giúp tôi các đơn hàng Open của khách hàng CUST-8888 phát sinh kể từ 2026-05-15.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Open", "customerIdOrName": "CUST-8888", "fromDate": "2026-05-15"}}
 {"query": "Cho tôi xem toàn bộ đơn hàng đang xử lý trong hệ thống.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Open"}}
-{"query": "List out all completed sales orders created since 2026-04-01.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Delivered", "fromDate": "2026-04-01"}}
+{"query": "List out all completed sales orders created since 2026-04-01.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Delivered", "fromDate": "2026-04-01", "toDate": "2026-06-19"}}
 {"query": "Get me all blocked orders for customer Philly Bikes.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Blocked", "customerIdOrName": "Philly Bikes"}}
-{"query": "Show me all cancelled orders this year.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Cancelled", "fromDate": "2026-01-01", "toDate": "2026-06-19"}}
+{"query": "Show me all cancelled orders this year.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Cancelled", "fromDate": "2026-01-01", "toDate": "2026-12-31"}}
 {"query": "Lọc 10 đơn hàng mới nhất cho tổ chức bán hàng DN00.", "expected_function": "GetSalesOrders", "expected_args": {"salesOrg": "DN00", "top": 10}}
 {"query": "Tìm đơn của Philly Bikes.", "expected_function": "GetSalesOrders", "expected_args": {"customerIdOrName": "Philly Bikes"}}
-{"query": "Lấy đơn hàng đã giao một phần từ 2026-03-01.", "expected_function": "GetSalesOrders", "expected_args": {"status": "PartiallyDelivered", "fromDate": "2026-03-01"}}
+{"query": "Lấy đơn hàng đã giao một phần từ 2026-03-01.", "expected_function": "GetSalesOrders", "expected_args": {"status": "PartiallyDelivered", "fromDate": "2026-03-01", "toDate": "2026-06-19"}}
 {"query": "Phê duyệt và giải phóng đơn hàng ORD-123456.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-123456"}}
 {"query": "Duyệt gấp đơn hàng ORD-777888 kèm ghi chú: Khách hàng VIP cần giao sớm.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-777888", "comment": "Khách hàng VIP cần giao sớm."}}
 {"query": "Release order ORD-112233 right now.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-112233"}}
 {"query": "Approve order ORD-900100 with note: Urgent customer request.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-900100", "comment": "Urgent customer request"}}
 {"query": "Sign off on ORD-202620001 please.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-202620001"}}
-{"query": "Authorize release of ORD-202620002 – priority shipment.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-202620002", "comment": "Priority shipment"}}
+{"query": "Authorize release of ORD-202620002 – priority shipment.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-202620002", "comment": "Priority shipment."}}
 {"query": "Hủy đơn hàng ORD-888999 do hết hàng rồi.", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-888999", "reason_code": "OUT_OF_STOCK"}}
 {"query": "Từ chối đơn hàng ORD-443322 vì sai giá.", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-443322", "reason_code": "PRICE_ISSUE"}}
 {"query": "Reject order ORD-999000 due to out of stock.", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-999000", "reason_code": "OUT_OF_STOCK"}}

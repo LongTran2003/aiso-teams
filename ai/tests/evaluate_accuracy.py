@@ -211,6 +211,9 @@ def validate_parameters(
     elif fn_name == "ReleaseOrder":
         if not order_id or order_id == "null" or str(order_id).strip() == "":
             return None
+        # Clean empty optional string fields and 'null' strings
+        args = {k: v for k, v in args.items()
+                if not (isinstance(v, str) and (v.strip() == "" or v.strip().lower() == "null") and k != "order_id")}
     elif fn_name == "RejectOrder":
         reason_code = args.get("reason_code")
         if not order_id or order_id == "null" or str(order_id).strip() == "":
@@ -240,10 +243,14 @@ def validate_parameters(
             "hôm nay", "today", "hôm qua", "yesterday", "ngày mai", "tomorrow",
             "tuần này", "this week", "tuần trước", "last week",
             "tháng này", "this month", "tháng trước", "last month", "tháng sau",
+            "tháng 1", "tháng 2", "tháng 3", "tháng 4", "tháng 5", "tháng 6",
+            "tháng 7", "tháng 8", "tháng 9", "tháng 10", "tháng 11", "tháng 12",
+            "january", "february", "march", "april", "may", "june",
+            "july", "august", "september", "october", "november", "december",
             "quý này", "this quarter", "quý trước", "last quarter",
             "năm nay", "this year", "năm ngoái", "last year",
             "ngày", "month", "week", "year", "quarter",
-            "202",  # catches any explicit year like 2026-xx-xx
+            "202",  # catches any explicit date like 2026-xx-xx
         ]
         user_mentioned_date = any(kw in lower_msg for kw in DATE_KEYWORDS)
 
@@ -260,15 +267,14 @@ def validate_parameters(
 
         # top N – user must mention a number with limit intent
         import re as _re
-        TOP_PATTERNS = [r"top\s*\d+", r"\d+\s*(cái|kết quả|records?|items?|entries?)",
-                        r"(lấy|hiển thị|lọc)\s*\d+"]
         _top_val = str(args.get("top", ""))
         user_mentioned_top = bool(
             _re.search(r"top\s*\d+", lower_msg) or
             _re.search(r"\d+\s*(cái|kết quả|records?|items?)", lower_msg) or
             (_top_val.isdigit() and _top_val in lower_msg) or
-            # Superlative forms imply top-1: "nhất" (VN), "most", "best", "highest", "lowest"
-            any(kw in lower_msg for kw in ["nh\u1ea5t", "most ", "best-", "best ", "highest", "lowest", "top "])
+            # Only Vietnamese superlative "nhất" (= the very best, implies top-1)
+            # NOT: "highest/lowest/most/best" – those are sorting cues, not limit cues
+            "nhất" in lower_msg
         )
 
         for k, v in args.items():
