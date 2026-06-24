@@ -117,4 +117,32 @@ internal static class TeamsCardBuilder
         card = BuildSuccessCard(orderIdElement.GetString()!, action ?? "Completed");
         return true;
     }
+
+    public static Attachment BuildSoSummaryCard(IReadOnlyList<SalesOrder> orders)
+    {
+        var data = new
+        {
+            count = orders.Count,
+            orders = orders.Select(o => new
+            {
+                soNumber = o.SoNumber,
+                customerName = o.CustomerName,
+                orderDate = o.OrderDate.ToString("dd MMM yyyy"),
+                formattedValue = $"{o.NetValue:N0} {o.Currency}",
+                status = o.Status.ToString(),
+                statusColor = StatusToColor(o.Status),
+                salesOrg = o.SalesOrg
+            }).ToList()
+        };
+
+        return CardTemplateFileLoader.BuildAdaptiveCardAttachment("so-summary.json", data);
+    }
+
+    private static string StatusToColor(SalesOrderStatus s) => s switch
+    {
+        SalesOrderStatus.Blocked => "Attention",
+        SalesOrderStatus.Open or SalesOrderStatus.PartiallyDelivered => "Warning",
+        SalesOrderStatus.Delivered or SalesOrderStatus.Invoiced => "Good",
+        _ => "Default"
+    };
 }
