@@ -1,8 +1,8 @@
 
 using System.Diagnostics;
-using AdaptiveCards.Templating;
 using AISO.AiOrchestration;
 using AISO.Bot.Cards;
+using AISO.Bot.Cards.Builders;
 using AISO.Domain.SalesOrders;
 using AISO.Persistence.Auditing;
 using Microsoft.Bot.Builder;
@@ -81,7 +81,7 @@ public class TeamsBot : TeamsActivityHandler
                             : "UNKNOWN";
 
                         await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(BuildSalesOrderDetailCard(new
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
                             {
                                 salesOrderNumber = salesOrderId,
                                 customerName = "Sample Customer",
@@ -98,7 +98,7 @@ public class TeamsBot : TeamsActivityHandler
                     if (string.Equals(action, "view_revenue_kpi", StringComparison.OrdinalIgnoreCase))
                     {
                         await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(BuildKpiRevenueCard(new
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildKpiRevenueCard(new
                             {
                                 period = "This month",
                                 totalRevenue = "$245K",
@@ -113,7 +113,7 @@ public class TeamsBot : TeamsActivityHandler
                     if (string.Equals(action, "view_delivery_kpi", StringComparison.OrdinalIgnoreCase))
                     {
                         await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(BuildKpiDeliveryCard(new
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildKpiDeliveryCard(new
                             {
                                 onTimeRate = "94%",
                                 delayedCount = "12",
@@ -146,7 +146,7 @@ public class TeamsBot : TeamsActivityHandler
             if (string.Equals(normalizedMessage, "help", StringComparison.OrdinalIgnoreCase))
             {
                 await turnContext.SendActivityAsync(
-                    MessageFactory.Attachment(BuildHelpCard()),
+                    MessageFactory.Attachment(TeamsCardBuilder.BuildHelpCard()),
                     cancellationToken);
                 return;
             }
@@ -165,7 +165,7 @@ public class TeamsBot : TeamsActivityHandler
             }
 
             await turnContext.SendActivityAsync(
-                MessageFactory.Attachment(BuildLoadingCard()),
+                MessageFactory.Attachment(TeamsCardBuilder.BuildLoadingCard()),
                 cancellationToken);
 
             var stopwatch = Stopwatch.StartNew();
@@ -194,7 +194,7 @@ public class TeamsBot : TeamsActivityHandler
             if (!dispatch.Handled)
             {
                 await turnContext.SendActivityAsync(
-                    MessageFactory.Attachment(BuildErrorCard("UNHANDLED", dispatch.Reason ?? "Unknown request")),
+                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("UNHANDLED", dispatch.Reason ?? "Unknown request")),
                     cancellationToken);
                 return;
             }
@@ -206,7 +206,7 @@ public class TeamsBot : TeamsActivityHandler
                     dispatch.FunctionName, dispatch.Result?.ErrorMessage);
 
                 await turnContext.SendActivityAsync(
-                    MessageFactory.Attachment(BuildErrorCard("FUNCTION_FAILED", dispatch.Result?.ErrorMessage ?? "Unknown error")),
+                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("FUNCTION_FAILED", dispatch.Result?.ErrorMessage ?? "Unknown error")),
                     cancellationToken);
                 return;
             }
@@ -227,12 +227,12 @@ public class TeamsBot : TeamsActivityHandler
                 if (orders.Count == 0)
                 {
                     await turnContext.SendActivityAsync(
-                        MessageFactory.Attachment(BuildEmptyCard()),
+                        MessageFactory.Attachment(TeamsCardBuilder.BuildEmptyCard()),
                         cancellationToken);
                     return;
                 }
 
-                var kpiCard = BuildKpiCardForRequest(normalizedMessage, orders, getOrdersResponse.ChartUrl);
+                var kpiCard = TeamsCardBuilder.BuildKpiCardForRequest(normalizedMessage, orders, getOrdersResponse.ChartUrl);
                 if (kpiCard is not null)
                 {
                     await turnContext.SendActivityAsync(
@@ -260,7 +260,7 @@ public class TeamsBot : TeamsActivityHandler
                 var json = System.Text.Json.JsonSerializer.Serialize(result.Payload);
                 using var doc = System.Text.Json.JsonDocument.Parse(json);
 
-                if (TryBuildWorkflowSuccessCard(doc.RootElement, dispatch.FunctionName, out var workflowCard))
+                if (TeamsCardBuilder.TryBuildWorkflowSuccessCard(doc.RootElement, dispatch.FunctionName, out var workflowCard))
                 {
                     await turnContext.SendActivityAsync(
                         MessageFactory.Attachment(workflowCard),
@@ -321,122 +321,10 @@ public class TeamsBot : TeamsActivityHandler
             {
                 await turnContext.SendActivityAsync(
                     MessageFactory.Attachment(
-                        BuildWelcomeCard(member.Name ?? "bạn")),
+                        TeamsCardBuilder.BuildWelcomeCard(member.Name ?? "bạn")),
                     cancellationToken);
             }
         }
-    }
-
-    private static Attachment BuildWelcomeCard(string username) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("welcome.json", new { username });
-
-    private static Attachment BuildHelpCard() =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("help.json");
-
-    private static Attachment BuildEmptyCard() =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("empty.json");
-
-    private static Attachment BuildLoadingCard() =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("loading.json");
-
-    private static Attachment BuildSuccessCard(string salesOrderNumber, string status) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("success.json", new { salesOrderNumber, status });
-
-    private static Attachment BuildErrorCard(string errorCode, string errorMessage) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("error.json", new { errorCode, errorMessage });
-
-    private static Attachment BuildConfirmRejectCard(string salesOrderNumber) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-reject.json", new { salesOrderNumber });
-
-    private static Attachment BuildKpiSummaryCard(object data) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("kpi-summary.json", data);
-
-    private static Attachment BuildKpiRevenueCard(object data) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("kpi-revenue.json", data);
-
-    private static Attachment BuildKpiDeliveryCard(object data) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("kpi-delivery.json", data);
-
-    private static Attachment BuildSalesOrderDetailCard(object data) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("sales-order-detail.json", data);
-
-    private static Attachment? BuildKpiCardForRequest(string message, IReadOnlyList<SalesOrder> orders, string? chartUrl)
-    {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return null;
-        }
-
-        var lowerMessage = message.ToLowerInvariant();
-        var currency = orders.FirstOrDefault()?.Currency ?? "USD";
-        var totalRevenue = orders.Sum(o => o.NetValue);
-        var targetRevenue = totalRevenue + Math.Max(10000m, totalRevenue * 0.1m);
-
-        if (lowerMessage.Contains("delivery"))
-        {
-            var deliveredCount = orders.Count(o => o.Status is SalesOrderStatus.Delivered or SalesOrderStatus.Invoiced);
-            var delayedCount = orders.Count(o => o.Status is SalesOrderStatus.Blocked or SalesOrderStatus.PartiallyDelivered or SalesOrderStatus.Open);
-            var onTimeRate = orders.Count == 0 ? 0 : Math.Round((double)deliveredCount / orders.Count * 100, 0);
-
-            return BuildKpiDeliveryCard(new
-            {
-                onTimeRate = $"{onTimeRate}%",
-                delayedCount = delayedCount.ToString(),
-                completedToday = deliveredCount.ToString(),
-                deliveryProgress = (int)onTimeRate,
-                chartUrl = chartUrl
-            });
-        }
-
-        if (lowerMessage.Contains("revenue"))
-        {
-            return BuildKpiRevenueCard(new
-            {
-                period = "Current results",
-                totalRevenue = $"{totalRevenue:N0} {currency}",
-                growthRate = orders.Count > 5 ? "+12%" : "+8%",
-                targetRevenue = $"{targetRevenue:N0} {currency}",
-                chartUrl = chartUrl
-            });
-        }
-
-        if (lowerMessage.Contains("kpi") || lowerMessage.Contains("summary"))
-        {
-            return BuildKpiSummaryCard(new
-            {
-                revenueValue = $"{totalRevenue:N0} {currency}",
-                orderCount = orders.Count,
-                chartUrl = chartUrl
-            });
-        }
-
-        return null;
-    }
-
-    private static bool TryBuildWorkflowSuccessCard(System.Text.Json.JsonElement payload, string? functionName, out Attachment? card)
-    {
-        card = null;
-        if (payload.ValueKind != System.Text.Json.JsonValueKind.Object)
-        {
-            return false;
-        }
-
-        if (!payload.TryGetProperty("order_id", out var orderIdElement) || orderIdElement.ValueKind != System.Text.Json.JsonValueKind.String)
-        {
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(orderIdElement.GetString()))
-        {
-            return false;
-        }
-
-        var action = payload.TryGetProperty("action", out var actionElement) && actionElement.ValueKind == System.Text.Json.JsonValueKind.String
-            ? actionElement.GetString()
-            : functionName;
-
-        card = BuildSuccessCard(orderIdElement.GetString()!, action ?? "Completed");
-        return true;
     }
 
     private static string DeriveStatus(DispatchResult d)
