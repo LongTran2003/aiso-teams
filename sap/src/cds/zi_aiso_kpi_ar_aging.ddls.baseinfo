@@ -3,12 +3,10 @@
 {
 "FROM":
 [
-"VBAK"
+"VBRK"
 ],
 "ASSOCIATED":
-[
-"ZI_AISO_SO_ITEM"
-],
+[],
 "BASE":
 [],
 "ANNO_REF":

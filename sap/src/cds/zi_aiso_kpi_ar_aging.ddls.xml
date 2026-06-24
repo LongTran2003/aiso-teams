@@ -3,10 +3,10 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <DDLS>
-    <DDLNAME>ZC_AISO_SO_WITH_ITEMS</DDLNAME>
+    <DDLNAME>ZI_AISO_KPI_AR_AGING</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>AISO Composite View - SO with Items</DDTEXT>
-    <SOURCE_TYPE>P</SOURCE_TYPE>
+    <DDTEXT>AISO KPI - AR Aging</DDTEXT>
+    <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>
  </asx:abap>
