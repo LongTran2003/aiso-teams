@@ -97,6 +97,14 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
+            if (string.Equals(normalizedMessage, "cancel", StringComparison.OrdinalIgnoreCase) || 
+                string.Equals(normalizedMessage, "thoát", StringComparison.OrdinalIgnoreCase))
+            {
+                await _conversationState.ClearStateAsync(turnContext, cancellationToken);
+                await turnContext.SendActivityAsync("Đã huỷ các tiến trình đang chạy. Bạn có thể bắt đầu lại.", cancellationToken: cancellationToken);
+                return;
+            }
+
             var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
 
             var dialogSet = new DialogSet(_conversationState.CreateProperty<DialogState>("DialogState"));
