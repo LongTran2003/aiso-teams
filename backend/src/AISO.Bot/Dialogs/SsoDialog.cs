@@ -50,7 +50,10 @@ public class SsoDialog : ComponentDialog
 
     private async Task<DialogTurnResult> PromptStepAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
     {
-        return await stepContext.BeginDialogAsync(nameof(OAuthPrompt), null, cancellationToken);
+        return await stepContext.BeginDialogAsync(nameof(OAuthPrompt), new PromptOptions
+        {
+            RetryPrompt = MessageFactory.Text("Đăng nhập không thành công. Vui lòng thử lại hoặc gõ 'cancel' để thoát.")
+        }, cancellationToken);
     }
 
     private async Task<DialogTurnResult> LoginStepAsync(WaterfallStepContext stepContext, CancellationToken cancellationToken)
