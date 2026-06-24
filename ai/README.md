@@ -1,6 +1,12 @@
-# AI Module
+# AISO-Teams AI Module
 
-LLM function calling and prompt orchestration.
+LLM function calling and prompt orchestration for the AISO-Teams bot.
+
+## Structure
+
+- `prompts/` — System prompts and few-shot examples
+- `functions/` — Function definitions (JSON schemas)
+- `tests/` — Test cases (NL query → expected function call)
 
 ## Quick start (if Python FastAPI)
 
@@ -14,10 +20,8 @@ uvicorn main:app --reload --port 8000
 
 ## Quick start (if .NET in-process)
 
-AI module is part of backend solution. See `backend/src/AISO.AiOrchestration/`.
+The AI module is currently integrated as part of the backend solution. See `backend/src/AISO.AiOrchestration/`.
 
-## Structure
+## More docs
 
-- `prompts/` — System prompts and few-shot examples
-- `functions/` — Function definitions (JSON schemas)
-- `tests/` — Test cases (NL query → expected function call)
+Please refer to the `docs/` folder at the root of the repository for comprehensive documentation.
