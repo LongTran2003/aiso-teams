@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\AISO.AiOrchestration\AISO.AiOrchestration.csproj" />
@@ -8,7 +8,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Cards\Templates\SoSummaryCard.json" />
+    <EmbeddedResource Include="Cards\Templates\*.json" />
   </ItemGroup>
 
   <ItemGroup>
