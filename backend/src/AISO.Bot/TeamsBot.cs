@@ -160,7 +160,7 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
-            if (string.Equals(normalizedMessage, "cancel", StringComparison.OrdinalIgnoreCase) || 
+            if (string.Equals(normalizedMessage, "cancel", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(normalizedMessage, "thoát", StringComparison.OrdinalIgnoreCase))
             {
                 await _conversationState.ClearStateAsync(turnContext, cancellationToken);
