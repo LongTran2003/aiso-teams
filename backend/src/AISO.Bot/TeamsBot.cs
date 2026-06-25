@@ -302,37 +302,8 @@ public class TeamsBot : TeamsActivityHandler
     {
         _logger.LogInformation("Received Invoke Activity with Name: {InvokeName}", turnContext.Activity.Name);
 
-        if (turnContext.Activity.Name == "signin/verifyState")
-        {
-            _logger.LogInformation("Received signin/verifyState Invoke Activity");
-            await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
-            return new InvokeResponse { Status = 200 };
-        }
-
-        if (turnContext.Activity.Name == "signin/tokenExchange")
-        {
-            _logger.LogInformation("Received signin/tokenExchange Invoke Activity");
-            await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
-
-            // If OAuthPrompt failed to exchange the token, we MUST return 412 Precondition Failed.
-            // This tells Teams to fallback to showing the Sign-In card to the user.
-            var tokenExchangeSuccessful = turnContext.TurnState.TryGetValue("BotFramework.OAuthPrompt.TokenExchangeSuccessful", out var result) && result is bool success && success;
-            if (!tokenExchangeSuccessful)
-            {
-                _logger.LogWarning("SSO Token Exchange failed validation. Returning 412 so Teams displays the OAuthCard.");
-                return new InvokeResponse { Status = 412 };
-            }
-
-            return new InvokeResponse { Status = 200 };
-        }
-
-        // When silent SSO fails, Teams sends "signin/failure". We MUST return 200 to tell Teams to show the Sign-in button.
-        if (turnContext.Activity.Name == "signin/failure")
-        {
-            _logger.LogWarning("SSO Token Exchange failed. Teams should now fallback to showing the OAuthCard.");
-            return new InvokeResponse { Status = 200 };
-        }
-
+        // SsoDialog no longer uses OAuthPrompt, so we don't need to handle
+        // signin/verifyState or signin/tokenExchange here anymore.
         return await base.OnInvokeActivityAsync(turnContext, cancellationToken);
     }
 
