@@ -77,8 +77,24 @@
           "isSubtle": true,
           "spacing": "None",
           "wrap": true
+        },
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.Submit",
+              "title": "View Details",
+              "data": {
+                "action": "view_details",
+                "salesOrderId": "${soNumber}"
+              }
+            }
+          ],
+          "spacing": "Small"
         }
       ]
+      
     }
   ]
+  
 }
