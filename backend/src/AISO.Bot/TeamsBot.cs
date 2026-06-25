@@ -371,6 +371,7 @@ public class TeamsBot : TeamsActivityHandler
         return true;
     }
 
+
     private static string DeriveStatus(DispatchResult d)
     {
         if (!d.Handled) return "Unrecognized";
