@@ -95,7 +95,8 @@ public class SsoDialog : ComponentDialog
             }
         }
 
-        await stepContext.Context.SendActivityAsync(MessageFactory.Text("Đăng nhập thất bại. Vui lòng thử lại."), cancellationToken);
+        var errorInfo = stepContext.Result == null ? "Result is NULL" : $"Result Type: {stepContext.Result.GetType().Name}";
+        await stepContext.Context.SendActivityAsync(MessageFactory.Text($"Đăng nhập thất bại ({errorInfo}). Vui lòng thử lại."), cancellationToken);
         return await stepContext.EndDialogAsync(cancellationToken: cancellationToken);
     }
 
