@@ -36,7 +36,11 @@
       "type": "Action.Submit",
       "title": "Show Help",
       "data": {
-        "command": "help"
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "help",
+          "text": "help"
+        }
       }
     }
   ]

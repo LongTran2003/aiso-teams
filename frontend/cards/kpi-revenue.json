@@ -39,7 +39,11 @@
       "type": "Action.Submit",
       "title": "View Revenue Details",
       "data": {
-        "action": "view_revenue_kpi"
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "View Revenue KPI Dashboard",
+          "text": "show revenue kpi"
+        }
       }
     }
   ]

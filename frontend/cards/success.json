@@ -37,6 +37,11 @@
       "type": "Action.Submit",
       "title": "View Details",
       "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "View Order Details",
+          "text": "view order ${salesOrderNumber}"
+        },
         "action": "view_details",
         "salesOrderId": "${salesOrderNumber}"
       }
