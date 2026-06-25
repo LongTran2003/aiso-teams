@@ -85,6 +85,11 @@
               "type": "Action.Submit",
               "title": "View Details",
               "data": {
+                "msteams": {
+                  "type": "messageBack",
+                  "displayText": "View Order Details",
+                  "text": "view order ${soNumber}"
+                },
                 "action": "view_details",
                 "salesOrderId": "${soNumber}"
               }
@@ -93,7 +98,6 @@
           "spacing": "Small"
         }
       ]
-      
     }
   ]
   
