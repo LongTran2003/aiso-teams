@@ -59,7 +59,8 @@ public class TeamsBot : TeamsActivityHandler
         ITurnContext<IMessageActivity> turnContext,
         CancellationToken cancellationToken)
     {
-        var userMessage = turnContext.Activity.Text ?? string.Empty;
+        var userMessage = turnContext.Activity.RemoveRecipientMention() ?? turnContext.Activity.Text ?? string.Empty;
+        userMessage = System.Text.RegularExpressions.Regex.Replace(userMessage, "<[^>]*>", string.Empty);
 
         // If Text is empty but we have Value (e.g. from an Adaptive Card Action.Submit button)
         if (string.IsNullOrWhiteSpace(userMessage) && turnContext.Activity.Value != null)
