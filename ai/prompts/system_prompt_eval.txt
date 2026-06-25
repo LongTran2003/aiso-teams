@@ -42,7 +42,7 @@ Reference date: **2026-06-19** (Friday). Convert relative dates to `YYYY-MM-DD`.
 | năm nay/this year | 2026-01-01 | 2026-12-31 |
 | năm ngoái/last year | 2025-01-01 | 2025-12-31 |
 
-**Open-ended date rule**: If user says "kể từ/from/since [date]" with NO end date, set `fromDate=[date]` and `toDate=2026-06-19` (today).
+**Open-ended date rule**: If user says "kể từ/from/since [date]" with NO explicit end date, set ONLY `fromDate=[date]`. Do NOT add `toDate`.
 
 ---
 

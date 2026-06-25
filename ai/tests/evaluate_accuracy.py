@@ -272,9 +272,15 @@ def validate_parameters(
             _re.search(r"top\s*\d+", lower_msg) or
             _re.search(r"\d+\s*(cái|kết quả|records?|items?)", lower_msg) or
             (_top_val.isdigit() and _top_val in lower_msg) or
-            # Only Vietnamese superlative "nhất" (= the very best, implies top-1)
-            # NOT: "highest/lowest/most/best" – those are sorting cues, not limit cues
-            "nhất" in lower_msg
+                    "nhất" in lower_msg
+        )
+
+        # Detect open-ended "from/since/kể từ [date]" pattern (no explicit end date)
+        OPEN_ENDED_KEYWORDS = ["kể từ", "since ", "from ", "starting from", "bắt đầu từ", "created since"]
+        END_DATE_KEYWORDS = ["đến", " to ", "until", "through", "before", "ending", "tới", "đến ngày"]
+        is_open_ended = (
+            any(kw in lower_msg for kw in OPEN_ENDED_KEYWORDS) and
+            not any(kw in lower_msg for kw in END_DATE_KEYWORDS)
         )
 
         for k, v in args.items():
@@ -283,6 +289,9 @@ def validate_parameters(
                 continue
             # Strip hallucinated date params
             if k in ("fromDate", "toDate") and not user_mentioned_date:
+                continue
+            # Strip hallucinated toDate for open-ended "since/kể từ [date]" queries
+            if k == "toDate" and is_open_ended:
                 continue
             # Strip hallucinated granularity
             if k == "granularity" and not user_mentioned_granularity:
