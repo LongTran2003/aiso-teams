@@ -20,12 +20,6 @@
       "spacing": "Medium"
     },
     {
-      "type": "ProgressBar",
-      "value": "${deliveryProgress}",
-      "max": 100,
-      "label": "${deliveryProgress}%"
-    },
-    {
       "type": "Image",
       "url": "${chartUrl}",
       "altText": "Delivery performance chart",
@@ -38,7 +32,11 @@
       "type": "Action.Submit",
       "title": "Open Delivery KPI",
       "data": {
-        "action": "view_delivery_kpi"
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "View Delivery KPI Dashboard",
+          "text": "show delivery kpi"
+        }
       }
     }
   ]

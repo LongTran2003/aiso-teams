@@ -36,6 +36,11 @@
       "type": "Action.Submit",
       "title": "Confirm Reject",
       "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Confirm reject order ${salesOrderNumber}",
+          "text": "reject order ${salesOrderNumber}"
+        },
         "action": "reject_so_confirm",
         "salesOrderId": "${salesOrderNumber}"
       }
@@ -44,7 +49,11 @@
       "type": "Action.Submit",
       "title": "Cancel",
       "data": {
-        "action": "cancel"
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
       }
     }
   ]

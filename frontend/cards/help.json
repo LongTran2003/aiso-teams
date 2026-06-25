@@ -22,17 +22,35 @@
         {
           "type": "Action.Submit",
           "title": "🔍 Find Recent Orders",
-          "data": { "msteams": { "type": "imBack" }, "command": "recent orders" }
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "Find Recent Orders",
+              "text": "recent orders"
+            }
+          }
         },
         {
           "type": "Action.Submit",
           "title": "📊 View Revenue KPI Dashboard",
-          "data": { "msteams": { "type": "imBack" }, "command": "show revenue kpi" }
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "View Revenue KPI Dashboard",
+              "text": "show revenue kpi"
+            }
+          }
         },
         {
           "type": "Action.Submit",
           "title": "📑 Register Substitute (Substitution)",
-          "data": { "msteams": { "type": "imBack" }, "command": "setup substitution" }
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "Register Substitute (Substitution)",
+              "text": "setup substitution"
+            }
+          }
         }
       ],
       "spacing": "Large"

@@ -41,6 +41,11 @@
       "type": "Action.Submit",
       "title": "✅ Approve (Release)",
       "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Approve order ${salesOrderNumber}",
+          "text": "release order ${salesOrderNumber}"
+        },
         "action": "release_so",
         "salesOrderId": "${salesOrderNumber}"
       }
@@ -49,6 +54,11 @@
       "type": "Action.Submit",
       "title": "❌ Reject",
       "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Reject order ${salesOrderNumber}",
+          "text": "reject order ${salesOrderNumber}"
+        },
         "action": "reject_so",
         "salesOrderId": "${salesOrderNumber}"
       }
