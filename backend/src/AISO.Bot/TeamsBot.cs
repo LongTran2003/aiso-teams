@@ -62,16 +62,23 @@ public class TeamsBot : TeamsActivityHandler
         var userMessage = turnContext.Activity.RemoveRecipientMention() ?? turnContext.Activity.Text ?? string.Empty;
         userMessage = System.Text.RegularExpressions.Regex.Replace(userMessage, "<[^>]*>", string.Empty);
 
-        // If Text is empty but we have Value (e.g. from an Adaptive Card Action.Submit button)
-        if (string.IsNullOrWhiteSpace(userMessage) && turnContext.Activity.Value != null)
+        // When an Adaptive Card button (Action.Submit with msteams.type=imBack) is clicked,
+        // Teams sends BOTH Activity.Text (= button title, e.g. "🔍 Find Recent Orders")
+        // AND Activity.Value (= the data payload, e.g. { command: "recent orders" }).
+        // We MUST check Value first so the structured command wins over the display title.
+        if (turnContext.Activity.Value != null)
         {
             try
             {
                 var valueObj = Newtonsoft.Json.Linq.JObject.FromObject(turnContext.Activity.Value);
-                if (valueObj.TryGetValue("command", StringComparison.OrdinalIgnoreCase, out var cmdToken))
+
+                // Priority 1: explicit "command" field → overrides whatever Text says
+                if (valueObj.TryGetValue("command", StringComparison.OrdinalIgnoreCase, out var cmdToken)
+                    && !string.IsNullOrWhiteSpace(cmdToken.ToString()))
                 {
                     userMessage = cmdToken.ToString();
                 }
+                // Priority 2: "action" field → handle inline card actions immediately
                 else if (valueObj.TryGetValue("action", StringComparison.OrdinalIgnoreCase, out var actionToken))
                 {
                     var action = actionToken.ToString();
@@ -127,8 +134,9 @@ public class TeamsBot : TeamsActivityHandler
                     }
                 }
             }
-            catch { /* Ignore parsing errors, userMessage stays empty */ }
+            catch { /* Ignore parsing errors, fall through to use Activity.Text */ }
         }
+
 
         var normalizedMessage = userMessage.Trim();
         var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
