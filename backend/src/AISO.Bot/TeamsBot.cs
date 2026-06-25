@@ -168,6 +168,11 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
+            if (TryHandleOrderDetailRequest(normalizedMessage, turnContext, cancellationToken))
+            {
+                return;
+            }
+
             var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
 
             var dialogSet = new DialogSet(_conversationState.CreateProperty<DialogState>("DialogState"));
@@ -330,6 +335,40 @@ public class TeamsBot : TeamsActivityHandler
                     cancellationToken);
             }
         }
+    }
+
+    private static bool TryHandleOrderDetailRequest(string message, ITurnContext turnContext, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+        {
+            return false;
+        }
+
+        var lowered = message.ToLowerInvariant();
+        var isDetailRequest = lowered.Contains("detail") || lowered.Contains("chi tiết") || lowered.Contains("xem chi tiết") || lowered.Contains("show detail");
+        var mentionsOrder = lowered.Contains("order") || lowered.Contains("đơn hàng") || lowered.Contains("so") || lowered.Contains("sales order");
+
+        if (!isDetailRequest || !mentionsOrder)
+        {
+            return false;
+        }
+
+        var match = System.Text.RegularExpressions.Regex.Match(message, @"(?:order|so|sales order|đơn hàng|đơn)\s*(?:no\.?|number|#)?\s*([A-Za-z0-9\-\/]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var orderId = match.Success ? match.Groups[1].Value : "UNKNOWN";
+
+        turnContext.SendActivityAsync(
+            MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
+            {
+                salesOrderNumber = orderId,
+                customerName = "Sample Customer",
+                customerId = "1000",
+                documentDate = DateTime.Now.ToString("dd MMM yyyy"),
+                netAmount = "$12,500",
+                currency = "USD",
+                approvalStatus = "Pending"
+            })),
+            cancellationToken);
+        return true;
     }
 
     private static string DeriveStatus(DispatchResult d)
