@@ -4,18 +4,25 @@
   "version": "1.5",
   "body": [
     {
-      "type": "TextBlock",
-      "text": "Sales Orders",
-      "size": "Large",
-      "weight": "Bolder",
-      "wrap": true
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "📋 Sales Orders",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent"
+        }
+      ]
     },
     {
       "type": "TextBlock",
       "text": "${count} order(s) found",
       "size": "Small",
       "isSubtle": true,
-      "spacing": "None",
+      "spacing": "Medium",
       "wrap": true
     },
     {
@@ -77,6 +84,25 @@
           "isSubtle": true,
           "spacing": "None",
           "wrap": true
+        },
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.Submit",
+              "title": "View Details",
+              "data": {
+                "msteams": {
+                  "type": "messageBack",
+                  "displayText": "View Order Details",
+                  "text": "view order ${soNumber}"
+                },
+                "action": "view_details",
+                "salesOrderId": "${soNumber}"
+              }
+            }
+          ],
+          "spacing": "Small"
         }
       ]
     }
