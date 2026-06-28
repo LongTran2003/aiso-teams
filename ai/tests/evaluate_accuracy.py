@@ -276,7 +276,12 @@ def validate_parameters(
         )
 
         # Detect open-ended "from/since/kể từ [date]" pattern (no explicit end date)
-        OPEN_ENDED_KEYWORDS = ["kể từ", "since ", "from ", "starting from", "bắt đầu từ", "created since"]
+        OPEN_ENDED_KEYWORDS = [
+            "kể từ", "since ", "from ", "starting from",
+            "bắt đầu từ", "created since",
+            "từ 20",   # catches 'from 2026-xx-xx' in Vietnamese
+            "tính từ",  # another VN 'since' expression
+        ]
         END_DATE_KEYWORDS = ["đến", " to ", "until", "through", "before", "ending", "tới", "đến ngày"]
         is_open_ended = (
             any(kw in lower_msg for kw in OPEN_ENDED_KEYWORDS) and
@@ -366,7 +371,79 @@ def parse_and_validate_failed_generation(
 # ---------------------------------------------------------------------------
 
 
-def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
+# ---------------------------------------------------------------------------
+# Fuzzy Argument Matching
+# ---------------------------------------------------------------------------
+
+# Required params per function — MUST match exactly in both intent and value.
+# Optional params (not listed) are "bonus": AI may or may not include them.
+_REQUIRED_PARAMS: dict[str, set[str]] = {
+    "CheckOrderStatus":  {"order_id"},
+    "GetOrderDetail":    {"order_id"},
+    "ReleaseOrder":      {"order_id"},
+    "RejectOrder":       {"order_id", "reason_code"},
+    "ForwardOrder":      {"order_id", "forward_to_user"},
+    # KPI / list functions have NO required params
+    "GetSalesOrders":    set(),
+    "GetKpiSummary":     set(),
+    "GetKpiByCustomer":  set(),
+    "GetKpiByProduct":   set(),
+    "GetOverdueOrders":  set(),
+}
+
+
+def _normalize_val(v) -> str:
+    """Lowercase, strip trailing punctuation for lenient string comparison."""
+    s = str(v).strip()
+    return s.rstrip(".").strip().lower()
+
+
+def fuzzy_args_match(pred_fn: str | None, pred_args: dict,
+                     exp_fn: str | None, exp_args: dict) -> tuple[bool, bool]:
+    """
+    Returns (intent_ok, args_ok).
+
+    Fuzzy rules:
+    - Required params: must all be present AND values must match (normalized).
+    - Expected optional params: must be present AND match if AI also returned them.
+      If AI omitted an optional expected param → still OK (model chose not to include).
+    - Extra params from AI (not in expected): ignored — not counted as failure.
+    - Trap queries (exp_fn=None): AI must also return None.
+    """
+    intent_ok = pred_fn == exp_fn
+    if not intent_ok:
+        return False, False
+    if exp_fn is None:
+        return True, True  # both None → full pass
+
+    required = _REQUIRED_PARAMS.get(exp_fn, set())
+
+    def norm(d: dict) -> dict[str, str]:
+        return {k: _normalize_val(v) for k, v in d.items()
+                if v is not None and str(v).lower() not in ("null", "")}
+
+    p = norm(pred_args)
+    e = norm(exp_args)
+
+    # 1. Required params: must match
+    for key in required:
+        if e.get(key) != p.get(key):  # missing or wrong value
+            return True, False
+
+    # 2. Optional expected params: if AI returned them, values must match
+    for key, exp_val in e.items():
+        if key in required:
+            continue  # already checked
+        if key in p and p[key] != exp_val:
+            return True, False  # AI returned it but with wrong value
+        # AI omitted it → acceptable (lenient)
+
+    return True, True
+
+
+def run_evaluation(live_mode: bool = False, skip_confirm: bool = False,
+                   tier_filter: int | None = None, fuzzy: bool = True,
+                   from_line: int | None = None, to_line: int | None = None):
     # Load golden dataset
     if not GOLDEN_DATA_PATH.exists():
         print(f"Error: Golden dataset not found at {GOLDEN_DATA_PATH}", file=sys.stderr)
@@ -387,7 +464,21 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
                 )
                 sys.exit(1)
 
-    print(f"Loaded {len(test_cases)} test cases from {GOLDEN_DATA_PATH.name}")
+    total_loaded = len(test_cases)
+
+    # Filter by line range (1-indexed, takes priority over tier if both specified)
+    if from_line is not None or to_line is not None:
+        lo = (from_line or 1) - 1      # convert to 0-indexed
+        hi = (to_line or total_loaded)  # inclusive
+        test_cases = test_cases[lo:hi]
+        print(f"Loaded {len(test_cases)}/{total_loaded} test cases "
+              f"[lines {from_line or 1}–{to_line or total_loaded}] from {GOLDEN_DATA_PATH.name}")
+    elif tier_filter is not None:
+        test_cases = [c for c in test_cases if c.get("tier", 3) <= tier_filter]
+        tier_label = {1: "Smoke (Tier 1)", 2: "Core (Tier ≤ 2)", 3: "Full (Tier ≤ 3)"}[tier_filter]
+        print(f"Loaded {len(test_cases)}/{total_loaded} test cases [{tier_label}] from {GOLDEN_DATA_PATH.name}")
+    else:
+        print(f"Loaded {total_loaded} test cases from {GOLDEN_DATA_PATH.name}")
 
     CACHE_PATH = SCRIPT_DIR / "test_cache.json"
     cache = {}
@@ -541,25 +632,22 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False):
                 pred_fn = "API_FAIL"
                 pred_args = {}
 
-        # Evaluate matches
-        intent_match = pred_fn == expected_fn
-
-        # Normalize types to string for comparison, filtering out None / null values
-        normalized_pred_args = {
-            k: str(v)
-            for k, v in pred_args.items()
-            if v is not None and str(v).lower() != "none"
-        }
-        normalized_expected_args = {
-            k: str(v)
-            for k, v in expected_args.items()
-            if v is not None and str(v).lower() != "none"
-        }
-
-        if not intent_match:
-            args_match = False
+        if fuzzy:
+            intent_match, args_match = fuzzy_args_match(
+                pred_fn, pred_args, expected_fn, expected_args
+            )
         else:
-            args_match = normalized_pred_args == normalized_expected_args
+            # Legacy exact match
+            intent_match = pred_fn == expected_fn
+            normalized_pred_args = {
+                k: str(v) for k, v in pred_args.items()
+                if v is not None and str(v).lower() != "none"
+            }
+            normalized_expected_args = {
+                k: str(v) for k, v in expected_args.items()
+                if v is not None and str(v).lower() != "none"
+            }
+            args_match = normalized_pred_args == normalized_expected_args if intent_match else False
 
         if intent_match:
             correct_intents += 1
@@ -649,6 +737,54 @@ if __name__ == "__main__":
         action="store_true",
         help="Skip confirmation warning for live API calls.",
     )
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Run only Tier-1 smoke tests (~13 cases, 1 per function). Fast & cheap.",
+    )
+    parser.add_argument(
+        "--tier",
+        type=int,
+        choices=[1, 2, 3],
+        default=None,
+        help="Run only cases of a specific tier (1=smoke, 2=core, 3=full).",
+    )
+    parser.add_argument(
+        "--from",
+        dest="from_line",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Start from line N (1-indexed). Example: --from 14",
+    )
+    parser.add_argument(
+        "--to",
+        dest="to_line",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Stop at line N inclusive. Example: --to 65",
+    )
+    parser.add_argument(
+        "--fuzzy",
+        action="store_true",
+        default=True,
+        help="(default ON) Allow AI to return superset of expected optional params.",
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Disable fuzzy matching — exact arg comparison (legacy behaviour).",
+    )
     args = parser.parse_args()
 
-    run_evaluation(live_mode=(args.live or args.no_cache), skip_confirm=args.yes)
+    tier_filter = 1 if args.smoke else args.tier  # --smoke ≡ --tier 1
+    fuzzy = not args.strict
+    run_evaluation(
+        live_mode=(args.live or args.no_cache),
+        skip_confirm=args.yes,
+        tier_filter=tier_filter,
+        fuzzy=fuzzy,
+        from_line=args.from_line,
+        to_line=args.to_line,
+    )

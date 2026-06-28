@@ -125,6 +125,7 @@ Backend maps SAP response to Adaptive Card. Key field names:
 | "Hiệu suất bán hàng của tổ chức UE00 trong tháng 5" | GetKpiSummary | `{salesOrg:"UE00", fromDate:"2026-05-01", toDate:"2026-05-31"}` |
 | "Xem KPI của khách hàng CUST-3001 trong tháng 5" | GetKpiByCustomer | `{customerIdOrName:"CUST-3001", fromDate:"2026-05-01", toDate:"2026-05-31"}` |
 | "Bàn giao đơn ORD-202640002 cho anh Minh Tuấn" | ForwardOrder | `{order_id:"ORD-202640002", forward_to_user:"anh Minh Tuấn"}` |
+| "Forward đơn ORD-555555 tới email john.smith@company.com dùm" | ForwardOrder | `{order_id:"ORD-555555", forward_to_user:"john.smith@company.com"}` |
 | "Show me all cancelled orders this year" | GetSalesOrders | `{status:"Cancelled", fromDate:"2026-01-01", toDate:"2026-12-31"}` |
 | "Xem KPI doanh thu tháng 3" | GetKpiSummary | `{fromDate:"2026-03-01", toDate:"2026-03-31"}` |
 
