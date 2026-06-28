@@ -166,5 +166,12 @@
       "salesOrg": "DN00",
       "top": 10
     }
+  },
+  "Duyệt gấp đơn hàng ORD-777888 kèm ghi chú: Khách hàng VIP cần giao sớm.": {
+    "predicted_function": "ReleaseOrder",
+    "predicted_args": {
+      "comment": "Khách hàng VIP cần giao sớm.",
+      "order_id": "ORD-777888"
+    }
   }
 }

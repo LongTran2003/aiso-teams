@@ -158,7 +158,7 @@ def _mock_response(user_message: str) -> ChatResponse:
             fn_name = "GetKpiSummary"
         tool_calls.append(ToolCall(id="mock_kpi_001", function_name=fn_name, arguments={}))
         card_type = _get_adaptive_card_type(fn_name)
-        reply = f"[MOCK] Đang truy xuất dữ liệu KPI từ SAP..."
+        reply = "[MOCK] Đang truy xuất dữ liệu KPI từ SAP..."
 
     elif any(kw in lower for kw in ("quá hạn", "overdue", "giao trễ", "late delivery", "past due")):
         intent = "get_overdue_orders"
