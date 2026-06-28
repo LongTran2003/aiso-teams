@@ -53,7 +53,10 @@ def _load_system_prompt() -> str:
         try:
             content = path.read_text(encoding="utf-8").strip()
             label = path.name
-            print(f"[Info] Loaded system prompt: {label} ({len(content)} chars)", flush=True)
+            print(
+                f"[Info] Loaded system prompt: {label} ({len(content)} chars)",
+                flush=True,
+            )
             return content
         except FileNotFoundError:
             continue
@@ -212,8 +215,15 @@ def validate_parameters(
         if not order_id or order_id == "null" or str(order_id).strip() == "":
             return None
         # Clean empty optional string fields and 'null' strings
-        args = {k: v for k, v in args.items()
-                if not (isinstance(v, str) and (v.strip() == "" or v.strip().lower() == "null") and k != "order_id")}
+        args = {
+            k: v
+            for k, v in args.items()
+            if not (
+                isinstance(v, str)
+                and (v.strip() == "" or v.strip().lower() == "null")
+                and k != "order_id"
+            )
+        }
     elif fn_name == "RejectOrder":
         reason_code = args.get("reason_code")
         if not order_id or order_id == "null" or str(order_id).strip() == "":
@@ -233,31 +243,84 @@ def validate_parameters(
 
     # 5. Smart hallucination-stripping for optional-only param functions
     NO_REQUIRED_FUNCS = {
-        "GetSalesOrders", "GetKpiSummary", "GetKpiByCustomer",
-        "GetKpiByProduct", "GetOverdueOrders",
+        "GetSalesOrders",
+        "GetKpiSummary",
+        "GetKpiByCustomer",
+        "GetKpiByProduct",
+        "GetOverdueOrders",
     }
     if fn_name in NO_REQUIRED_FUNCS:
         cleaned = {}
         # Keywords that indicate user explicitly mentioned a time range
         DATE_KEYWORDS = [
-            "hôm nay", "today", "hôm qua", "yesterday", "ngày mai", "tomorrow",
-            "tuần này", "this week", "tuần trước", "last week",
-            "tháng này", "this month", "tháng trước", "last month", "tháng sau",
-            "tháng 1", "tháng 2", "tháng 3", "tháng 4", "tháng 5", "tháng 6",
-            "tháng 7", "tháng 8", "tháng 9", "tháng 10", "tháng 11", "tháng 12",
-            "january", "february", "march", "april", "may", "june",
-            "july", "august", "september", "october", "november", "december",
-            "quý này", "this quarter", "quý trước", "last quarter",
-            "năm nay", "this year", "năm ngoái", "last year",
-            "ngày", "month", "week", "year", "quarter",
+            "hôm nay",
+            "today",
+            "hôm qua",
+            "yesterday",
+            "ngày mai",
+            "tomorrow",
+            "tuần này",
+            "this week",
+            "tuần trước",
+            "last week",
+            "tháng này",
+            "this month",
+            "tháng trước",
+            "last month",
+            "tháng sau",
+            "tháng 1",
+            "tháng 2",
+            "tháng 3",
+            "tháng 4",
+            "tháng 5",
+            "tháng 6",
+            "tháng 7",
+            "tháng 8",
+            "tháng 9",
+            "tháng 10",
+            "tháng 11",
+            "tháng 12",
+            "january",
+            "february",
+            "march",
+            "april",
+            "may",
+            "june",
+            "july",
+            "august",
+            "september",
+            "october",
+            "november",
+            "december",
+            "quý này",
+            "this quarter",
+            "quý trước",
+            "last quarter",
+            "năm nay",
+            "this year",
+            "năm ngoái",
+            "last year",
+            "ngày",
+            "month",
+            "week",
+            "year",
+            "quarter",
             "202",  # catches any explicit date like 2026-xx-xx
         ]
         user_mentioned_date = any(kw in lower_msg for kw in DATE_KEYWORDS)
 
         # Keywords for granularity
         GRANULARITY_KEYWORDS = [
-            "daily", "weekly", "monthly", "theo ngày", "theo tuần", "theo tháng",
-            "hàng ngày", "hàng tuần", "hàng tháng", "chia theo",
+            "daily",
+            "weekly",
+            "monthly",
+            "theo ngày",
+            "theo tuần",
+            "theo tháng",
+            "hàng ngày",
+            "hàng tuần",
+            "hàng tháng",
+            "chia theo",
         ]
         user_mentioned_granularity = any(kw in lower_msg for kw in GRANULARITY_KEYWORDS)
 
@@ -267,25 +330,38 @@ def validate_parameters(
 
         # top N – user must mention a number with limit intent
         import re as _re
+
         _top_val = str(args.get("top", ""))
         user_mentioned_top = bool(
-            _re.search(r"top\s*\d+", lower_msg) or
-            _re.search(r"\d+\s*(cái|kết quả|records?|items?)", lower_msg) or
-            (_top_val.isdigit() and _top_val in lower_msg) or
-                    "nhất" in lower_msg
+            _re.search(r"top\s*\d+", lower_msg)
+            or _re.search(r"\d+\s*(cái|kết quả|records?|items?)", lower_msg)
+            or (_top_val.isdigit() and _top_val in lower_msg)
+            or "nhất" in lower_msg
         )
 
         # Detect open-ended "from/since/kể từ [date]" pattern (no explicit end date)
         OPEN_ENDED_KEYWORDS = [
-            "kể từ", "since ", "from ", "starting from",
-            "bắt đầu từ", "created since",
-            "từ 20",   # catches 'from 2026-xx-xx' in Vietnamese
+            "kể từ",
+            "since ",
+            "from ",
+            "starting from",
+            "bắt đầu từ",
+            "created since",
+            "từ 20",  # catches 'from 2026-xx-xx' in Vietnamese
             "tính từ",  # another VN 'since' expression
         ]
-        END_DATE_KEYWORDS = ["đến", " to ", "until", "through", "before", "ending", "tới", "đến ngày"]
-        is_open_ended = (
-            any(kw in lower_msg for kw in OPEN_ENDED_KEYWORDS) and
-            not any(kw in lower_msg for kw in END_DATE_KEYWORDS)
+        END_DATE_KEYWORDS = [
+            "đến",
+            " to ",
+            "until",
+            "through",
+            "before",
+            "ending",
+            "tới",
+            "đến ngày",
+        ]
+        is_open_ended = any(kw in lower_msg for kw in OPEN_ENDED_KEYWORDS) and not any(
+            kw in lower_msg for kw in END_DATE_KEYWORDS
         )
 
         for k, v in args.items():
@@ -378,17 +454,17 @@ def parse_and_validate_failed_generation(
 # Required params per function — MUST match exactly in both intent and value.
 # Optional params (not listed) are "bonus": AI may or may not include them.
 _REQUIRED_PARAMS: dict[str, set[str]] = {
-    "CheckOrderStatus":  {"order_id"},
-    "GetOrderDetail":    {"order_id"},
-    "ReleaseOrder":      {"order_id"},
-    "RejectOrder":       {"order_id", "reason_code"},
-    "ForwardOrder":      {"order_id", "forward_to_user"},
+    "CheckOrderStatus": {"order_id"},
+    "GetOrderDetail": {"order_id"},
+    "ReleaseOrder": {"order_id"},
+    "RejectOrder": {"order_id", "reason_code"},
+    "ForwardOrder": {"order_id", "forward_to_user"},
     # KPI / list functions have NO required params
-    "GetSalesOrders":    set(),
-    "GetKpiSummary":     set(),
-    "GetKpiByCustomer":  set(),
-    "GetKpiByProduct":   set(),
-    "GetOverdueOrders":  set(),
+    "GetSalesOrders": set(),
+    "GetKpiSummary": set(),
+    "GetKpiByCustomer": set(),
+    "GetKpiByProduct": set(),
+    "GetOverdueOrders": set(),
 }
 
 
@@ -398,8 +474,9 @@ def _normalize_val(v) -> str:
     return s.rstrip(".").strip().lower()
 
 
-def fuzzy_args_match(pred_fn: str | None, pred_args: dict,
-                     exp_fn: str | None, exp_args: dict) -> tuple[bool, bool]:
+def fuzzy_args_match(
+    pred_fn: str | None, pred_args: dict, exp_fn: str | None, exp_args: dict
+) -> tuple[bool, bool]:
     """
     Returns (intent_ok, args_ok).
 
@@ -419,8 +496,11 @@ def fuzzy_args_match(pred_fn: str | None, pred_args: dict,
     required = _REQUIRED_PARAMS.get(exp_fn, set())
 
     def norm(d: dict) -> dict[str, str]:
-        return {k: _normalize_val(v) for k, v in d.items()
-                if v is not None and str(v).lower() not in ("null", "")}
+        return {
+            k: _normalize_val(v)
+            for k, v in d.items()
+            if v is not None and str(v).lower() not in ("null", "")
+        }
 
     p = norm(pred_args)
     e = norm(exp_args)
@@ -441,9 +521,14 @@ def fuzzy_args_match(pred_fn: str | None, pred_args: dict,
     return True, True
 
 
-def run_evaluation(live_mode: bool = False, skip_confirm: bool = False,
-                   tier_filter: int | None = None, fuzzy: bool = True,
-                   from_line: int | None = None, to_line: int | None = None):
+def run_evaluation(
+    live_mode: bool = False,
+    skip_confirm: bool = False,
+    tier_filter: int | None = None,
+    fuzzy: bool = True,
+    from_line: int | None = None,
+    to_line: int | None = None,
+):
     # Load golden dataset
     if not GOLDEN_DATA_PATH.exists():
         print(f"Error: Golden dataset not found at {GOLDEN_DATA_PATH}", file=sys.stderr)
@@ -468,15 +553,21 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False,
 
     # Filter by line range (1-indexed, takes priority over tier if both specified)
     if from_line is not None or to_line is not None:
-        lo = (from_line or 1) - 1      # convert to 0-indexed
-        hi = (to_line or total_loaded)  # inclusive
+        lo = (from_line or 1) - 1  # convert to 0-indexed
+        hi = to_line or total_loaded  # inclusive
         test_cases = test_cases[lo:hi]
-        print(f"Loaded {len(test_cases)}/{total_loaded} test cases "
-              f"[lines {from_line or 1}–{to_line or total_loaded}] from {GOLDEN_DATA_PATH.name}")
+        print(
+            f"Loaded {len(test_cases)}/{total_loaded} test cases "
+            f"[lines {from_line or 1}–{to_line or total_loaded}] from {GOLDEN_DATA_PATH.name}"
+        )
     elif tier_filter is not None:
         test_cases = [c for c in test_cases if c.get("tier", 3) <= tier_filter]
-        tier_label = {1: "Smoke (Tier 1)", 2: "Core (Tier ≤ 2)", 3: "Full (Tier ≤ 3)"}[tier_filter]
-        print(f"Loaded {len(test_cases)}/{total_loaded} test cases [{tier_label}] from {GOLDEN_DATA_PATH.name}")
+        tier_label = {1: "Smoke (Tier 1)", 2: "Core (Tier ≤ 2)", 3: "Full (Tier ≤ 3)"}[
+            tier_filter
+        ]
+        print(
+            f"Loaded {len(test_cases)}/{total_loaded} test cases [{tier_label}] from {GOLDEN_DATA_PATH.name}"
+        )
     else:
         print(f"Loaded {total_loaded} test cases from {GOLDEN_DATA_PATH.name}")
 
@@ -640,14 +731,20 @@ def run_evaluation(live_mode: bool = False, skip_confirm: bool = False,
             # Legacy exact match
             intent_match = pred_fn == expected_fn
             normalized_pred_args = {
-                k: str(v) for k, v in pred_args.items()
+                k: str(v)
+                for k, v in pred_args.items()
                 if v is not None and str(v).lower() != "none"
             }
             normalized_expected_args = {
-                k: str(v) for k, v in expected_args.items()
+                k: str(v)
+                for k, v in expected_args.items()
                 if v is not None and str(v).lower() != "none"
             }
-            args_match = normalized_pred_args == normalized_expected_args if intent_match else False
+            args_match = (
+                normalized_pred_args == normalized_expected_args
+                if intent_match
+                else False
+            )
 
         if intent_match:
             correct_intents += 1
