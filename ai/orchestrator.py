@@ -146,7 +146,17 @@ def _mock_response(user_message: str) -> ChatResponse:
     lower = user_message.lower()
 
     # KPI keywords (kiểm tra trước để tránh nhầm với order)
-    if any(kw in lower for kw in ("kpi", "doanh thu", "revenue", "dashboard", "hiệu suất", "performance")):
+    if any(
+        kw in lower
+        for kw in (
+            "kpi",
+            "doanh thu",
+            "revenue",
+            "dashboard",
+            "hiệu suất",
+            "performance",
+        )
+    ):
         if any(kw in lower for kw in ("khách hàng", "customer", "client")):
             intent = "get_kpi_by_customer"
             fn_name = "GetKpiByCustomer"
@@ -156,13 +166,22 @@ def _mock_response(user_message: str) -> ChatResponse:
         else:
             intent = "get_kpi_summary"
             fn_name = "GetKpiSummary"
-        tool_calls.append(ToolCall(id="mock_kpi_001", function_name=fn_name, arguments={}))
+        tool_calls.append(
+            ToolCall(id="mock_kpi_001", function_name=fn_name, arguments={})
+        )
         card_type = _get_adaptive_card_type(fn_name)
         reply = "[MOCK] Đang truy xuất dữ liệu KPI từ SAP..."
 
-    elif any(kw in lower for kw in ("quá hạn", "overdue", "giao trễ", "late delivery", "past due")):
+    elif any(
+        kw in lower
+        for kw in ("quá hạn", "overdue", "giao trễ", "late delivery", "past due")
+    ):
         intent = "get_overdue_orders"
-        tool_calls.append(ToolCall(id="mock_overdue_001", function_name="GetOverdueOrders", arguments={}))
+        tool_calls.append(
+            ToolCall(
+                id="mock_overdue_001", function_name="GetOverdueOrders", arguments={}
+            )
+        )
         card_type = _get_adaptive_card_type("GetOverdueOrders")
         reply = "[MOCK] Đang lấy danh sách đơn hàng quá hạn từ SAP..."
 
@@ -171,30 +190,48 @@ def _mock_response(user_message: str) -> ChatResponse:
         order_id = match.group(1).upper() if match else ""
         if order_id:
             intent = "get_order_detail"
-            tool_calls.append(ToolCall(id="mock_detail_001", function_name="GetOrderDetail", arguments={"order_id": order_id}))
+            tool_calls.append(
+                ToolCall(
+                    id="mock_detail_001",
+                    function_name="GetOrderDetail",
+                    arguments={"order_id": order_id},
+                )
+            )
             card_type = _get_adaptive_card_type("GetOrderDetail")
             reply = f"[MOCK] Đang lấy chi tiết đơn hàng {order_id}..."
         else:
             reply = "[MOCK] Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện."
 
-    elif any(kw in lower for kw in ("đơn hàng", "order", "ord-", "trạng thái", "status")):
+    elif any(
+        kw in lower for kw in ("đơn hàng", "order", "ord-", "trạng thái", "status")
+    ):
         match = re.search(r"(ord-\w+)", lower)
         order_id = match.group(1).upper() if match else ""
         if order_id:
             intent = "check_order_status"
             tool_calls.append(
-                ToolCall(id="mock_check_001", function_name="CheckOrderStatus", arguments={"order_id": order_id})
+                ToolCall(
+                    id="mock_check_001",
+                    function_name="CheckOrderStatus",
+                    arguments={"order_id": order_id},
+                )
             )
             card_type = _get_adaptive_card_type("CheckOrderStatus")
             reply = f"[MOCK] Đang kiểm tra trạng thái đơn hàng {order_id}..."
         else:
             # Danh sách đơn hàng
             intent = "get_sales_orders"
-            tool_calls.append(ToolCall(id="mock_list_001", function_name="GetSalesOrders", arguments={}))
+            tool_calls.append(
+                ToolCall(
+                    id="mock_list_001", function_name="GetSalesOrders", arguments={}
+                )
+            )
             card_type = _get_adaptive_card_type("GetSalesOrders")
             reply = "[MOCK] Đang lấy danh sách đơn hàng từ SAP..."
 
-    return ChatResponse(reply=reply, intent=intent, tool_calls=tool_calls, adaptive_card_type=card_type)
+    return ChatResponse(
+        reply=reply, intent=intent, tool_calls=tool_calls, adaptive_card_type=card_type
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -333,7 +370,9 @@ class AIOrchestrator:
         """Trả về True nếu value là None, chuỗi rỗng, hoặc chuỗi 'null'."""
         if value is None:
             return True
-        if isinstance(value, str) and (value.strip() == "" or value.strip().lower() == "null"):
+        if isinstance(value, str) and (
+            value.strip() == "" or value.strip().lower() == "null"
+        ):
             return True
         return False
 
@@ -357,16 +396,19 @@ class AIOrchestrator:
             if str(order_id).lower() not in lower_msg:
                 logger.warning(
                     "Hallucinated order_id detected: '%s' not in query: '%s'",
-                    order_id, user_message,
+                    order_id,
+                    user_message,
                 )
                 if is_reject_intent:
                     return ChatResponse(
                         reply="Tôi chưa xác định được đơn hàng nào. Vui lòng cho tôi mã đơn hàng.",
-                        intent="general_query", tool_calls=[],
+                        intent="general_query",
+                        tool_calls=[],
                     )
                 return ChatResponse(
                     reply="Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện.",
-                    intent="general_query", tool_calls=[],
+                    intent="general_query",
+                    tool_calls=[],
                 )
 
         # ── Chống ảo tưởng forward_to_user ──────────────────────────────────
@@ -375,14 +417,16 @@ class AIOrchestrator:
             if str(forward_to_user).lower() not in lower_msg:
                 logger.warning(
                     "Hallucinated forward_to_user detected: '%s' not in query: '%s'",
-                    forward_to_user, user_message,
+                    forward_to_user,
+                    user_message,
                 )
                 return ChatResponse(
                     reply=(
                         f"Tôi chưa rõ bạn muốn chuyển tiếp đơn hàng {order_id} cho ai. "
                         "Vui lòng cung cấp tên hoặc email người nhận."
                     ),
-                    intent="general_query", tool_calls=[],
+                    intent="general_query",
+                    tool_calls=[],
                 )
 
         # ── Kiểm tra required fields từ JSON Schema (generic) ────────────────
@@ -401,11 +445,13 @@ class AIOrchestrator:
                     if is_reject_intent:
                         return ChatResponse(
                             reply="Tôi chưa xác định được đơn hàng nào. Vui lòng cho tôi mã đơn hàng.",
-                            intent="general_query", tool_calls=[],
+                            intent="general_query",
+                            tool_calls=[],
                         )
                     return ChatResponse(
                         reply="Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện.",
-                        intent="general_query", tool_calls=[],
+                        intent="general_query",
+                        tool_calls=[],
                     )
                 elif field == "reason_code":
                     return ChatResponse(
@@ -415,7 +461,8 @@ class AIOrchestrator:
                             "(do sai giá, hết hàng, hay lý do khác) để tôi cập nhật "
                             "chính xác lên hệ thống SAP nhé?"
                         ),
-                        intent="general_query", tool_calls=[],
+                        intent="general_query",
+                        tool_calls=[],
                     )
                 elif field == "forward_to_user":
                     return ChatResponse(
@@ -423,14 +470,16 @@ class AIOrchestrator:
                             f"Tôi chưa rõ bạn muốn chuyển tiếp đơn hàng {order_id} cho ai. "
                             "Vui lòng cung cấp tên hoặc email người nhận."
                         ),
-                        intent="general_query", tool_calls=[],
+                        intent="general_query",
+                        tool_calls=[],
                     )
                 else:
                     # Generic fallback cho required fields khác
                     field_desc = properties.get(field, {}).get("description", field)
                     return ChatResponse(
                         reply=f"Vui lòng cung cấp thông tin bắt buộc: {field_desc}.",
-                        intent="general_query", tool_calls=[],
+                        intent="general_query",
+                        tool_calls=[],
                     )
 
         return None
@@ -495,7 +544,8 @@ class AIOrchestrator:
             schema = self._schema_cache.get(fn_name, {})
             if not schema.get("required"):
                 args = {
-                    k: v for k, v in args.items()
+                    k: v
+                    for k, v in args.items()
                     if v is not None and str(v).strip() != "" and str(v) != "null"
                 }
 
@@ -558,9 +608,12 @@ class AIOrchestrator:
                 # Làm sạch null/empty cho các hàm có optional-only params
                 # (áp dụng chung: GetSalesOrders, GetKpiSummary, GetKpiByCustomer, GetKpiByProduct, GetOverdueOrders)
                 schema = self._schema_cache.get(fn_name, {})
-                if not schema.get("required"):  # Hàm không có required field → clean nulls
+                if not schema.get(
+                    "required"
+                ):  # Hàm không có required field → clean nulls
                     cleaned_args = {
-                        k: v for k, v in args.items()
+                        k: v
+                        for k, v in args.items()
                         if v is not None and str(v).strip() != "" and str(v) != "null"
                     }
                     args = cleaned_args
