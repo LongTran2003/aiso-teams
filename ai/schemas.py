@@ -60,12 +60,21 @@ class ChatResponse(BaseModel):
         default_factory=list,
         description="Danh sách các hàm mà model yêu cầu gọi (nếu có).",
     )
+    adaptive_card_type: str | None = Field(
+        default=None,
+        description=(
+            "Loại Adaptive Card mà frontend cần render, ví dụ: 'order_detail', "
+            "'order_list', 'kpi_summary', 'kpi_by_customer', 'kpi_by_product', "
+            "'overdue_orders'. None nếu không có tool call hoặc là general_query."
+        ),
+    )
 
     model_config = {
         "json_schema_extra": {
             "example": {
-                "reply": "Tôi sẽ kiểm tra trạng thái đơn hàng ORD-20240001 cho bạn.",
+                "reply": "",
                 "intent": "check_order_status",
+                "adaptive_card_type": "order_detail",
                 "tool_calls": [
                     {
                         "id": "call_abc123",
