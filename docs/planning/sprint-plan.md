@@ -35,8 +35,8 @@ Phase 1                  Phase 2                                Phase 3         
 Preparation +            Realization                            UAT                     Defense
 Explore                  (Development)                                                  (Golive)
 ─────────                ──────────────────────────────────     ───────                 ─────────
-16/05 — 17/05            19/05 — 27/07                          30/07 — 05/08           23/08
-2 days                   10 weeks (5 sprints)                   1 week                  2.5 weeks
+16/05 — 17/05            19/05 — 12/07                          30/07 — 05/08           23/08
+2 days                   8 weeks (5 sprints)                    1 week                  2.5 weeks
         │                              │                               │                   │
         ▼                              ▼                               ▼                   ▼
    Mentor Review 1            Mentor Review 2                Mentor Review 3         Thesis Defense
@@ -61,7 +61,7 @@ Explore                  (Development)                                          
 
 ---
 
-### Phase 2: Realization (19/05 – 27/07)
+### Phase 2: Realization (19/05 – 12/07)
 
 **Duration**: 10 weeks → **5 sprints × 2 weeks**
 
@@ -80,7 +80,7 @@ Explore                  (Development)                                          
 - Testing documentation
 - User Manual
 
-**Ends with**: 🎯 **Mentor Review 2** (27/07) — full working software demo
+**Ends with**: 🎯 **Mentor Review 2** (12/07) — full working software demo
 
 ---
 
@@ -129,11 +129,11 @@ Four critical milestones drive the project schedule:
 | Milestone | Date | Audience | Format | Demo state required |
 |---|---|---|---|---|
 | **Mentor Review 1** | 17/05 | FSoft Mentor | Workshop presentation | Slides + research findings |
-| **Mentor Review 2** | 27/07 | FSoft Mentor | Full demo + tech spec | Working software, all features |
+| **Mentor Review 2** | 12/07 ⚠️ _(moved up from 27/07)_ | FSoft Mentor | Full demo + tech spec | Working software, all features |
 | **Mentor Review 3** | 05/08 | FSoft Mentor | UAT sign-off | UAT passed, signed off |
 | **Thesis Defense** | 23/08 | School Panel + Supervisor | Defense presentation | Polished demo + Final Report |
 
-**Implication**: Working software must be **demonstrable by 27/07** (Mentor Review 2). UAT cannot find major architecture issues — those must be resolved earlier.
+**Implication**: Working software must be **demonstrable by 12/07** (Mentor Review 2 — moved up 15 days). UAT cannot find major architecture issues — those must be resolved earlier. **All remaining Sprint 4 work must be complete by 11/07.**
 
 ---
 
@@ -300,18 +300,18 @@ Measured via Application Insights / structured logs in production-like environme
 | Sprint 1 | Phase 2 | 19/05 – 01/06 | Foundation + Spikes | Echo bot in Emulator, Cloud Connector requested, all spikes done |
 | Sprint 2 | Phase 2 | 02/06 – 15/06 | Core Integrations | Bot live in Teams + Mock SAP + first function call |
 | Sprint 3 | Phase 2 | 16/06 – 29/06 | Feature Build I | SO queries + KPIs on real SAP data |
-| Sprint 4 | Phase 2 | 30/06 – 13/07 | Feature Build II + Reports | Workflow actions, AI Bonus, Hangfire scheduled jobs |
-| Sprint 5 | Phase 2 | 14/07 – 27/07 | PDF + Polish | PDF/email distribution, full polish, Mentor Review 2 ready |
-| Sprint 6 | Phase 3 | 30/07 – 05/08 | UAT | UAT executed and signed off |
-| Sprint 7 | Phase 4 | 06/08 – 23/08 | Defense Prep | Final docs + rehearsal + defense |
+| Sprint 4 | Phase 2 | 30/06 – 11/07 | Feature Build II + Carryover | Workflow actions, AI Bonus, carryover from Sprint 3, **Mentor Review 2 ready** |
+| Sprint 5 | Phase 2 | ~~14/07 – 27/07~~ _Merged into Sprint 4_ | _(Absorbed)_ | _(Review 2 moved to 12/07)_ |
+| Sprint 6 | Phase 3 | 13/07 – 27/07 | UAT | UAT executed and signed off |
+| Sprint 7 | Phase 4 | 28/07 – 23/08 | Defense Prep | Final docs + rehearsal + defense |
 
 **Critical dates**:
 - 🎯 17/05 — Mentor Review 1
-- 🎯 27/07 — Mentor Review 2 (full demo)
-- 🎯 05/08 — Mentor Review 3 (UAT Sign-Off)
+- 🎯 ~~27/07~~ **12/07** — Mentor Review 2 (full demo) ⚠️ _MOVED UP 15 days_
+- 🎯 27/07 — Mentor Review 3 (UAT Sign-Off) _(formerly 05/08)_
 - 🎯 23/08 — Thesis Defense
 
-**Key change from v2.0**: Sprint 1 lightened (Teams sideload moved to Sprint 2), Sprint 4 absorbs Hangfire + scheduled jobs (previously Sprint 5), Sprint 5 focused on PDF + email + polish only.
+**Key change v3.0** _(01/07/2026)_: Review 2 moved up from 27/07 → **12/07**. Sprint 4 now covers all remaining Sprint 3 carryover items. Sprint 5 is dissolved — its PDF/polish scope is deferred to post-UAT polish if time allows. Sprint 6 (UAT) starts 13/07.
 
 ---
 
@@ -454,101 +454,111 @@ Each spike is timeboxed to **1 day** and produces a working demo + 1-page learni
 **Dates**: 16/06 – 29/06
 **Sprint Goal**: Implement SO query and KPI features with real SAP data flowing from S40.
 
+> **Sprint 3 Retrospective (01/07/2026)**: Most BE and SAP core infrastructure is complete. Key carryovers: Redis token caching not yet wired into code, OAuthPrompt SSO replaced with direct TextPrompt mapping (OAuth Connection not provisioned in Azure), golden test set below target (21 vs 50+ entries), OData external verification pending, Adaptive Card button bug fixed in Sprint 4 start.
+
 #### Sprint deliverables by role
 
 **BE Lead**
-- [ ] Real `SapClient` implementation (HttpClient + Polly retry + CSRF token handling)
-- [ ] OData query builder (filter, top, skip, expand)
-- [ ] Switch functions from `MockSapClient` to real `SapClient`
-- [ ] Bot dialog flow refactoring (state management, turn handlers)
-- [ ] SSO `OAuthPrompt` integration in Teams
-- [ ] Token caching in Redis with refresh logic
-- [ ] Application Insights integration (basic telemetry)
-- [ ] Tech Spec section: SAP integration architecture, CDS/AMDP/OData walkthrough
+- [x] Real `SapClient` implementation (HttpClient + Polly retry + CSRF token handling)
+- [x] OData query builder (filter, top, skip, expand)
+- [x] Switch functions from `MockSapClient` to real `SapClient`
+- [x] Bot dialog flow refactoring (state management, turn handlers)
+- [~] SSO `OAuthPrompt` integration in Teams — ⚠️ _OAuthPrompt replaced with direct SAP username TextPrompt (Azure SSO Connection not provisioned); carried to Sprint 4 as optional_
+- [~] Token caching in Redis with refresh logic — ⚠️ _Package wired, `IConnectionMultiplexer` not yet injected into `SapTokenManager`; carried to Sprint 4_
+- [x] Application Insights integration (basic telemetry)
+- [x] Tech Spec section: SAP integration architecture, CDS/AMDP/OData walkthrough
 
 **SAP Team**
-- [ ] First Analytical CDS View: `ZR_AISO_REVENUE_CUBE` with `@Analytics.dataExtraction.enabled: true`
-- [ ] First AMDP procedure: `ZCL_AISO_AMDP_REVENUE` (SQLScript on HANA)
-- [ ] CDS views for: SO Aging, Delivery KPI, AR Aging (4 KPI domains total)
-- [ ] RAP service definition `ZSD_AISO_SALES_ORDER`
-- [ ] RAP service binding `ZSB_AISO_SALES_ORDER_V4`
-- [ ] OData service activated and consumable externally (verified via Postman)
+- [~] First Analytical CDS View: `ZR_AISO_REVENUE_CUBE` — ⚠️ _Created as `zaiso_cl_kpi_amdp` (AMDP class), not Analytical CDS View; naming differs from plan_
+- [x] First AMDP procedure: `ZCL_AISO_AMDP_REVENUE` (SQLScript on HANA) — ✅ `zaiso_cl_kpi_amdp.clas.abap` with Revenue + SO-count methods
+- [x] CDS views for: SO Aging, Delivery KPI, AR Aging (4 KPI domains total) — ✅ `zi_aiso_kpi_ar_aging`, `zi_aiso_kpi_delivery`, `zi_aiso_kpi_so_aging`
+- [x] RAP service definition `ZSD_AISO_SALES_ORDER` — ✅ `zsd_aiso_sales_order.srvd.xml`
+- [x] RAP service binding `ZSB_AISO_SALES_ORDER_V4` — ✅ `zsb_aiso_so_v4.srvb.xml`
+- [ ] OData service activated and consumable externally (verified via Postman) — ❌ _Not yet confirmed; carried to Sprint 4_
 
 **AI Team**
-- [ ] Function definitions expanded to 10 functions
-- [ ] System prompt v2 (Vietnamese + English support)
-- [ ] **Vietnamese test set v1**: 50+ queries with ground truth annotation in `tests/nl-accuracy/golden.jsonl`
-- [ ] Adaptive Cards expanded: 8-10 templates including KPI cards with server-rendered chart images
-- [ ] Card rendering tested on Teams desktop + mobile
+- [~] Function definitions expanded to 10 functions — ⚠️ _5 JSON defs + 7 C# handlers; target 10 uniform JSON defs not met; carried to Sprint 4_
+- [x] System prompt v2 (Vietnamese + English support) — ✅ `orchestrator.py` updated
+- [ ] **Vietnamese test set v1**: 50+ queries — ❌ _Only 21 entries in `golden.jsonl`; carried to Sprint 4_
+- [x] Adaptive Cards expanded: 8-10 templates including KPI cards — ✅ 13 templates in `frontend/cards/`
+- [ ] Card rendering tested on Teams desktop + mobile — ❌ _Button bug fixed on 25/06; re-test required in Sprint 4_
 
-#### Sprint 3 Demo criteria
-- ✓ User queries "show SO 5000123" → bot returns REAL data from SAP via Cloud Connector
-- ✓ Revenue dashboard renders with chart image
-- ✓ Vietnamese query works on at least 80% of test set
-- ✓ SSO sign-in flow functional in Teams
+#### Sprint 3 Demo criteria (actual outcome)
+- ✅ User queries → bot returns data from SAP via real `SapClient`
+- ✅ KPI cards render (Revenue, Delivery, Aging)
+- ⚠️ Vietnamese accuracy not yet measured (test set incomplete)
+- ⚠️ SSO replaced with username mapping flow (functional but not Azure SSO)
 
 #### Scope decision gate
-- If real SAP path not working by mid-Sprint 3 → continue with mock for Sprints 3-4, attempt switch in Sprint 5
-- Document fallback decision and rationale in retro
+- Real SAP path is working via `SapClient` + OData. Continuing with real data in Sprint 4.
+- Azure AD SSO deferred — document fallback decision in Tech Spec.
 
 ---
 
-### Sprint 4 — Feature Build II + Workflows + Scheduled Reports (Phase 2)
+### Sprint 4 — Feature Build II + Carryover + Review 2 Prep (Phase 2)
 
-**Dates**: 30/06 – 13/07
-**Sprint Goal**: Complete workflow actions, AI Bonus features, and Hangfire-driven scheduled reports.
+**Dates**: 30/06 – 11/07 _(Review 2 on 12/07)_
+**Sprint Goal**: Complete workflow actions, resolve Sprint 3 carryovers, and deliver a demo-ready system for Mentor Review 2 on 12/07.
+
+> ⚠️ **Review 2 moved to 12/07** — Sprint 4 is now the LAST sprint before mentor review. Scope has been right-sized: Hangfire/scheduling and PDF features are **deprioritized** (moved to post-review polish). Focus is on demo stability + workflow actions + carryover resolution.
 
 #### Sprint deliverables by role
 
 **BE Lead**
-- [ ] All 15+ function handlers wired in `AISO.AiOrchestration`
-- [ ] Workflow function handlers: release, reject, forward, substitution
-- [ ] Attachment management (view, upload, download)
+- [ ] Wire Redis (`IConnectionMultiplexer`) into `SapTokenManager` for token caching _(carryover S3)_
+- [ ] Workflow function handlers end-to-end: release, reject, forward
 - [ ] Authorization check before action execution
-- [ ] Audit log entries for every action
-- [ ] **`AISO.Scheduling`: Hangfire setup with PostgreSQL persistence** _(moved from Sprint 5)_
-- [ ] **Weekly report job (Monday 9 AM)** _(moved from Sprint 5)_
-- [ ] **Daily alert check job (revenue drop, delivery overdue)** _(moved from Sprint 5)_
-- [ ] AI Bonus: Insights generation pipeline (aggregation → LLM → narrative output)
-- [ ] Pseudonymization layer for any data sent to LLM
-- [ ] Hallucination detection (validate referenced SO numbers exist)
-- [ ] Tech Spec section: Workflow actions, AI insights, scheduling
+- [ ] Audit log entries for every workflow action
+- [ ] Adaptive Card button fix verified working on Teams (messageBack) _(carryover S3 bug)_
+- [ ] End-to-end integration test: user types → AI dispatch → SAP action → response card
+- [ ] ~~`AISO.Scheduling`: Hangfire setup~~ _(deprioritized — post-Review 2)_
+- [ ] Tech Spec section: Workflow actions + SAP action architecture
+- [ ] **Demo script + data setup for Review 2** (12/07)
 
 **SAP Team**
-- [ ] RAP Behavior Definitions for SO actions (release, reject) — this is where RAP behavior pool kicks in
-- [ ] RAP Behavior Implementations (ABAP classes)
+- [ ] Verify OData service consumable externally via Postman _(carryover S3)_
+- [ ] RAP Behavior Definitions for SO actions (release, reject)
+- [ ] RAP Behavior Implementations (ABAP classes) — `zbp_i_aiso_so_header` already started
 - [ ] PFCG roles: `ZROLE_AISO_BOT_VIEWER`, `ZROLE_AISO_BOT_RELEASER`
-- [ ] Authorization objects setup
 - [ ] Bot service user (`ZBOT_USER`) configured
-- [ ] Substitution management table + service in SAP
-- [ ] **Background job for KPI refresh (6-hour cycle, SM37 scheduled)** _(consolidated here)_
+- [ ] ~~Substitution management table~~ _(deprioritized — post-Review 2)_
+- [ ] ~~Background KPI refresh job~~ _(deprioritized — post-Review 2)_
 
 **AI Team**
-- [ ] All 15+ function definitions complete with schemas
-- [ ] Action confirmation prompts (release/reject/forward)
-- [ ] Reason code cards (rejection)
-- [ ] User search cards (forwarding)
-- [ ] Substitution setup cards
-- [ ] Insights prompt design + Adaptive Card template
-- [ ] **Vietnamese test set v2**: expand to 100+ queries + 50 English
-- [ ] Test harness runs in CI
+- [ ] Complete function JSON definitions to cover all implemented C# handlers (align `ai/functions/` with `AISO.AiOrchestration/Functions/`) _(carryover S3)_
+- [ ] **Vietnamese test set v1 → 50+ entries** in `ai/tests/golden.jsonl` _(carryover S3: currently 21 entries)_
+- [ ] Verify Adaptive Card buttons working on Teams Desktop + Mobile after fix _(carryover S3)_
+- [ ] Action confirmation prompts for release/reject/forward
+- [ ] Reason code card for rejection
+- [ ] ~~Vietnamese test set v2 (100+ queries)~~ _(deprioritized — stretch goal)_
+- [ ] ~~Test harness in CI~~ _(deprioritized — post-Review 2)_
 
-#### Sprint 4 Demo criteria
-- ✓ User releases SO with comment, action reflected in SAP (verifiable in VA02/VA03)
-- ✓ User rejects SO with reason from dropdown
-- ✓ Forward to colleague works
-- ✓ Substitution setup creates rule in SAP
-- ✓ AI insights generation produces analytical narrative on a sample report
-- ✓ Scheduled weekly report job runs on demand (Hangfire dashboard visible)
-- ✓ All 6 KPI cards render with real data
-- ✓ NL accuracy on Vietnamese ≥ 85% on test set v2
+#### Sprint 4 Demo criteria (Review 2 — 12/07)
+- ✓ User queries sales orders → bot returns REAL SAP data (SO number, customer, value)
+- ✓ User releases SO via bot → action reflected in SAP (verifiable in VA03)
+- ✓ User rejects SO with reason → status updated in SAP
+- ✓ KPI cards (Revenue, Delivery, Aging) render with real data
+- ✓ Adaptive Card shortcut buttons work in Teams (messageBack fix verified)
+- ✓ User account mapping flow works on first login
+- ✓ Vietnamese queries understood correctly (≥ 80% on current test set)
+
+#### Deprioritized items (target Sprint 6 / post-Review 2)
+- Hangfire scheduling, weekly/daily jobs
+- PDF generation, email distribution
+- Substitution management
+- Vietnamese test set v2 (100+ queries)
+- Test harness in CI
 
 ---
 
-### Sprint 5 — PDF Distribution + Polish (Phase 2)
+### ~~Sprint 5 — PDF Distribution + Polish (Phase 2)~~ _(Dissolved — scope absorbed into Sprint 6)_
 
-**Dates**: 14/07 – 27/07
-**Sprint Goal**: PDF generation, email distribution, end-to-end polish. Sprint end = Mentor Review 2 ready.
+**Note**: Sprint 5 is dissolved as Mentor Review 2 was moved to 12/07. PDF and email features are deferred to post-Review 2 polish if time allows before defense.
+
+### Sprint 6 — UAT + Polish (Phase 3)
+
+**Dates**: 13/07 – 27/07 _(extended UAT window)_
+**Sprint Goal**: UAT execution, bug fixes from Review 2 feedback, documentation polish.
 
 #### Sprint deliverables by role
 
