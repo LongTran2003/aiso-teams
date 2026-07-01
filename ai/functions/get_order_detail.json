@@ -1,0 +1,15 @@
+{
+  "name": "GetOrderDetail",
+  "description": "Get full details of a sales order (header + line items) from SAP. Trigger when user wants to view complete information of a single order. Requires order_id explicitly stated by user.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "order_id": {
+        "type": "string",
+        "description": "SAP sales order ID (e.g. 'ORD-123456'). Must be stated by user – never infer."
+      }
+    },
+    "required": ["order_id"],
+    "additionalProperties": false
+  }
+}

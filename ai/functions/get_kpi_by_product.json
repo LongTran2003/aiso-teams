@@ -1,0 +1,29 @@
+{
+  "name": "GetKpiByProduct",
+  "description": "Get KPI metrics per product/material from SAP: quantity sold, revenue, delivery fulfillment rate. Trigger when user asks about product performance, best-selling items, or per-SKU revenue analysis. All params optional.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "materialIdOrName": {
+        "type": ["string", "null"],
+        "description": "Material ID or partial product name. Null to return all products."
+      },
+      "fromDate": {
+        "type": ["string", "null"],
+        "format": "date",
+        "description": "Start date YYYY-MM-DD. Null if not specified."
+      },
+      "toDate": {
+        "type": ["string", "null"],
+        "format": "date",
+        "description": "End date YYYY-MM-DD. Null if not specified."
+      },
+      "top": {
+        "type": ["integer", "null"],
+        "description": "Return top N products by quantity or revenue. Null if not specified."
+      }
+    },
+    "required": [],
+    "additionalProperties": false
+  }
+}
