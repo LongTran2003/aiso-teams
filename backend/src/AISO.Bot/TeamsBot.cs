@@ -279,6 +279,25 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
+            if (result.Payload is IReadOnlyList<Domain.SalesOrders.SalesOrder> ordersList)
+            {
+                if (ordersList.Count == 0)
+                {
+                    await turnContext.SendActivityAsync(
+                        MessageFactory.Attachment(TeamsCardBuilder.BuildEmptyCard()),
+                        cancellationToken);
+                    return;
+                }
+
+                var card = TeamsCardBuilder.BuildSoSummaryCard(ordersList);
+                await turnContext.SendActivityAsync(
+                    MessageFactory.Attachment(card), cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with Adaptive Card listing {Count} orders from CheckOrderStatus", ordersList.Count);
+                return;
+            }
+
             // Workflow action results (Release, Reject, Forward) — show a success card when applicable
             if (result.Payload is not null)
             {
@@ -296,7 +315,7 @@ public class TeamsBot : TeamsActivityHandler
                     return;
                 }
 
-                var message = doc.RootElement.TryGetProperty("message", out var msg)
+                var message = doc.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object && doc.RootElement.TryGetProperty("message", out var msg)
                     ? msg.GetString()
                     : $"✅ Function {dispatch.FunctionName} executed successfully.";
 
