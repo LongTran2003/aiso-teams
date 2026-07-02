@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
 using AISO.Domain.Kpi;
 using AISO.SapIntegration;
@@ -68,7 +68,7 @@ public sealed class GetKpiByProductFunction : IFunction
         {
             var top5 = products.Take(5).ToList();
             var labels = string.Join(",", top5.Select(p => $"'{p.MaterialName}'"));
-            var data   = string.Join(",", top5.Select(p => p.Revenue));
+            var data = string.Join(",", top5.Select(p => p.Revenue));
             var chartConfig = "{\"type\":\"doughnut\",\"data\":{\"labels\":[" + labels + "],\"datasets\":[{\"data\":[" + data + "]}]},\"options\":{\"plugins\":{\"title\":{\"display\":true,\"text\":\"Top Products by Revenue\"}}}}";
             chartUrl = $"https://quickchart.io/chart?c={Uri.EscapeDataString(chartConfig)}";
         }

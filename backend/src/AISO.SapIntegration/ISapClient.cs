@@ -1,4 +1,4 @@
-﻿using AISO.Domain.Kpi;
+using AISO.Domain.Kpi;
 using AISO.Domain.SalesOrders;
 
 namespace AISO.SapIntegration;
