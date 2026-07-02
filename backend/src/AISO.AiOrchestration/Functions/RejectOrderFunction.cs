@@ -68,9 +68,17 @@ public sealed class RejectOrderFunction : IFunction
         _logger.LogInformation(
             "RejectOrder: orderId={OrderId}, reasonCode={ReasonCode}, sapUser={SapUser}", orderId, reasonCode, requestingSapUser);
 
+        // Map AI friendly reason_codes to SAP 2-char ABGRU (Reason for Rejection)
+        var sapReasonCode = reasonCode.ToUpperInvariant() switch
+        {
+            "PRICE_ISSUE" => "02", // Too expensive
+            "OUT_OF_STOCK" => "04", // Not in stock
+            _ => "03" // Other / Customer Cancellation
+        };
+
         try
         {
-            var updatedOrder = await _sap.CancelOrderAsync(orderId, reasonCode, requestingSapUser, ct);
+            var updatedOrder = await _sap.CancelOrderAsync(orderId, sapReasonCode, requestingSapUser, ct);
             var result = new
             {
                 order_id = updatedOrder.SoNumber,
