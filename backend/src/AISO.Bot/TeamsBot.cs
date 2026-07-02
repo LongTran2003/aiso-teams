@@ -61,9 +61,12 @@ public class TeamsBot : TeamsActivityHandler
     {
         var userMessage = turnContext.Activity.RemoveRecipientMention() ?? turnContext.Activity.Text ?? string.Empty;
         userMessage = System.Text.RegularExpressions.Regex.Replace(userMessage, "<[^>]*>", string.Empty);
-
-        // If Text is empty but we have Value (e.g. from an Adaptive Card Action.Submit button)
-        if (string.IsNullOrWhiteSpace(userMessage) && turnContext.Activity.Value != null)
+        
+        // When an Adaptive Card button (Action.Submit with msteams.type=messageBack) is clicked,
+        // Teams sends BOTH Activity.Text (= button title, e.g. "view order 129998")
+        // AND Activity.Value (= the data payload, e.g. { action: "view_details" }).
+        // We MUST check Value first so the structured command wins over the display title.
+        if (turnContext.Activity.Value != null)
         {
             try
             {
