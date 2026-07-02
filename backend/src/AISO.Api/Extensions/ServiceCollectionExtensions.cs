@@ -3,6 +3,15 @@ using AISO.AiOrchestration.Functions;
 using AISO.AiOrchestration.Logging;
 using AISO.AiOrchestration.Services;
 using AISO.AiOrchestration.Stub;
+using AISO.Bot;
+using AISO.Bot.Dialogs;
+using AISO.Bot.Services;
+using AISO.SapIntegration;
+using AISO.SapIntegration.Mock;
+using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.Integration.AspNet.Core;
+using Microsoft.Bot.Connector.Authentication;
+using Polly;
 
 namespace AISO.Api.Extensions;
 
@@ -21,7 +30,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFunction, CreateOrderFunction>();
         services.AddSingleton<IFunction, UpdateOrderReferenceFunction>();
 
-        // Sprint 4 — KPI functions
+        // KPI functions
         services.AddSingleton<IFunction, GetKpiSummaryFunction>();
         services.AddSingleton<IFunction, GetKpiByCustomerFunction>();
         services.AddSingleton<IFunction, GetKpiByProductFunction>();
@@ -51,6 +60,98 @@ public static class ServiceCollectionExtensions
         // Decorate IFunctionDispatcher with structured logging.
         services.Decorate<IFunctionDispatcher, LoggingFunctionDispatcher>();
 
+        return services;
+    }
+
+    public static IServiceCollection AddBotServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddSingleton<BotFrameworkAuthentication, ConfigurationBotFrameworkAuthentication>();
+        services.AddSingleton<IBotFrameworkHttpAdapter, AdapterWithErrorHandler>();
+
+        // Create the storage we'll be using for User and Conversation state.
+        services.AddSingleton<IStorage, MemoryStorage>();
+        services.AddSingleton<UserState>();
+        services.AddSingleton<ConversationState>();
+
+        // Add Redis distributed cache
+        services.AddStackExchangeRedisCache(options =>
+        {
+            options.Configuration = configuration.GetConnectionString("Redis");
+            options.InstanceName = "AisoBot_";
+        });
+
+        // Register the SSO Dialog and User Mapping Service
+        services.AddTransient<UserMappingService>();
+        services.AddTransient<SsoDialog>();
+
+        // Register the Bot
+        services.AddTransient<IBot, TeamsBot>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddSapIntegration(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.Configure<SapOptions>(configuration.GetSection(SapOptions.SectionName));
+
+        // Register SapTokenManager
+        services.AddHttpClient<ISapTokenManager, SapTokenManager>((sp, client) =>
+        {
+            var sapOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SapOptions>>().Value;
+            if (!string.IsNullOrEmpty(sapOptions.BaseUrl))
+            {
+                client.BaseAddress = new Uri(sapOptions.BaseUrl);
+            }
+
+            if (!string.IsNullOrEmpty(sapOptions.Username) && !string.IsNullOrEmpty(sapOptions.Password))
+            {
+                var authHeader = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{sapOptions.Username}:{sapOptions.Password}"));
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
+            }
+
+            client.Timeout = TimeSpan.FromSeconds(sapOptions.TimeoutSeconds > 0 ? sapOptions.TimeoutSeconds : 30);
+        })
+        .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));
+
+        // Register SapClient
+        services.AddHttpClient<ISapClient, SapClient>((sp, client) =>
+        {
+            var sapOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SapOptions>>().Value;
+            if (!string.IsNullOrEmpty(sapOptions.BaseUrl))
+            {
+                client.BaseAddress = new Uri(sapOptions.BaseUrl);
+            }
+
+            if (!string.IsNullOrEmpty(sapOptions.Username) && !string.IsNullOrEmpty(sapOptions.Password))
+            {
+                var authHeader = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{sapOptions.Username}:{sapOptions.Password}"));
+                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
+            }
+
+            client.Timeout = TimeSpan.FromSeconds(sapOptions.TimeoutSeconds > 0 ? sapOptions.TimeoutSeconds : 30);
+        })
+        .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));
+
+        return services;
+    }
+
+    public static IServiceCollection AddCustomHealthChecks(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddHealthChecks()
+            .AddNpgSql(
+                connectionString: configuration.GetConnectionString("Postgres")!,
+                name: "postgres",
+                tags: new[] { "db", "ready" })
+            .AddRedis(
+                redisConnectionString: configuration.GetConnectionString("Redis")!,
+                name: "redis",
+                tags: new[] { "cache", "ready" });
         return services;
     }
 }
