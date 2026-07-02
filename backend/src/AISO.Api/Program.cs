@@ -58,13 +58,6 @@ try
 
     var app = builder.Build();
 
-    // Automatically apply EF Core migrations at startup
-    using (var scope = app.Services.CreateScope())
-    {
-        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.MigrateAsync();
-    }
-
     // --- HTTP pipeline ---
     app.UseMiddleware<CorrelationIdMiddleware>();
     app.UseSerilogRequestLogging();
