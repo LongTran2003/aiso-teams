@@ -37,7 +37,8 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                     {
                         Handled = true,
                         FunctionName = fn.Name,
-                        Result = result
+                        Result = result,
+                        ParametersJson = paramsJson
                     };
                 }
             }
@@ -63,9 +64,10 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                     items = new[] { new { material = material, qty = qty } }
                 };
 
-                using var doc = JsonDocument.Parse(JsonSerializer.Serialize(paramsObj));
+                var paramsJson = JsonSerializer.Serialize(paramsObj);
+                using var doc = JsonDocument.Parse(paramsJson);
                 var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
-                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result };
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
             }
         }
 
@@ -82,9 +84,10 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 var newRef = refMatch.Success ? refMatch.Groups[1].Value : "Updated Reference";
 
                 var paramsObj = new { order_id = orderId, new_reference = newRef };
-                using var doc = JsonDocument.Parse(JsonSerializer.Serialize(paramsObj));
+                var paramsJson = JsonSerializer.Serialize(paramsObj);
+                using var doc = JsonDocument.Parse(paramsJson);
                 var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
-                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result };
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
             }
         }
 
@@ -98,9 +101,10 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
 
                 var paramsObj = new { order_id = orderId, reason_code = "OTHER" };
-                using var doc = JsonDocument.Parse(JsonSerializer.Serialize(paramsObj));
+                var paramsJson = JsonSerializer.Serialize(paramsObj);
+                using var doc = JsonDocument.Parse(paramsJson);
                 var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
-                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result };
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
             }
         }
 
@@ -132,7 +136,8 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             {
                 Handled = true,
                 FunctionName = fn.Name,
-                Result = result
+                Result = result,
+                ParametersJson = paramsJson
             };
         }
 
