@@ -5,6 +5,7 @@ using AISO.AiOrchestration.Services;
 using AISO.AiOrchestration.Stub;
 using AISO.Api.Extensions;
 using AISO.Api.Middleware;
+using Microsoft.EntityFrameworkCore;
 using AISO.Bot;
 using AISO.Persistence;
 using AISO.SapIntegration;
@@ -56,6 +57,13 @@ try
         .AddCustomHealthChecks(builder.Configuration);
 
     var app = builder.Build();
+
+    // Automatically apply EF Core migrations at startup
+    using (var scope = app.Services.CreateScope())
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Database.MigrateAsync();
+    }
 
     // --- HTTP pipeline ---
     app.UseMiddleware<CorrelationIdMiddleware>();
