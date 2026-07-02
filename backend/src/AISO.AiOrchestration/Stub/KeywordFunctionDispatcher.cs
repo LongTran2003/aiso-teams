@@ -57,7 +57,8 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 var material = matMatch.Success ? matMatch.Groups[1].Value.ToUpperInvariant() : "TG11";
                 var qty = qtyMatch.Success ? int.Parse(qtyMatch.Groups[1].Value) : 1;
 
-                var paramsObj = new {
+                var paramsObj = new
+                {
                     customer = customerId,
                     items = new[] { new { material = material, qty = qty } }
                 };
@@ -76,7 +77,7 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             {
                 var orderMatch = OrderIdPattern().Match(text);
                 var refMatch = Regex.Match(text, @"thành '([^']+)'", RegexOptions.IgnoreCase);
-                
+
                 var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
                 var newRef = refMatch.Success ? refMatch.Groups[1].Value : "Updated Reference";
 
@@ -119,13 +120,13 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             var customerIdMatch = Regex.Match(text, @"(uscu_[a-z0-9]+)", RegexOptions.IgnoreCase);
             var customerId = customerIdMatch.Success ? customerIdMatch.Groups[1].Value.ToUpperInvariant() : null;
 
-            var paramsObj = customerId != null 
-                ? new { customerIdOrName = customerId } 
+            var paramsObj = customerId != null
+                ? new { customerIdOrName = customerId }
                 : (object)new { };
-                
+
             var paramsJson = JsonSerializer.Serialize(paramsObj);
             using var doc = JsonDocument.Parse(paramsJson);
-            
+
             var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
             return new DispatchResult
             {

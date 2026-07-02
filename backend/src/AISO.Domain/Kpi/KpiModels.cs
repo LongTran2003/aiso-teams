@@ -1,4 +1,4 @@
-﻿namespace AISO.Domain.Kpi;
+namespace AISO.Domain.Kpi;
 
 /// <summary>
 /// Overall KPI dashboard: aggregated totals across all dimensions.

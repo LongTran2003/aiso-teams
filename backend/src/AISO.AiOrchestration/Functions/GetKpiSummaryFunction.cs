@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
 using AISO.Domain.Kpi;
 using AISO.SapIntegration;
@@ -66,7 +66,7 @@ public sealed class GetKpiSummaryFunction : IFunction
         if (summary.RevenueTimeSeries.Count > 0)
         {
             var labels = string.Join(",", summary.RevenueTimeSeries.Select(p => $"'{p.Label}'"));
-            var data   = string.Join(",", summary.RevenueTimeSeries.Select(p => p.Value));
+            var data = string.Join(",", summary.RevenueTimeSeries.Select(p => p.Value));
             var chartConfig = "{\"type\":\"bar\",\"data\":{\"labels\":[" + labels + "],\"datasets\":[{\"label\":\"Revenue\",\"data\":[" + data + "],\"backgroundColor\":\"rgba(54,162,235,0.7)\"}]},\"options\":{\"plugins\":{\"title\":{\"display\":true,\"text\":\"Revenue Trend\"}}}}";
             chartUrl = $"https://quickchart.io/chart?c={Uri.EscapeDataString(chartConfig)}";
         }

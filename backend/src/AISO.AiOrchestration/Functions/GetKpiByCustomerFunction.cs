@@ -1,4 +1,4 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Text.Json;
 using AISO.Domain.Kpi;
 using AISO.SapIntegration;
@@ -68,7 +68,7 @@ public sealed class GetKpiByCustomerFunction : IFunction
         {
             var top5 = customers.Take(5).ToList();
             var labels = string.Join(",", top5.Select(c => $"'{c.CustomerName}'"));
-            var data   = string.Join(",", top5.Select(c => c.Revenue));
+            var data = string.Join(",", top5.Select(c => c.Revenue));
             var chartConfig = "{\"type\":\"horizontalBar\",\"data\":{\"labels\":[" + labels + "],\"datasets\":[{\"label\":\"Revenue\",\"data\":[" + data + "],\"backgroundColor\":\"rgba(75,192,192,0.7)\"}]},\"options\":{\"plugins\":{\"title\":{\"display\":true,\"text\":\"Top Customers by Revenue\"}}}}";
             chartUrl = $"https://quickchart.io/chart?c={Uri.EscapeDataString(chartConfig)}";
         }

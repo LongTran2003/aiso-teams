@@ -1,13 +1,9 @@
-﻿using AISO.Domain.Kpi;
+using AISO.Domain.Kpi;
 using AISO.Domain.SalesOrders;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.SapIntegration.Mock;
 
-/// <summary>
-/// In-memory implementation of <see cref="ISapClient"/> for development and fallback.
-/// Seed data follows the Global Bike sample dataset (UCC S40 client 324).
-/// </summary>
 public sealed class MockSapClient : ISapClient
 {
     private readonly ILogger<MockSapClient>? _logger;
@@ -21,70 +17,137 @@ public sealed class MockSapClient : ISapClient
     {
         new()
         {
-            SoNumber = "0000005001", CustomerId = "1000", CustomerName = "Philly Bikes",
-            OrderDate = new DateOnly(2026, 5, 28), NetValue = 15_750m, Currency = "USD",
-            SalesOrg = "UE00", Status = SalesOrderStatus.Open,
+            SoNumber = "0000005001",
+            CustomerId = "1000",
+            CustomerName = "Philly Bikes",
+            OrderDate = new DateOnly(2026, 5, 28),
+            NetValue = 15_750m,
+            Currency = "USD",
+            SalesOrg = "UE00",
+            Status = SalesOrderStatus.Open,
             Items = new List<SalesOrderItem>
             {
-                new() { ItemNumber = "00010", Material = "DXTR1000",
-                        Description = "Deluxe Touring Bike (Black)",
-                        Quantity = 5m, Unit = "EA", NetValue = 12_500m },
-                new() { ItemNumber = "00020", Material = "WDFR1000",
-                        Description = "Water Bottle (Front)",
-                        Quantity = 50m, Unit = "EA", NetValue = 3_250m }
-            }
+                new()
+                {
+                    ItemNumber = "00010",
+                    Material = "DXTR1000",
+                    Description = "Deluxe Touring Bike (Black)",
+                    Quantity = 5m,
+                    Unit = "EA",
+                    NetValue = 12_500m,
+                },
+                new()
+                {
+                    ItemNumber = "00020",
+                    Material = "WDFR1000",
+                    Description = "Water Bottle (Front)",
+                    Quantity = 50m,
+                    Unit = "EA",
+                    NetValue = 3_250m,
+                },
+            },
         },
         new()
         {
-            SoNumber = "0000005002", CustomerId = "1003", CustomerName = "Beantown Bikes",
-            OrderDate = new DateOnly(2026, 5, 30), NetValue = 8_400m, Currency = "USD",
-            SalesOrg = "UE00", Status = SalesOrderStatus.Delivered,
+            SoNumber = "0000005002",
+            CustomerId = "1003",
+            CustomerName = "Beantown Bikes",
+            OrderDate = new DateOnly(2026, 5, 30),
+            NetValue = 8_400m,
+            Currency = "USD",
+            SalesOrg = "UE00",
+            Status = SalesOrderStatus.Delivered,
             Items = new List<SalesOrderItem>
             {
-                new() { ItemNumber = "00010", Material = "DXTR2000",
-                        Description = "Deluxe Touring Bike (Silver)",
-                        Quantity = 3m, Unit = "EA", NetValue = 8_400m }
-            }
+                new()
+                {
+                    ItemNumber = "00010",
+                    Material = "DXTR2000",
+                    Description = "Deluxe Touring Bike (Silver)",
+                    Quantity = 3m,
+                    Unit = "EA",
+                    NetValue = 8_400m,
+                },
+            },
         },
         new()
         {
-            SoNumber = "0000005003", CustomerId = "2000", CustomerName = "Berlin Bikes",
-            OrderDate = new DateOnly(2026, 6, 1), NetValue = 22_300m, Currency = "EUR",
-            SalesOrg = "DN00", Status = SalesOrderStatus.Blocked,
+            SoNumber = "0000005003",
+            CustomerId = "2000",
+            CustomerName = "Berlin Bikes",
+            OrderDate = new DateOnly(2026, 6, 1),
+            NetValue = 22_300m,
+            Currency = "EUR",
+            SalesOrg = "DN00",
+            Status = SalesOrderStatus.Blocked,
             Items = new List<SalesOrderItem>
             {
-                new() { ItemNumber = "00010", Material = "PRTR1000",
-                        Description = "Professional Touring Bike (Black)",
-                        Quantity = 8m, Unit = "EA", NetValue = 22_300m }
-            }
+                new()
+                {
+                    ItemNumber = "00010",
+                    Material = "PRTR1000",
+                    Description = "Professional Touring Bike (Black)",
+                    Quantity = 8m,
+                    Unit = "EA",
+                    NetValue = 22_300m,
+                },
+            },
         },
         new()
         {
-            SoNumber = "0000005004", CustomerId = "3000", CustomerName = "Munich Bikes",
-            OrderDate = new DateOnly(2026, 6, 3), NetValue = 5_600m, Currency = "EUR",
-            SalesOrg = "DS00", Status = SalesOrderStatus.PartiallyDelivered,
+            SoNumber = "0000005004",
+            CustomerId = "3000",
+            CustomerName = "Munich Bikes",
+            OrderDate = new DateOnly(2026, 6, 3),
+            NetValue = 5_600m,
+            Currency = "EUR",
+            SalesOrg = "DS00",
+            Status = SalesOrderStatus.PartiallyDelivered,
             Items = new List<SalesOrderItem>
             {
-                new() { ItemNumber = "00010", Material = "ORWN1000",
-                        Description = "Off Road Bike",
-                        Quantity = 4m, Unit = "EA", NetValue = 5_600m }
-            }
+                new()
+                {
+                    ItemNumber = "00010",
+                    Material = "ORWN1000",
+                    Description = "Off Road Bike",
+                    Quantity = 4m,
+                    Unit = "EA",
+                    NetValue = 5_600m,
+                },
+            },
         },
         new()
         {
-            SoNumber = "0000005005", CustomerId = "1004", CustomerName = "Rocky Mountain Bikes",
-            OrderDate = new DateOnly(2026, 6, 5), NetValue = 11_200m, Currency = "USD",
-            SalesOrg = "UW00", Status = SalesOrderStatus.Open,
+            SoNumber = "0000005005",
+            CustomerId = "1004",
+            CustomerName = "Rocky Mountain Bikes",
+            OrderDate = new DateOnly(2026, 6, 5),
+            NetValue = 11_200m,
+            Currency = "USD",
+            SalesOrg = "UW00",
+            Status = SalesOrderStatus.Open,
             Items = new List<SalesOrderItem>
             {
-                new() { ItemNumber = "00010", Material = "DXTR1000",
-                        Description = "Deluxe Touring Bike (Black)",
-                        Quantity = 4m, Unit = "EA", NetValue = 10_000m },
-                new() { ItemNumber = "00020", Material = "WDFR1000",
-                        Description = "Water Bottle (Front)",
-                        Quantity = 24m, Unit = "EA", NetValue = 1_200m }
-            }
-        }
+                new()
+                {
+                    ItemNumber = "00010",
+                    Material = "DXTR1000",
+                    Description = "Deluxe Touring Bike (Black)",
+                    Quantity = 4m,
+                    Unit = "EA",
+                    NetValue = 10_000m,
+                },
+                new()
+                {
+                    ItemNumber = "00020",
+                    Material = "WDFR1000",
+                    Description = "Water Bottle (Front)",
+                    Quantity = 24m,
+                    Unit = "EA",
+                    NetValue = 1_200m,
+                },
+            },
+        },
     };
 
     public Task<IReadOnlyList<SalesOrder>> GetSalesOrdersAsync(SalesOrdersQuery query, CancellationToken ct = default)
@@ -98,10 +161,15 @@ public sealed class MockSapClient : ISapClient
             var needle = query.CustomerIdOrName;
             q = q.Where(o => o.CustomerId == needle || o.CustomerName.Contains(needle, StringComparison.OrdinalIgnoreCase));
         }
-        if (!string.IsNullOrWhiteSpace(query.SalesOrg)) q = q.Where(o => o.SalesOrg == query.SalesOrg);
-        if (query.FromDate.HasValue) q = q.Where(o => o.OrderDate >= query.FromDate.Value);
-        if (query.ToDate.HasValue)   q = q.Where(o => o.OrderDate <= query.ToDate.Value);
-        if (query.Status.HasValue)   q = q.Where(o => o.Status == query.Status.Value);
+
+        if (!string.IsNullOrWhiteSpace(query.SalesOrg))
+            q = q.Where(o => o.SalesOrg == query.SalesOrg);
+        if (query.FromDate.HasValue)
+            q = q.Where(o => o.OrderDate >= query.FromDate.Value);
+        if (query.ToDate.HasValue)
+            q = q.Where(o => o.OrderDate <= query.ToDate.Value);
+        if (query.Status.HasValue)
+            q = q.Where(o => o.Status == query.Status.Value);
 
         var result = q.OrderByDescending(o => o.OrderDate).Take(Math.Clamp(query.Top, 1, 50)).ToList();
         return Task.FromResult<IReadOnlyList<SalesOrder>>(result);
@@ -117,10 +185,15 @@ public sealed class MockSapClient : ISapClient
     {
         return Task.FromResult(new SalesOrder
         {
-            SoNumber = "9999999999", CustomerId = dto.Customer, CustomerName = "Mock Customer",
-            SalesOrg = dto.SalesOrg, OrderDate = DateOnly.FromDateTime(DateTime.Now),
-            NetValue = 1000m, Currency = dto.Currency, Status = SalesOrderStatus.Open,
-            Items = Array.Empty<SalesOrderItem>()
+            SoNumber = "9999999999",
+            CustomerId = dto.Customer,
+            CustomerName = "Mock Customer",
+            SalesOrg = dto.SalesOrg,
+            OrderDate = DateOnly.FromDateTime(DateTime.Now),
+            NetValue = 1000m,
+            Currency = dto.Currency,
+            Status = SalesOrderStatus.Open,
+            Items = Array.Empty<SalesOrderItem>(),
         });
     }
 
@@ -138,26 +211,27 @@ public sealed class MockSapClient : ISapClient
         return Task.FromResult(order);
     }
 
-    // -----------------------------------------------------------------------
-    // KPI mock methods — plausible seed data for dev/testing
-    // -----------------------------------------------------------------------
-
     public Task<KpiSummary> GetKpiSummaryAsync(KpiSummaryQuery query, CancellationToken ct = default)
     {
         _logger?.LogDebug("MockSapClient.GetKpiSummaryAsync called");
         var summary = new KpiSummary
         {
-            TotalRevenue = 63_250m, Currency = "USD",
+            TotalRevenue = 63_250m,
+            Currency = "USD",
             TotalOrders = SeedData.Count,
             OpenOrders = SeedData.Count(o => o.Status == SalesOrderStatus.Open),
             DeliveredOrders = SeedData.Count(o => o.Status == SalesOrderStatus.Delivered),
-            OverdueOrders = 1, FulfillmentRate = 80.0m, CancellationRate = 5.0m,
-            Period = "Mock period", SalesOrg = query.SalesOrg, Granularity = query.Granularity,
+            OverdueOrders = 1,
+            FulfillmentRate = 80.0m,
+            CancellationRate = 5.0m,
+            Period = "Mock period",
+            SalesOrg = query.SalesOrg,
+            Granularity = query.Granularity,
             RevenueTimeSeries = new List<KpiDataPoint>
             {
                 new("May-26", 24_150m),
-                new("Jun-26", 39_100m)
-            }
+                new("Jun-26", 39_100m),
+            },
         };
         return Task.FromResult(summary);
     }
@@ -169,14 +243,18 @@ public sealed class MockSapClient : ISapClient
             .GroupBy(o => new { o.CustomerId, o.CustomerName })
             .Select(g => new KpiByCustomer
             {
-                CustomerId = g.Key.CustomerId, CustomerName = g.Key.CustomerName,
-                Revenue = g.Sum(o => o.NetValue), Currency = g.First().Currency,
+                CustomerId = g.Key.CustomerId,
+                CustomerName = g.Key.CustomerName,
+                Revenue = g.Sum(o => o.NetValue),
+                Currency = g.First().Currency,
                 OrderCount = g.Count(),
                 FulfillmentRate = g.Count() > 0
                     ? g.Count(o => o.Status == SalesOrderStatus.Delivered) * 100m / g.Count()
-                    : 0
+                    : 0,
             })
-            .OrderByDescending(c => c.Revenue).Take(query.Top).ToList();
+            .OrderByDescending(c => c.Revenue)
+            .Take(query.Top)
+            .ToList();
         return Task.FromResult(result);
     }
 
@@ -188,11 +266,17 @@ public sealed class MockSapClient : ISapClient
             .GroupBy(i => new { i.Material, i.Description })
             .Select(g => new KpiByProduct
             {
-                MaterialId = g.Key.Material, MaterialName = g.Key.Description,
-                Revenue = g.Sum(i => i.NetValue), Currency = "USD",
-                TotalQty = g.Sum(i => i.Quantity), Unit = "EA", OrderCount = g.Count()
+                MaterialId = g.Key.Material,
+                MaterialName = g.Key.Description,
+                Revenue = g.Sum(i => i.NetValue),
+                Currency = "USD",
+                TotalQty = g.Sum(i => i.Quantity),
+                Unit = "EA",
+                OrderCount = g.Count(),
             })
-            .OrderByDescending(p => p.Revenue).Take(query.Top).ToList();
+            .OrderByDescending(p => p.Revenue)
+            .Take(query.Top)
+            .ToList();
         return Task.FromResult(result);
     }
 
@@ -204,13 +288,19 @@ public sealed class MockSapClient : ISapClient
             .Where(o => o.Status == SalesOrderStatus.Open)
             .Select(o => new OverdueOrder
             {
-                SoNumber = o.SoNumber, CustomerId = o.CustomerId, CustomerName = o.CustomerName,
+                SoNumber = o.SoNumber,
+                CustomerId = o.CustomerId,
+                CustomerName = o.CustomerName,
                 ScheduledDeliveryDate = o.OrderDate.AddDays(14),
                 DaysPastDue = Math.Max(0, today.DayNumber - o.OrderDate.AddDays(14).DayNumber),
-                NetValue = o.NetValue, Currency = o.Currency, SalesOrg = o.SalesOrg
+                NetValue = o.NetValue,
+                Currency = o.Currency,
+                SalesOrg = o.SalesOrg,
             })
             .Where(o => o.DaysPastDue > 0)
-            .OrderByDescending(o => o.DaysPastDue).Take(query.Top).ToList();
+            .OrderByDescending(o => o.DaysPastDue)
+            .Take(query.Top)
+            .ToList();
         return Task.FromResult(result);
     }
 }
