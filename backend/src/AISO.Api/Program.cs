@@ -3,6 +3,7 @@ using AISO.AiOrchestration.Functions;
 using AISO.AiOrchestration.Logging;
 using AISO.AiOrchestration.Services;
 using AISO.AiOrchestration.Stub;
+using AISO.Api.Extensions;
 using AISO.Api.Middleware;
 using AISO.Bot;
 using AISO.Persistence;
@@ -116,41 +117,7 @@ try
     .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));
 
     // --- AI Orchestration ---
-    builder.Services.AddSingleton<IFunction, GetSalesOrdersFunction>();
-    builder.Services.AddSingleton<IFunction, CheckOrderStatusFunction>();
-    builder.Services.AddSingleton<IFunction, ReleaseOrderFunction>();
-    builder.Services.AddSingleton<IFunction, RejectOrderFunction>();
-    builder.Services.AddSingleton<IFunction, ForwardOrderFunction>();
-    builder.Services.AddSingleton<IFunction, CreateOrderFunction>();
-    builder.Services.AddSingleton<IFunction, UpdateOrderReferenceFunction>();
-    // Sprint 4 — KPI functions
-    builder.Services.AddSingleton<IFunction, GetKpiSummaryFunction>();
-    builder.Services.AddSingleton<IFunction, GetKpiByCustomerFunction>();
-    builder.Services.AddSingleton<IFunction, GetKpiByProductFunction>();
-    builder.Services.AddSingleton<IFunction, GetOverdueOrdersFunction>();
-    builder.Services.AddSingleton<IFunctionRegistry, FunctionRegistry>();
-
-    // AI Service integration: register HTTP client for AI microservice.
-    // Set AiService:UseKeywordFallback=true in config to bypass AI service
-    // and use keyword matching (e.g. when AI service is not running).
-    builder.Services.Configure<AiServiceOptions>(
-        builder.Configuration.GetSection(AiServiceOptions.SectionName));
-
-    var useKeywordFallback = builder.Configuration
-        .GetValue<bool>("AiService:UseKeywordFallback", false);
-
-    if (useKeywordFallback)
-    {
-        builder.Services.AddSingleton<IFunctionDispatcher, KeywordFunctionDispatcher>();
-    }
-    else
-    {
-        builder.Services.AddHttpClient<AiServiceClient>();
-        builder.Services.AddSingleton<IFunctionDispatcher, AiServiceDispatcher>();
-    }
-
-    // Decorate IFunctionDispatcher with structured logging.
-    builder.Services.Decorate<IFunctionDispatcher, LoggingFunctionDispatcher>();
+    builder.Services.AddAiOrchestration(builder.Configuration);
 
     // --- Health Checks ---
     builder.Services.AddHealthChecks()
