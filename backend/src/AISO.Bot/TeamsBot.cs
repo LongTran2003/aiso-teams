@@ -205,7 +205,7 @@ public class TeamsBot : TeamsActivityHandler
                     TeamsUserId = teamsUserId,
                     ConversationId = conversationId,
                     Action = dispatch.FunctionName ?? "unrecognized",
-                    ParametersJson = "{}",
+                    ParametersJson = dispatch.ParametersJson,
                     ResultStatus = DeriveStatus(dispatch),
                     DurationMs = (int)stopwatch.ElapsedMilliseconds,
                     ErrorMessage = dispatch.Result?.ErrorMessage ?? dispatch.Reason
