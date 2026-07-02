@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using AISO.Domain.Kpi;
 using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
