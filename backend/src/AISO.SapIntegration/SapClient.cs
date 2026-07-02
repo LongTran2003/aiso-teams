@@ -168,7 +168,7 @@ public class SapClient : ISapClient
         var payload = new
         {
             REQUESTING_TEAMS_USER = requestingSapUser,
-            REASON_CODE = reason
+            REASON = reason
         };
 
         try
