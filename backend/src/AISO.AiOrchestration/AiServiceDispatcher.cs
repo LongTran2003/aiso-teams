@@ -109,7 +109,8 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
         {
             Handled = true,
             FunctionName = function.Name,
-            Result = result
+            Result = result,
+            ParametersJson = argsJson
         };
     }
 }

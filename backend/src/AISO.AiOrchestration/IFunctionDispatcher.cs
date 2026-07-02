@@ -16,6 +16,7 @@ public sealed record DispatchResult
     public required bool Handled { get; init; }
     public string? FunctionName { get; init; }
     public FunctionResult? Result { get; init; }
+    public string ParametersJson { get; init; } = "{}";
 
     /// <summary>Reason for non-handling (e.g. "intent unclear"), or null when handled.</summary>
     public string? Reason { get; init; }
