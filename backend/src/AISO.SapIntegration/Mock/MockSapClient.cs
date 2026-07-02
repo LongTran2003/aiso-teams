@@ -1,11 +1,11 @@
+using AISO.Domain.Kpi;
 using AISO.Domain.SalesOrders;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.SapIntegration.Mock;
 
 /// <summary>
-/// In-memory implementation of <see cref="ISapClient"/> for Sprint 2 development.
-/// Replaced in Sprint 3 by a real OData client calling SAP via Cloud Connector.
+/// In-memory implementation of <see cref="ISapClient"/> for development and fallback.
 /// Seed data follows the Global Bike sample dataset (UCC S40 client 324).
 /// </summary>
 public sealed class MockSapClient : ISapClient
@@ -87,67 +87,39 @@ public sealed class MockSapClient : ISapClient
         }
     };
 
-    public Task<IReadOnlyList<SalesOrder>> GetSalesOrdersAsync(
-        SalesOrdersQuery query,
-        CancellationToken ct = default)
+    public Task<IReadOnlyList<SalesOrder>> GetSalesOrdersAsync(SalesOrdersQuery query, CancellationToken ct = default)
     {
-        _logger?.LogDebug(
-            "MockSapClient.GetSalesOrdersAsync called: customer={Customer}, " +
-            "salesOrg={SalesOrg}, top={Top}",
+        _logger?.LogDebug("MockSapClient.GetSalesOrdersAsync: customer={Customer}, salesOrg={SalesOrg}, top={Top}",
             query.CustomerIdOrName, query.SalesOrg, query.Top);
 
         IEnumerable<SalesOrder> q = SeedData;
-
         if (!string.IsNullOrWhiteSpace(query.CustomerIdOrName))
         {
             var needle = query.CustomerIdOrName;
-            q = q.Where(o =>
-                o.CustomerId == needle ||
-                o.CustomerName.Contains(needle, StringComparison.OrdinalIgnoreCase));
+            q = q.Where(o => o.CustomerId == needle || o.CustomerName.Contains(needle, StringComparison.OrdinalIgnoreCase));
         }
+        if (!string.IsNullOrWhiteSpace(query.SalesOrg)) q = q.Where(o => o.SalesOrg == query.SalesOrg);
+        if (query.FromDate.HasValue) q = q.Where(o => o.OrderDate >= query.FromDate.Value);
+        if (query.ToDate.HasValue)   q = q.Where(o => o.OrderDate <= query.ToDate.Value);
+        if (query.Status.HasValue)   q = q.Where(o => o.Status == query.Status.Value);
 
-        if (!string.IsNullOrWhiteSpace(query.SalesOrg))
-            q = q.Where(o => o.SalesOrg == query.SalesOrg);
-
-        if (query.FromDate.HasValue)
-            q = q.Where(o => o.OrderDate >= query.FromDate.Value);
-
-        if (query.ToDate.HasValue)
-            q = q.Where(o => o.OrderDate <= query.ToDate.Value);
-
-        if (query.Status.HasValue)
-            q = q.Where(o => o.Status == query.Status.Value);
-
-        var top = Math.Clamp(query.Top, 1, 50);
-        var result = q.OrderByDescending(o => o.OrderDate).Take(top).ToList();
-
-        _logger?.LogDebug(
-            "MockSapClient returning {Count} orders from {SeedCount} seeds",
-            result.Count, SeedData.Count);
-
+        var result = q.OrderByDescending(o => o.OrderDate).Take(Math.Clamp(query.Top, 1, 50)).ToList();
         return Task.FromResult<IReadOnlyList<SalesOrder>>(result);
     }
 
-    public Task<SalesOrder?> GetSalesOrderByIdAsync(
-        string soNumber, CancellationToken ct = default)
+    public Task<SalesOrder?> GetSalesOrderByIdAsync(string soNumber, CancellationToken ct = default)
     {
-        _logger?.LogDebug("MockSapClient.GetSalesOrderByIdAsync called: soNumber={SoNumber}", soNumber);
-        return Task.FromResult<SalesOrder?>(
-            SeedData.FirstOrDefault(x => x.SoNumber == soNumber));
+        _logger?.LogDebug("MockSapClient.GetSalesOrderByIdAsync: {SoNumber}", soNumber);
+        return Task.FromResult<SalesOrder?>(SeedData.FirstOrDefault(x => x.SoNumber == soNumber));
     }
 
     public Task<SalesOrder> CreateSalesOrderAsync(CreateSalesOrderDto dto, CancellationToken ct = default)
     {
         return Task.FromResult(new SalesOrder
         {
-            SoNumber = "9999999999",
-            CustomerId = dto.Customer,
-            CustomerName = "Mock Customer",
-            SalesOrg = dto.SalesOrg,
-            OrderDate = DateOnly.FromDateTime(DateTime.Now),
-            NetValue = 1000m,
-            Currency = dto.Currency,
-            Status = SalesOrderStatus.Open,
+            SoNumber = "9999999999", CustomerId = dto.Customer, CustomerName = "Mock Customer",
+            SalesOrg = dto.SalesOrg, OrderDate = DateOnly.FromDateTime(DateTime.Now),
+            NetValue = 1000m, Currency = dto.Currency, Status = SalesOrderStatus.Open,
             Items = Array.Empty<SalesOrderItem>()
         });
     }
@@ -164,5 +136,81 @@ public sealed class MockSapClient : ISapClient
         var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
             ?? throw new InvalidOperationException($"Order {soNumber} not found.");
         return Task.FromResult(order);
+    }
+
+    // -----------------------------------------------------------------------
+    // KPI mock methods — plausible seed data for dev/testing
+    // -----------------------------------------------------------------------
+
+    public Task<KpiSummary> GetKpiSummaryAsync(KpiSummaryQuery query, CancellationToken ct = default)
+    {
+        _logger?.LogDebug("MockSapClient.GetKpiSummaryAsync called");
+        var summary = new KpiSummary
+        {
+            TotalRevenue = 63_250m, Currency = "USD",
+            TotalOrders = SeedData.Count,
+            OpenOrders = SeedData.Count(o => o.Status == SalesOrderStatus.Open),
+            DeliveredOrders = SeedData.Count(o => o.Status == SalesOrderStatus.Delivered),
+            OverdueOrders = 1, FulfillmentRate = 80.0m, CancellationRate = 5.0m,
+            Period = "Mock period", SalesOrg = query.SalesOrg, Granularity = query.Granularity,
+            RevenueTimeSeries = new List<KpiDataPoint>
+            {
+                new("May-26", 24_150m),
+                new("Jun-26", 39_100m)
+            }
+        };
+        return Task.FromResult(summary);
+    }
+
+    public Task<IReadOnlyList<KpiByCustomer>> GetKpiByCustomerAsync(KpiByCustomerQuery query, CancellationToken ct = default)
+    {
+        _logger?.LogDebug("MockSapClient.GetKpiByCustomerAsync called");
+        IReadOnlyList<KpiByCustomer> result = SeedData
+            .GroupBy(o => new { o.CustomerId, o.CustomerName })
+            .Select(g => new KpiByCustomer
+            {
+                CustomerId = g.Key.CustomerId, CustomerName = g.Key.CustomerName,
+                Revenue = g.Sum(o => o.NetValue), Currency = g.First().Currency,
+                OrderCount = g.Count(),
+                FulfillmentRate = g.Count() > 0
+                    ? g.Count(o => o.Status == SalesOrderStatus.Delivered) * 100m / g.Count()
+                    : 0
+            })
+            .OrderByDescending(c => c.Revenue).Take(query.Top).ToList();
+        return Task.FromResult(result);
+    }
+
+    public Task<IReadOnlyList<KpiByProduct>> GetKpiByProductAsync(KpiByProductQuery query, CancellationToken ct = default)
+    {
+        _logger?.LogDebug("MockSapClient.GetKpiByProductAsync called");
+        IReadOnlyList<KpiByProduct> result = SeedData
+            .SelectMany(o => o.Items)
+            .GroupBy(i => new { i.Material, i.Description })
+            .Select(g => new KpiByProduct
+            {
+                MaterialId = g.Key.Material, MaterialName = g.Key.Description,
+                Revenue = g.Sum(i => i.NetValue), Currency = "USD",
+                TotalQty = g.Sum(i => i.Quantity), Unit = "EA", OrderCount = g.Count()
+            })
+            .OrderByDescending(p => p.Revenue).Take(query.Top).ToList();
+        return Task.FromResult(result);
+    }
+
+    public Task<IReadOnlyList<OverdueOrder>> GetOverdueOrdersAsync(OverdueOrdersQuery query, CancellationToken ct = default)
+    {
+        _logger?.LogDebug("MockSapClient.GetOverdueOrdersAsync called");
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        IReadOnlyList<OverdueOrder> result = SeedData
+            .Where(o => o.Status == SalesOrderStatus.Open)
+            .Select(o => new OverdueOrder
+            {
+                SoNumber = o.SoNumber, CustomerId = o.CustomerId, CustomerName = o.CustomerName,
+                ScheduledDeliveryDate = o.OrderDate.AddDays(14),
+                DaysPastDue = Math.Max(0, today.DayNumber - o.OrderDate.AddDays(14).DayNumber),
+                NetValue = o.NetValue, Currency = o.Currency, SalesOrg = o.SalesOrg
+            })
+            .Where(o => o.DaysPastDue > 0)
+            .OrderByDescending(o => o.DaysPastDue).Take(query.Top).ToList();
+        return Task.FromResult(result);
     }
 }

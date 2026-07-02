@@ -1,3 +1,4 @@
+using AISO.Domain.Kpi;
 using AISO.Domain.SalesOrders;
 
 namespace AISO.SapIntegration;
@@ -31,6 +32,22 @@ public interface ISapClient
         string reason,
         string requestingSapUser,
         CancellationToken ct = default);
+
+    // -----------------------------------------------------------------------
+    // KPI methods (Sprint 4)
+    // -----------------------------------------------------------------------
+
+    /// <summary>Get aggregated KPI dashboard: revenue totals, order counts, fulfillment rate.</summary>
+    Task<KpiSummary> GetKpiSummaryAsync(KpiSummaryQuery query, CancellationToken ct = default);
+
+    /// <summary>Get KPI breakdown per customer, ordered by revenue descending.</summary>
+    Task<IReadOnlyList<KpiByCustomer>> GetKpiByCustomerAsync(KpiByCustomerQuery query, CancellationToken ct = default);
+
+    /// <summary>Get KPI breakdown per product/material, ordered by revenue descending.</summary>
+    Task<IReadOnlyList<KpiByProduct>> GetKpiByProductAsync(KpiByProductQuery query, CancellationToken ct = default);
+
+    /// <summary>Get sales orders that have exceeded their scheduled delivery date.</summary>
+    Task<IReadOnlyList<OverdueOrder>> GetOverdueOrdersAsync(OverdueOrdersQuery query, CancellationToken ct = default);
 }
 
 public sealed record CreateSalesOrderDto

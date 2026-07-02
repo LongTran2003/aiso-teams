@@ -123,6 +123,11 @@ try
     builder.Services.AddSingleton<IFunction, ForwardOrderFunction>();
     builder.Services.AddSingleton<IFunction, CreateOrderFunction>();
     builder.Services.AddSingleton<IFunction, UpdateOrderReferenceFunction>();
+    // Sprint 4 — KPI functions
+    builder.Services.AddSingleton<IFunction, GetKpiSummaryFunction>();
+    builder.Services.AddSingleton<IFunction, GetKpiByCustomerFunction>();
+    builder.Services.AddSingleton<IFunction, GetKpiByProductFunction>();
+    builder.Services.AddSingleton<IFunction, GetOverdueOrdersFunction>();
     builder.Services.AddSingleton<IFunctionRegistry, FunctionRegistry>();
 
     // AI Service integration: register HTTP client for AI microservice.
