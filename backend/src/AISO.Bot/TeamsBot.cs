@@ -160,6 +160,14 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
+            if (string.Equals(normalizedMessage, "logout", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(normalizedMessage, "đăng xuất", StringComparison.OrdinalIgnoreCase))
+            {
+                await _userMappingService.RemoveMappingAsync(teamsUserId, cancellationToken);
+                await turnContext.SendActivityAsync("Đã đăng xuất tài khoản SAP thành công. Bạn có thể gõ 'hi' để thử đăng nhập lại.", cancellationToken: cancellationToken);
+                return;
+            }
+
             var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
 
             var dialogSet = new DialogSet(_conversationState.CreateProperty<DialogState>("DialogState"));
