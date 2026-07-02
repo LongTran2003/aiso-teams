@@ -167,7 +167,7 @@ public class SapClient : ISapClient
         var payload = new
         {
             REQUESTING_TEAMS_USER = requestingSapUser,
-            REASON = reason
+            REASON_CODE = reason
         };
 
         try
@@ -236,6 +236,14 @@ public class SapClient : ISapClient
         try
         {
             var response = await _httpClient.GetAsync(url, ct);
+            
+            // Fallback: If view is missing, aggregate SalesOrders
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("SAP KPI view not found, falling back to manual aggregation");
+                return await GetKpiSummaryFallbackAsync(query, ct);
+            }
+            
             response.EnsureSuccessStatusCode();
 
             var rawJson = await response.Content.ReadAsStringAsync(ct);
@@ -281,9 +289,40 @@ public class SapClient : ISapClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling SAP KPI Summary endpoint");
+            _logger.LogError(ex, "Error fetching KPI summary from SAP");
             throw;
         }
+    }
+
+    private async Task<KpiSummary> GetKpiSummaryFallbackAsync(KpiSummaryQuery query, CancellationToken ct)
+    {
+        // Query maximum possible orders within range
+        var orders = await GetSalesOrdersAsync(new SalesOrdersQuery
+        {
+            FromDate = query.FromDate,
+            ToDate = query.ToDate,
+            SalesOrg = query.SalesOrg,
+            Top = 500 // Aggregate up to 500 recent orders
+        }, ct);
+        
+        var totalOrders = orders.Count;
+        var deliveredOrders = orders.Count(o => o.Status == SalesOrderStatus.Delivered);
+        var openOrders = orders.Count(o => o.Status == SalesOrderStatus.Open);
+        // Note: For cancelled/overdue we'd need more status mappings, simplified here
+        
+        return new KpiSummary
+        {
+            TotalRevenue = orders.Sum(o => o.NetValue),
+            Currency = orders.FirstOrDefault()?.Currency ?? "USD",
+            TotalOrders = totalOrders,
+            OpenOrders = openOrders,
+            DeliveredOrders = deliveredOrders,
+            FulfillmentRate = totalOrders > 0 ? Math.Round((decimal)deliveredOrders / totalOrders * 100, 1) : 0,
+            Period = BuildPeriodLabel(query.FromDate, query.ToDate),
+            SalesOrg = query.SalesOrg,
+            Granularity = query.Granularity,
+            RevenueTimeSeries = new List<KpiDataPoint>()
+        };
     }
 
     public async Task<IReadOnlyList<KpiByCustomer>> GetKpiByCustomerAsync(KpiByCustomerQuery query, CancellationToken ct = default)
