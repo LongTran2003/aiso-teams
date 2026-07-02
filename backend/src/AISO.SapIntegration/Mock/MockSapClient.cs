@@ -1,4 +1,4 @@
-using AISO.Domain.Kpi;
+﻿using AISO.Domain.Kpi;
 using AISO.Domain.SalesOrders;
 using Microsoft.Extensions.Logging;
 
