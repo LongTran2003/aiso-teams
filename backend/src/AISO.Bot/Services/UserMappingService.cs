@@ -53,4 +53,17 @@ public class UserMappingService
 
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task RemoveMappingAsync(string teamsUserId, CancellationToken cancellationToken = default)
+    {
+        var mapping = await _dbContext.UserMappings
+            .Where(u => u.TeamsUserId == teamsUserId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (mapping != null)
+        {
+            _dbContext.UserMappings.Remove(mapping);
+            await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+    }
 }
