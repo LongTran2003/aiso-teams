@@ -62,23 +62,16 @@ public class TeamsBot : TeamsActivityHandler
         var userMessage = turnContext.Activity.RemoveRecipientMention() ?? turnContext.Activity.Text ?? string.Empty;
         userMessage = System.Text.RegularExpressions.Regex.Replace(userMessage, "<[^>]*>", string.Empty);
 
-        // When an Adaptive Card button (Action.Submit with msteams.type=imBack) is clicked,
-        // Teams sends BOTH Activity.Text (= button title, e.g. "🔍 Find Recent Orders")
-        // AND Activity.Value (= the data payload, e.g. { command: "recent orders" }).
-        // We MUST check Value first so the structured command wins over the display title.
-        if (turnContext.Activity.Value != null)
+        // If Text is empty but we have Value (e.g. from an Adaptive Card Action.Submit button)
+        if (string.IsNullOrWhiteSpace(userMessage) && turnContext.Activity.Value != null)
         {
             try
             {
                 var valueObj = Newtonsoft.Json.Linq.JObject.FromObject(turnContext.Activity.Value);
-
-                // Priority 1: explicit "command" field → overrides whatever Text says
-                if (valueObj.TryGetValue("command", StringComparison.OrdinalIgnoreCase, out var cmdToken)
-                    && !string.IsNullOrWhiteSpace(cmdToken.ToString()))
+                if (valueObj.TryGetValue("command", StringComparison.OrdinalIgnoreCase, out var cmdToken))
                 {
                     userMessage = cmdToken.ToString();
                 }
-                // Priority 2: "action" field → handle inline card actions immediately
                 else if (valueObj.TryGetValue("action", StringComparison.OrdinalIgnoreCase, out var actionToken))
                 {
                     var action = actionToken.ToString();
@@ -134,9 +127,8 @@ public class TeamsBot : TeamsActivityHandler
                     }
                 }
             }
-            catch { /* Ignore parsing errors, fall through to use Activity.Text */ }
+            catch { /* Ignore parsing errors, userMessage stays empty */ }
         }
-
 
         var normalizedMessage = userMessage.Trim();
         var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
@@ -160,16 +152,11 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
-            if (string.Equals(normalizedMessage, "cancel", StringComparison.OrdinalIgnoreCase) ||
+            if (string.Equals(normalizedMessage, "cancel", StringComparison.OrdinalIgnoreCase) || 
                 string.Equals(normalizedMessage, "thoát", StringComparison.OrdinalIgnoreCase))
             {
                 await _conversationState.ClearStateAsync(turnContext, cancellationToken);
                 await turnContext.SendActivityAsync("Đã huỷ các tiến trình đang chạy. Bạn có thể bắt đầu lại.", cancellationToken: cancellationToken);
-                return;
-            }
-
-            if (TryHandleOrderDetailRequest(normalizedMessage, turnContext, cancellationToken))
-            {
                 return;
             }
 
@@ -202,7 +189,7 @@ public class TeamsBot : TeamsActivityHandler
                     TeamsUserId = teamsUserId,
                     ConversationId = conversationId,
                     Action = dispatch.FunctionName ?? "unrecognized",
-                    ParametersJson = dispatch.ParametersJson,
+                    ParametersJson = "{}",
                     ResultStatus = DeriveStatus(dispatch),
                     DurationMs = (int)stopwatch.ElapsedMilliseconds,
                     ErrorMessage = dispatch.Result?.ErrorMessage ?? dispatch.Reason
@@ -315,8 +302,37 @@ public class TeamsBot : TeamsActivityHandler
     {
         _logger.LogInformation("Received Invoke Activity with Name: {InvokeName}", turnContext.Activity.Name);
 
-        // SsoDialog no longer uses OAuthPrompt, so we don't need to handle
-        // signin/verifyState or signin/tokenExchange here anymore.
+        if (turnContext.Activity.Name == "signin/verifyState")
+        {
+            _logger.LogInformation("Received signin/verifyState Invoke Activity");
+            await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
+            return new InvokeResponse { Status = 200 };
+        }
+
+        if (turnContext.Activity.Name == "signin/tokenExchange")
+        {
+            _logger.LogInformation("Received signin/tokenExchange Invoke Activity");
+            await _dialog.RunAsync(turnContext, _conversationState.CreateProperty<DialogState>("DialogState"), cancellationToken);
+
+            // If OAuthPrompt failed to exchange the token, we MUST return 412 Precondition Failed.
+            // This tells Teams to fallback to showing the Sign-In card to the user.
+            var tokenExchangeSuccessful = turnContext.TurnState.TryGetValue("BotFramework.OAuthPrompt.TokenExchangeSuccessful", out var result) && result is bool success && success;
+            if (!tokenExchangeSuccessful)
+            {
+                _logger.LogWarning("SSO Token Exchange failed validation. Returning 412 so Teams displays the OAuthCard.");
+                return new InvokeResponse { Status = 412 };
+            }
+
+            return new InvokeResponse { Status = 200 };
+        }
+
+        // When silent SSO fails, Teams sends "signin/failure". We MUST return 200 to tell Teams to show the Sign-in button.
+        if (turnContext.Activity.Name == "signin/failure")
+        {
+            _logger.LogWarning("SSO Token Exchange failed. Teams should now fallback to showing the OAuthCard.");
+            return new InvokeResponse { Status = 200 };
+        }
+
         return await base.OnInvokeActivityAsync(turnContext, cancellationToken);
     }
 
@@ -336,41 +352,6 @@ public class TeamsBot : TeamsActivityHandler
             }
         }
     }
-
-    private static bool TryHandleOrderDetailRequest(string message, ITurnContext turnContext, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(message))
-        {
-            return false;
-        }
-
-        var lowered = message.ToLowerInvariant();
-        var isDetailRequest = lowered.Contains("detail") || lowered.Contains("chi tiết") || lowered.Contains("xem chi tiết") || lowered.Contains("show detail");
-        var mentionsOrder = lowered.Contains("order") || lowered.Contains("đơn hàng") || lowered.Contains("so") || lowered.Contains("sales order");
-
-        if (!isDetailRequest || !mentionsOrder)
-        {
-            return false;
-        }
-
-        var match = System.Text.RegularExpressions.Regex.Match(message, @"(?:order|so|sales order|đơn hàng|đơn)\s*(?:no\.?|number|#)?\s*([A-Za-z0-9\-\/]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        var orderId = match.Success ? match.Groups[1].Value : "UNKNOWN";
-
-        turnContext.SendActivityAsync(
-            MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
-            {
-                salesOrderNumber = orderId,
-                customerName = "Sample Customer",
-                customerId = "1000",
-                documentDate = DateTime.Now.ToString("dd MMM yyyy"),
-                netAmount = "$12,500",
-                currency = "USD",
-                approvalStatus = "Pending"
-            })),
-            cancellationToken);
-        return true;
-    }
-
 
     private static string DeriveStatus(DispatchResult d)
     {
