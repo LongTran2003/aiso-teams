@@ -1,4 +1,8 @@
 @EndUserText.label: 'AISO Sales Order Service Definition'
 define service ZSD_AISO_SALES_ORDER {
   expose ZC_AISO_SO_WITH_ITEMS as SalesOrder;
+  expose ZI_AISO_KPI_SO_AGING as KpiSoAging;
+  expose ZI_AISO_KPI_DELIVERY as KpiDelivery;
+  expose ZI_AISO_KPI_AR_AGING as KpiArAging;
+  expose ZI_AISO_KPI_REVENUE as KpiRevenue;
 }
