@@ -33,6 +33,17 @@ public interface ISapClient
         string requestingSapUser,
         CancellationToken ct = default);
 
+    Task<SalesOrder> ReleaseOrderAsync(
+        string soNumber,
+        string requestingSapUser,
+        CancellationToken ct = default);
+
+    Task<SalesOrder> ForwardOrderAsync(
+        string soNumber,
+        string forwardToUser,
+        string requestingSapUser,
+        CancellationToken ct = default);
+
     // -----------------------------------------------------------------------
     // KPI methods (Sprint 4)
     // -----------------------------------------------------------------------
