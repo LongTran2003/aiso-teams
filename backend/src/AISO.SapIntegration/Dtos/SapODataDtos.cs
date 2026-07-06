@@ -25,6 +25,15 @@ internal class SapSalesOrderDto
 }
 
 // KPI DTOs — field names must match SAP CDS view element names (PascalCase via OData)
+internal class SapKpiRevenueDto
+{
+    public string? SalesOrg { get; set; }
+    public string? Currency { get; set; }
+    public string? BillingDate { get; set; }
+    public decimal? TotalRevenue { get; set; }
+    public int? InvoiceCount { get; set; }
+}
+
 internal class SapKpiSummaryDto
 {
     public string? PeriodLabel { get; set; }

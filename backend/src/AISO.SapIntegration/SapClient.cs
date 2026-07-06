@@ -247,69 +247,63 @@ public class SapClient : ISapClient
 
     public async Task<KpiSummary> GetKpiSummaryAsync(KpiSummaryQuery query, CancellationToken ct = default)
     {
-        // Entity: ZI_AISO_KPI_SUMMARY (to be created by SAP team)
-        // Falls back to aggregating from SalesOrder if KPI view not yet ready.
-        var builder = new ODataQueryBuilder("ZI_AISO_KPI_SUMMARY")
+        // Entity: KpiRevenue (exposed by SAP team)
+        var builder = new ODataQueryBuilder("KpiRevenue")
             .AddCustomParam("sap-client", "324");
 
         if (query.FromDate.HasValue)
-            builder.FilterRaw($"DocDate ge {query.FromDate.Value:yyyy-MM-dd}");
+            builder.FilterRaw($"BillingDate ge {query.FromDate.Value:yyyy-MM-dd}");
         if (query.ToDate.HasValue)
-            builder.FilterRaw($"DocDate le {query.ToDate.Value:yyyy-MM-dd}");
+            builder.FilterRaw($"BillingDate le {query.ToDate.Value:yyyy-MM-dd}");
         if (!string.IsNullOrWhiteSpace(query.SalesOrg))
             builder.Filter("SalesOrg", "eq", query.SalesOrg);
 
         var url = builder.Build();
-        _logger.LogInformation("Calling SAP OData (KPI Summary): {Url}", url);
+        _logger.LogInformation("Calling SAP OData (KPI Revenue): {Url}", url);
 
         try
         {
             var response = await _httpClient.GetAsync(url, ct);
             
-            // Fallback: If view is missing, aggregate SalesOrders
+            // Fallback: If view is missing, aggregate SalesOrders entirely
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
-                _logger.LogWarning("SAP KPI view not found, falling back to manual aggregation");
+                _logger.LogWarning("SAP KPI view not found, falling back to manual aggregation for everything");
                 return await GetKpiSummaryFallbackAsync(query, ct);
             }
             
             response.EnsureSuccessStatusCode();
 
             var rawJson = await response.Content.ReadAsStringAsync(ct);
-            _logger.LogDebug("SAP KPI Summary raw: {Raw}", rawJson);
+            _logger.LogDebug("SAP KPI Revenue raw: {Raw}", rawJson);
 
-            var result = JsonSerializer.Deserialize<ODataResponse<SapKpiSummaryDto>>(
+            var result = JsonSerializer.Deserialize<ODataResponse<SapKpiRevenueDto>>(
                 rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-            if (result?.Value == null || result.Value.Count == 0)
-                return new KpiSummary { Period = BuildPeriodLabel(query.FromDate, query.ToDate), SalesOrg = query.SalesOrg, Granularity = query.Granularity };
+            var rows = result?.Value ?? new List<SapKpiRevenueDto>();
 
-            // Aggregate all rows into a single summary
-            var rows = result.Value;
             var totalRevenue = rows.Sum(r => r.TotalRevenue ?? 0);
-            var totalOrders = rows.Sum(r => r.OrderCount ?? 0);
-            var deliveredOrders = rows.Sum(r => r.DeliveredCount ?? 0);
-            var openOrders = rows.Sum(r => r.OpenCount ?? 0);
-            var overdueOrders = rows.Sum(r => r.OverdueCount ?? 0);
-            var fulfillmentRate = totalOrders > 0 ? (decimal)deliveredOrders / totalOrders * 100 : 0;
-            var cancelledOrders = rows.Sum(r => r.CancelledCount ?? 0);
-            var cancellationRate = totalOrders > 0 ? (decimal)cancelledOrders / totalOrders * 100 : 0;
+            var currency = rows.FirstOrDefault()?.Currency ?? "USD";
 
             var timeSeries = rows
-                .Where(r => !string.IsNullOrEmpty(r.PeriodLabel))
-                .Select(r => new KpiDataPoint(r.PeriodLabel!, r.TotalRevenue ?? 0))
+                .Where(r => !string.IsNullOrEmpty(r.BillingDate))
+                .GroupBy(r => r.BillingDate!)
+                .Select(g => new KpiDataPoint(g.Key, g.Sum(r => r.TotalRevenue ?? 0)))
                 .ToList();
+
+            // KpiRevenue doesn't provide order statuses, so we get them from SalesOrders
+            var fallbackSummary = await GetKpiSummaryFallbackAsync(query, ct);
 
             return new KpiSummary
             {
                 TotalRevenue = totalRevenue,
-                Currency = rows.FirstOrDefault()?.Currency ?? "USD",
-                TotalOrders = totalOrders,
-                OpenOrders = openOrders,
-                DeliveredOrders = deliveredOrders,
-                OverdueOrders = overdueOrders,
-                FulfillmentRate = Math.Round(fulfillmentRate, 1),
-                CancellationRate = Math.Round(cancellationRate, 1),
+                Currency = currency,
+                TotalOrders = fallbackSummary.TotalOrders,
+                OpenOrders = fallbackSummary.OpenOrders,
+                DeliveredOrders = fallbackSummary.DeliveredOrders,
+                OverdueOrders = fallbackSummary.OverdueOrders,
+                FulfillmentRate = fallbackSummary.FulfillmentRate,
+                CancellationRate = fallbackSummary.CancellationRate,
                 Period = BuildPeriodLabel(query.FromDate, query.ToDate),
                 SalesOrg = query.SalesOrg,
                 Granularity = query.Granularity,
@@ -318,7 +312,7 @@ public class SapClient : ISapClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching KPI summary from SAP");
+            _logger.LogError(ex, "Error fetching KPI Revenue from SAP");
             throw;
         }
     }
