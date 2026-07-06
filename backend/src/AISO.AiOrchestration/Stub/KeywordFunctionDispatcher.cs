@@ -20,8 +20,8 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
     {
         var text = userMessage.Trim().ToLowerInvariant();
 
-        // Pattern 1: Check specific order — "kiểm tra đơn hàng 5001" or "check order 5001"
-        if (text.Contains("kiểm tra") || text.Contains("check"))
+        // Pattern 1: Check specific order — "kiểm tra đơn hàng 5001" or "check order 5001" or "show sales order 5001"
+        if (text.Contains("kiểm tra") || text.Contains("check") || text.Contains("show"))
         {
             var match = OrderIdPattern().Match(text);
             if (match.Success)
