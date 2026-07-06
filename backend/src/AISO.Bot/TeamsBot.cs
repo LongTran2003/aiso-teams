@@ -71,6 +71,21 @@ public class TeamsBot : TeamsActivityHandler
             try
             {
                 var valueObj = Newtonsoft.Json.Linq.JObject.FromObject(turnContext.Activity.Value);
+                
+                // For messageBack cards, Teams might not reliably populate Activity.Text. 
+                // We extract msteams.text directly from Value if present.
+                if (valueObj.TryGetValue("msteams", StringComparison.OrdinalIgnoreCase, out var msTeamsToken) && msTeamsToken is Newtonsoft.Json.Linq.JObject msTeamsObj)
+                {
+                    if (msTeamsObj.TryGetValue("text", StringComparison.OrdinalIgnoreCase, out var textToken))
+                    {
+                        var textVal = textToken.ToString();
+                        if (!string.IsNullOrWhiteSpace(textVal))
+                        {
+                            userMessage = textVal;
+                        }
+                    }
+                }
+
                 if (valueObj.TryGetValue("command", StringComparison.OrdinalIgnoreCase, out var cmdToken))
                 {
                     userMessage = cmdToken.ToString();
