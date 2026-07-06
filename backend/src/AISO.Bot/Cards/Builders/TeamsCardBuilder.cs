@@ -27,6 +27,9 @@ internal static class TeamsCardBuilder
     public static Attachment BuildConfirmRejectCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-reject.json", new { salesOrderNumber });
 
+    public static Attachment BuildConfirmReleaseCard(string salesOrderNumber) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-release.json", new { salesOrderNumber });
+
     public static Attachment BuildKpiSummaryCard(object data) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("kpi-summary.json", data);
 
