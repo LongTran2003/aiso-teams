@@ -60,7 +60,8 @@ public sealed class ReleaseOrderFunction : IFunction
         }
 
         // Authorization Check
-        if (!requestingSapUser.Contains("manager", StringComparison.OrdinalIgnoreCase))
+        var allowedManagers = new[] { "DEV-249", "DEV-001", "DEV-002" };
+        if (!allowedManagers.Contains(requestingSapUser.ToUpperInvariant()))
         {
             _logger.LogWarning("AUDIT: User {User} attempted to release order {OrderId} but does not have manager role.", requestingSapUser, orderId);
             return FunctionResult.Fail("Authorization failed: You do not have the required 'Manager' role to approve sales orders.");
