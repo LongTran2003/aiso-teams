@@ -82,6 +82,15 @@ public class TeamsBot : TeamsActivityHandler
                         if (!string.IsNullOrWhiteSpace(textVal))
                         {
                             userMessage = textVal;
+
+                            if (valueObj.TryGetValue("comment", StringComparison.OrdinalIgnoreCase, out var commentToken))
+                            {
+                                userMessage += $" comment: {commentToken.ToString()}";
+                            }
+                            if (valueObj.TryGetValue("reasonCode", StringComparison.OrdinalIgnoreCase, out var reasonToken))
+                            {
+                                userMessage += $" reason: {reasonToken.ToString()}";
+                            }
                         }
                     }
                 }

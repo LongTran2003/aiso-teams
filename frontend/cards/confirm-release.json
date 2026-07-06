@@ -29,6 +29,12 @@
       "wrap": true,
       "isSubtle": true,
       "spacing": "Small"
+    },
+    {
+      "type": "Input.Text",
+      "id": "comment",
+      "placeholder": "Enter approval comment (optional)...",
+      "isMultiline": true
     }
   ],
   "actions": [

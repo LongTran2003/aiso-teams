@@ -29,6 +29,27 @@
       "wrap": true,
       "isSubtle": true,
       "spacing": "Small"
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "reasonCode",
+      "label": "Select a reason for rejection",
+      "isRequired": true,
+      "errorMessage": "Please select a reason",
+      "choices": [
+        {
+          "title": "Too expensive",
+          "value": "PRICE_ISSUE"
+        },
+        {
+          "title": "Not in stock",
+          "value": "OUT_OF_STOCK"
+        },
+        {
+          "title": "Other / Customer Cancellation",
+          "value": "OTHER"
+        }
+      ]
     }
   ],
   "actions": [

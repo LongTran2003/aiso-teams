@@ -91,7 +91,7 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
-        // Pattern: Cancel Order
+        // Pattern: Cancel/Reject Order
         if ((text.Contains("hủy") || text.Contains("huỷ") || text.Contains("reject") || text.Contains("cancel")) && (text.Contains("đơn") || text.Contains("order")))
         {
             var fn = _registry.GetByName("RejectOrder");
@@ -100,7 +100,10 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 var orderMatch = OrderIdPattern().Match(text);
                 var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
 
-                var reasonCode = text.Contains("sai giá") || text.Contains("price") ? "PRICE_ISSUE" : "OTHER";
+                var reasonMatch = Regex.Match(text, @"reason:\s*(.+)");
+                var reasonCode = reasonMatch.Success 
+                    ? reasonMatch.Groups[1].Value.Trim().ToUpperInvariant() 
+                    : (text.Contains("sai giá") || text.Contains("price") ? "PRICE_ISSUE" : "OTHER");
 
                 var paramsObj = new { order_id = orderId, reason_code = reasonCode };
                 var paramsJson = JsonSerializer.Serialize(paramsObj);
@@ -119,7 +122,10 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 var orderMatch = OrderIdPattern().Match(text);
                 var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
 
-                var paramsObj = new { order_id = orderId, comment = "Approved via Teams Bot" };
+                var commentMatch = Regex.Match(text, @"comment:\s*(.+)");
+                var commentStr = commentMatch.Success ? commentMatch.Groups[1].Value.Trim() : "Approved via Teams Bot";
+
+                var paramsObj = new { order_id = orderId, comment = commentStr };
                 var paramsJson = JsonSerializer.Serialize(paramsObj);
                 using var doc = JsonDocument.Parse(paramsJson);
                 var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
