@@ -191,22 +191,57 @@ public class SapClient : ISapClient
 
         try
         {
-            // TEMPORARY MOCK: SAP Backend is currently throwing ABAP RAISE_SHORTDUMP for cancelOrder.
-            // Mocking the success response until the SAP team fixes the OData action implementation.
-            _logger.LogWarning("SAP CancelOrder is currently broken (RAISE_SHORTDUMP). Mocking success response.");
-            
-            var order = await GetSalesOrderByIdAsync(soNumber, ct);
-            if (order == null) throw new InvalidOperationException($"Order {soNumber} not found.");
-            
-            return order with { Status = SalesOrderStatus.Cancelled };
-
-            // REAL IMPLEMENTATION (Commented out until SAP is ready):
-            // var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
-            // return result == null ? throw new InvalidOperationException("Failed to deserialize canceled order.") : MapToDomain(result);
+            var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
+            return result == null ? throw new InvalidOperationException("Failed to deserialize canceled order.") : MapToDomain(result);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error calling SAP OData CancelOrderAsync for {SoNumber}", soNumber);
+            throw;
+        }
+    }
+
+    public async Task<SalesOrder> ReleaseOrderAsync(string soNumber, string requestingSapUser, CancellationToken ct = default)
+    {
+        var url = $"SalesOrder('{soNumber}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.releaseOrder?sap-client=324&$format=json";
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        var payload = new
+        {
+            REQUESTING_TEAMS_USER = requestingSapUser
+        };
+
+        try
+        {
+            var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
+            return result == null ? throw new InvalidOperationException("Failed to deserialize released order.") : MapToDomain(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling SAP OData ReleaseOrderAsync for {SoNumber}", soNumber);
+            throw;
+        }
+    }
+
+    public async Task<SalesOrder> ForwardOrderAsync(string soNumber, string forwardToUser, string requestingSapUser, CancellationToken ct = default)
+    {
+        var url = $"SalesOrder('{soNumber}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.forwardOrder?sap-client=324&$format=json";
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        var payload = new
+        {
+            REQUESTING_TEAMS_USER = requestingSapUser,
+            FORWARD_TO = forwardToUser
+        };
+
+        try
+        {
+            var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
+            return result == null ? throw new InvalidOperationException("Failed to deserialize forwarded order.") : MapToDomain(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling SAP OData ForwardOrderAsync for {SoNumber}", soNumber);
             throw;
         }
     }
