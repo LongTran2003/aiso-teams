@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.AiOrchestration.Functions;
@@ -10,10 +11,12 @@ namespace AISO.AiOrchestration.Functions;
 /// </summary>
 public sealed class ReleaseOrderFunction : IFunction
 {
+    private readonly ISapClient _sap;
     private readonly ILogger<ReleaseOrderFunction> _logger;
 
-    public ReleaseOrderFunction(ILogger<ReleaseOrderFunction> logger)
+    public ReleaseOrderFunction(ISapClient sap, ILogger<ReleaseOrderFunction> logger)
     {
+        _sap = sap;
         _logger = logger;
     }
 
@@ -39,7 +42,7 @@ public sealed class ReleaseOrderFunction : IFunction
         }
         """;
 
-    public Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
+    public async Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
     {
         var orderId = parameters.TryGetProperty("order_id", out var p)
                       && p.ValueKind == JsonValueKind.String
@@ -53,22 +56,42 @@ public sealed class ReleaseOrderFunction : IFunction
 
         if (string.IsNullOrWhiteSpace(orderId))
         {
-            return Task.FromResult(FunctionResult.Fail("Missing required parameter: order_id"));
+            return FunctionResult.Fail("Missing required parameter: order_id");
+        }
+
+        // Authorization Check
+        if (!requestingSapUser.Contains("manager", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("AUDIT: User {User} attempted to release order {OrderId} but does not have manager role.", requestingSapUser, orderId);
+            return FunctionResult.Fail("Authorization failed: You do not have the required 'Manager' role to approve sales orders.");
         }
 
         _logger.LogInformation(
-            "ReleaseOrder: orderId={OrderId}, comment={Comment}", orderId, comment);
+            "ReleaseOrder: orderId={OrderId}, comment={Comment}, sapUser={SapUser}", orderId, comment, requestingSapUser);
 
-        // Sprint 2-3: mock success. Sprint 4: call SAP RAP action.
-        var result = new
+        try
         {
-            order_id = orderId,
-            action = "Released",
-            comment,
-            message = $"Sales order {orderId} has been released successfully."
-        };
+            // Call SAP RAP action
+            var updatedOrder = await _sap.ReleaseOrderAsync(orderId, requestingSapUser, ct);
+            
+            // Audit Log
+            _logger.LogInformation("AUDIT: User {User} successfully released order {OrderId} with comment: {Comment}", requestingSapUser, orderId, comment ?? "None");
 
-        return Task.FromResult(FunctionResult.Ok(result));
+            var result = new
+            {
+                order_id = updatedOrder.SoNumber,
+                action = "Released",
+                comment,
+                message = $"Sales order {updatedOrder.SoNumber} has been released successfully. Status is now {updatedOrder.Status}."
+            };
+
+            return FunctionResult.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to release order {OrderId}", orderId);
+            return FunctionResult.Fail($"Failed to release order in SAP: {ex.Message}");
+        }
     }
 }
 

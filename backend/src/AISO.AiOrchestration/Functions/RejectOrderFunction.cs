@@ -65,6 +65,13 @@ public sealed class RejectOrderFunction : IFunction
             return FunctionResult.Fail("Missing required parameter: reason_code");
         }
 
+        // Authorization Check
+        if (!requestingSapUser.Contains("manager", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("AUDIT: User {User} attempted to reject order {OrderId} but does not have manager role.", requestingSapUser, orderId);
+            return FunctionResult.Fail("Authorization failed: You do not have the required 'Manager' role to reject sales orders.");
+        }
+
         _logger.LogInformation(
             "RejectOrder: orderId={OrderId}, reasonCode={ReasonCode}, sapUser={SapUser}", orderId, reasonCode, requestingSapUser);
 
@@ -79,6 +86,10 @@ public sealed class RejectOrderFunction : IFunction
         try
         {
             var updatedOrder = await _sap.CancelOrderAsync(orderId, sapReasonCode, requestingSapUser, ct);
+            
+            // Audit Log
+            _logger.LogInformation("AUDIT: User {User} successfully rejected order {OrderId} with reason: {Reason}", requestingSapUser, orderId, reasonCode);
+
             var result = new
             {
                 order_id = updatedOrder.SoNumber,
