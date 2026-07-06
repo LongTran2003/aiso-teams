@@ -76,11 +76,18 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ConversationState>();
 
         // Add Redis distributed cache
+        var redisConnStr = configuration.GetConnectionString("Redis");
         services.AddStackExchangeRedisCache(options =>
         {
-            options.Configuration = configuration.GetConnectionString("Redis");
+            options.Configuration = redisConnStr;
             options.InstanceName = "AisoBot_";
         });
+
+        if (!string.IsNullOrEmpty(redisConnStr))
+        {
+            services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp => 
+                StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnStr));
+        }
 
         // Register the SSO Dialog and User Mapping Service
         services.AddTransient<UserMappingService>();
