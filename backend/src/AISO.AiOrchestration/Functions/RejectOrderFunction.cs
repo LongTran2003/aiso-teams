@@ -66,7 +66,7 @@ public sealed class RejectOrderFunction : IFunction
         }
 
         // Authorization Check
-        var allowedManagers = new[] { "DEV-249", "DEV-001", "DEV-002" };
+        var allowedManagers = new[] { "DEV-249" };
         if (!allowedManagers.Contains(requestingSapUser.ToUpperInvariant()))
         {
             _logger.LogWarning("AUDIT: User {User} attempted to reject order {OrderId} but does not have manager role.", requestingSapUser, orderId);
