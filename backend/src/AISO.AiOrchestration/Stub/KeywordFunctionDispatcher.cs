@@ -113,6 +113,26 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
+        // Pattern: Forward Order
+        if ((text.Contains("forward") || text.Contains("chuyển")) && (text.Contains("đơn") || text.Contains("order")))
+        {
+            var fn = _registry.GetByName("ForwardOrder");
+            if (fn is not null)
+            {
+                var orderMatch = OrderIdPattern().Match(text);
+                var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
+
+                var toMatch = Regex.Match(text, @"(?:to|cho)\s+([^\s]+)");
+                var forwardTo = toMatch.Success ? toMatch.Groups[1].Value : "manager@aiso.com";
+
+                var paramsObj = new { order_id = orderId, forward_to_user = forwardTo };
+                var paramsJson = JsonSerializer.Serialize(paramsObj);
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
+            }
+        }
+
         // Pattern: Approve Order
         if ((text.Contains("phê duyệt") || text.Contains("approve") || text.Contains("release")) && (text.Contains("đơn") || text.Contains("order")))
         {
