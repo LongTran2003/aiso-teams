@@ -92,7 +92,7 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         }
 
         // Pattern: Cancel Order
-        if ((text.Contains("hủy") || text.Contains("huỷ")) && text.Contains("đơn"))
+        if ((text.Contains("hủy") || text.Contains("huỷ") || text.Contains("reject") || text.Contains("cancel")) && (text.Contains("đơn") || text.Contains("order")))
         {
             var fn = _registry.GetByName("RejectOrder");
             if (fn is not null)
@@ -111,7 +111,7 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         }
 
         // Pattern: Approve Order
-        if (text.Contains("phê duyệt") || text.Contains("approve"))
+        if ((text.Contains("phê duyệt") || text.Contains("approve") || text.Contains("release")) && (text.Contains("đơn") || text.Contains("order")))
         {
             var fn = _registry.GetByName("ReleaseOrder");
             if (fn is not null)
