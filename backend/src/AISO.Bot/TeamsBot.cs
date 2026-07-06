@@ -114,6 +114,24 @@ public class TeamsBot : TeamsActivityHandler
                         return;
                     }
 
+                    if (string.Equals(action, "release_so", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmReleaseCard(salesOrderId)),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "reject_so", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmRejectCard(salesOrderId)),
+                            cancellationToken);
+                        return;
+                    }
+
                     if (string.Equals(action, "view_revenue_kpi", StringComparison.OrdinalIgnoreCase))
                     {
                         await turnContext.SendActivityAsync(
