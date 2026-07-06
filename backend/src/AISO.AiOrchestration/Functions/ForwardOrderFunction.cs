@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.AiOrchestration.Functions;
@@ -10,10 +11,12 @@ namespace AISO.AiOrchestration.Functions;
 /// </summary>
 public sealed class ForwardOrderFunction : IFunction
 {
+    private readonly ISapClient _sap;
     private readonly ILogger<ForwardOrderFunction> _logger;
 
-    public ForwardOrderFunction(ILogger<ForwardOrderFunction> logger)
+    public ForwardOrderFunction(ISapClient sap, ILogger<ForwardOrderFunction> logger)
     {
+        _sap = sap;
         _logger = logger;
     }
 
@@ -39,7 +42,7 @@ public sealed class ForwardOrderFunction : IFunction
         }
         """;
 
-    public Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
+    public async Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
     {
         var orderId = parameters.TryGetProperty("order_id", out var p)
                       && p.ValueKind == JsonValueKind.String
@@ -53,27 +56,47 @@ public sealed class ForwardOrderFunction : IFunction
 
         if (string.IsNullOrWhiteSpace(orderId))
         {
-            return Task.FromResult(FunctionResult.Fail("Missing required parameter: order_id"));
+            return FunctionResult.Fail("Missing required parameter: order_id");
         }
 
         if (string.IsNullOrWhiteSpace(forwardTo))
         {
-            return Task.FromResult(FunctionResult.Fail("Missing required parameter: forward_to_user"));
+            return FunctionResult.Fail("Missing required parameter: forward_to_user");
+        }
+
+        // Authorization Check
+        if (!requestingSapUser.Contains("manager", StringComparison.OrdinalIgnoreCase))
+        {
+            _logger.LogWarning("AUDIT: User {User} attempted to forward order {OrderId} but does not have manager role.", requestingSapUser, orderId);
+            return FunctionResult.Fail("Authorization failed: You do not have the required 'Manager' role to forward sales orders.");
         }
 
         _logger.LogInformation(
-            "ForwardOrder: orderId={OrderId}, forwardTo={ForwardTo}", orderId, forwardTo);
+            "ForwardOrder: orderId={OrderId}, forwardTo={ForwardTo}, sapUser={SapUser}", orderId, forwardTo, requestingSapUser);
 
-        // Sprint 2-3: mock success. Sprint 4: call SAP substitution service.
-        var result = new
+        try
         {
-            order_id = orderId,
-            action = "Forwarded",
-            forward_to_user = forwardTo,
-            message = $"Sales order {orderId} has been forwarded to {forwardTo}."
-        };
+            // Call SAP RAP action
+            var updatedOrder = await _sap.ForwardOrderAsync(orderId, forwardTo, requestingSapUser, ct);
+            
+            // Audit Log
+            _logger.LogInformation("AUDIT: User {User} successfully forwarded order {OrderId} to {ForwardTo}", requestingSapUser, orderId, forwardTo);
 
-        return Task.FromResult(FunctionResult.Ok(result));
+            var result = new
+            {
+                order_id = updatedOrder.SoNumber,
+                action = "Forwarded",
+                forward_to_user = forwardTo,
+                message = $"Sales order {updatedOrder.SoNumber} has been forwarded to {forwardTo}. Status is {updatedOrder.Status}."
+            };
+
+            return FunctionResult.Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to forward order {OrderId}", orderId);
+            return FunctionResult.Fail($"Failed to forward order in SAP: {ex.Message}");
+        }
     }
 }
 
