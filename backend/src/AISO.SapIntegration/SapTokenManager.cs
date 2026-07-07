@@ -37,7 +37,7 @@ public class SapTokenManager : ISapTokenManager
             {
                 try
                 {
-                    var context = JsonSerializer.Deserialize<SapAuthContext>(cachedJson!);
+                    var context = JsonSerializer.Deserialize<SapAuthContext>((string)cachedJson!);
                     if (context != null)
                     {
                         _logger.LogDebug("Retrieved SAP CSRF token from Redis cache");

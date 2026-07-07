@@ -251,7 +251,10 @@ public class SapClient : ISapClient
         var request = new HttpRequestMessage(HttpMethod.Post, url);
         var jsonString = System.Text.Json.JsonSerializer.Serialize(payload);
         var stringContent = new StringContent(jsonString, System.Text.Encoding.UTF8, "application/json");
-        stringContent.Headers.ContentType.CharSet = string.Empty;
+        if (stringContent.Headers.ContentType != null)
+        {
+            stringContent.Headers.ContentType.CharSet = string.Empty;
+        }
         request.Content = stringContent;
         request.Headers.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
 
