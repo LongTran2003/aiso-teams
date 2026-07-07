@@ -22,6 +22,8 @@ CLASS lhc_SalesOrder DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS forwardOrder FOR MODIFY
       IMPORTING keys FOR ACTION SalesOrder~forwardOrder RESULT result.
+    METHODS rejectOrder FOR MODIFY
+  IMPORTING keys FOR ACTION SalesOrder~rejectOrder RESULT result.
 
 ENDCLASS.
 
@@ -342,4 +344,102 @@ METHOD forwardorder.
 
     result = VALUE #( FOR ls_m IN mapped-SalesOrder ( %tky = ls_m-%tky ) ).
   ENDMETHOD.
+ METHOD rejectorder.
+  DATA: lt_items_in  TYPE TABLE OF bapisditm,
+        lt_items_inx TYPE TABLE OF bapisditmx,
+        lt_return    TYPE TABLE OF bapiret2,
+        lv_timestamp TYPE c LENGTH 14.
+
+  LOOP AT keys INTO DATA(ls_key).
+    DATA(ls_param) = ls_key-%param.
+
+    " Validate rejection code — chỉ chấp nhận 02, 03, 04
+   " Validate rejection code — chỉ chấp nhận 02, 03, 04
+    IF ls_param-rejection_code <> '02' AND
+       ls_param-rejection_code <> '03' AND
+       ls_param-rejection_code <> '04'.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-SalesOrder.
+      CONTINUE.
+    ENDIF.
+
+    " Check role ZROLE_AISO_BOT_RELEASER — không check ownership
+    " Chỉ user có role này mới được reject
+    AUTHORITY-CHECK OBJECT 'S_TCODE'
+      ID 'TCD' FIELD '/AISO/REJ'.
+    " Nếu không có SU authorization check đơn giản hơn:
+    " Dùng pattern check qua bảng AGR_USERS
+    SELECT SINGLE uname FROM agr_users
+      INTO @DATA(lv_auth_check)
+      WHERE agr_name = 'ZROLE_AISO_BOT_RELEASER'
+        AND uname    = @sy-uname.
+
+    IF sy-subrc <> 0.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+             TO failed-SalesOrder.
+      CONTINUE.
+    ENDIF.
+
+    " Lấy tất cả items của SO
+    CLEAR: lt_items_in, lt_items_inx, lt_return.
+    SELECT posnr FROM vbap
+      INTO TABLE @DATA(lt_posnr)
+      WHERE vbeln = @ls_key-SoNumber.
+
+    IF lt_posnr IS INITIAL.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-not_found )
+             TO failed-SalesOrder.
+      CONTINUE.
+    ENDIF.
+
+    " Set rejection reason cho từng item
+    LOOP AT lt_posnr INTO DATA(ls_posnr).
+      APPEND VALUE #(
+        itm_number = ls_posnr-posnr
+        reason_rej = ls_param-rejection_code   " 02 / 03 / 04
+      ) TO lt_items_in.
+      APPEND VALUE #(
+        itm_number = ls_posnr-posnr
+        reason_rej = 'X'
+      ) TO lt_items_inx.
+    ENDLOOP.
+
+    CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+      EXPORTING
+        salesdocument  = ls_key-SoNumber
+      TABLES
+        order_item_in  = lt_items_in
+        order_item_inx = lt_items_inx
+        return         = lt_return.
+
+    READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
+    IF sy-subrc = 0.
+      CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-SalesOrder.
+      CONTINUE.
+    ENDIF.
+
+    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = 'X'.
+
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+    INSERT zaiso_audit FROM @( VALUE #(
+      mandt       = sy-mandt
+      audit_id    = cl_system_uuid=>create_uuid_c32_static( )
+      sap_user    = sy-uname
+      action_type = 'REJECT_SO'
+      so_number   = ls_key-SoNumber
+      status      = 'SUCCESS'
+      remarks     = ls_param-rejection_code
+      created_at  = lv_timestamp
+    ) ).
+
+    APPEND VALUE #( %tky = ls_key-%tky ) TO result.
+  ENDLOOP.
+ENDMETHOD.
 ENDCLASS.

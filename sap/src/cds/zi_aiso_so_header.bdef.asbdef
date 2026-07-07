@@ -10,5 +10,6 @@ lock master
   static action createSalesOrder parameter zaiso_a_create_so result [1] $self;
   action releaseOrder parameter zaiso_s_release_params  result [1] $self;
   action forwardOrder parameter zaiso_s_forward_params result [1] $self;
+  action rejectOrder parameter zaiso_a_reject_so result [1] $self;
   field ( readonly ) SoNumber, OverallStatus, Customer, SalesOrg, DistChannel, Division, Currency, NetValue, DocDate, CreatedBy, CreatedDate;
 }
