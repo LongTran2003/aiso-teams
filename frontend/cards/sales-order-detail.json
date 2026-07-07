@@ -8,7 +8,8 @@
       "text": "📦 SAP SALES ORDER DETAILS: ${salesOrderNumber}",
       "weight": "Bolder",
       "size": "Large",
-      "color": "Accent"
+      "color": "Accent",
+      "wrap": true
     },
     {
       "type": "FactSet",
@@ -25,15 +26,20 @@
       "text": "Line Items:",
       "weight": "Bolder",
       "spacing": "Medium",
-      "separator": true
+      "separator": true,
+      "wrap": true
     },
     {
-      "type": "FactSet",
-      "facts": [
-        { "title": "Item 10: Material A", "value": "Quantity: 5 PC - Amount: 500 USD" },
-        { "title": "Item 20: Material B", "value": "Quantity: 2 PC - Amount: 200 USD" }
-      ],
-      "spacing": "Small"
+      "type": "Container",
+      "$data": "${items}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "• Item ${itemNumber}: ${description} — Qty ${quantity} ${unit} • Amount ${netValue} ${currency}",
+          "wrap": true,
+          "spacing": "Small"
+        }
+      ]
     }
   ],
   "actions": [
