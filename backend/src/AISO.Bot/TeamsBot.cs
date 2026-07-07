@@ -91,6 +91,10 @@ public class TeamsBot : TeamsActivityHandler
                             {
                                 userMessage += $" reason: {reasonToken.ToString()}";
                             }
+                            if (valueObj.TryGetValue("forwardToUser", StringComparison.OrdinalIgnoreCase, out var forwardToken))
+                            {
+                                userMessage += $" forward to: {forwardToken.ToString()}";
+                            }
                         }
                     }
                 }
@@ -138,6 +142,34 @@ public class TeamsBot : TeamsActivityHandler
                         await turnContext.SendActivityAsync(
                             MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmRejectCard(salesOrderId)),
                             cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "forward_so", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmForwardCard(salesOrderId)),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "release_so_confirm", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(action, "reject_so_confirm", StringComparison.OrdinalIgnoreCase) ||
+                        string.Equals(action, "forward_so_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        var forwardToUser = valueObj.TryGetValue("forwardToUser", StringComparison.OrdinalIgnoreCase, out var forwardToken)
+                            ? forwardToken.ToString()
+                            : "UNKNOWN";
+                        var confirmationMessage = action switch
+                        {
+                            "release_so_confirm" => $"Release action confirmed for sales order {salesOrderId}.",
+                            "reject_so_confirm" => $"Reject action confirmed for sales order {salesOrderId}.",
+                            _ => $"Forward action confirmed for sales order {salesOrderId} to {forwardToUser}."
+                        };
+
+                        await turnContext.SendActivityAsync(confirmationMessage, cancellationToken: cancellationToken);
                         return;
                     }
 

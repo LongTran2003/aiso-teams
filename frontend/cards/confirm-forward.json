@@ -1,0 +1,82 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "↪ Confirm forwarding",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Are you sure you want to forward sales order ${salesOrderNumber} for review?",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "This will send the order to another approver or team member.",
+      "wrap": true,
+      "isSubtle": true,
+      "spacing": "Small"
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "forwardToUser",
+      "label": "Select a recipient",
+      "isRequired": true,
+      "errorMessage": "Please select a recipient",
+      "style": "compact",
+      "choices": [
+        {
+          "title": "Sales Manager",
+          "value": "manager@aiso.com"
+        },
+        {
+          "title": "Finance Team",
+          "value": "finance@aiso.com"
+        },
+        {
+          "title": "Operations Team",
+          "value": "ops@aiso.com"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Confirm Forward",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Confirm forward order ${salesOrderNumber}",
+          "text": "forward order ${salesOrderNumber}"
+        },
+        "action": "forward_so_confirm",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}
