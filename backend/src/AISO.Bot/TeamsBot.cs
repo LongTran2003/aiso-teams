@@ -5,6 +5,7 @@ using AISO.Bot.Cards;
 using AISO.Bot.Cards.Builders;
 using AISO.Domain.SalesOrders;
 using AISO.Persistence.Auditing;
+using AISO.SapIntegration;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Logging;
@@ -21,6 +22,7 @@ namespace AISO.Bot;
 public class TeamsBot : TeamsActivityHandler
 {
     private readonly IFunctionDispatcher _dispatcher;
+    private readonly ISapClient _sap;
     private readonly IAuditLogger _audit;
     private readonly ILogger<TeamsBot> _logger;
     private readonly ConversationState _conversationState;
@@ -30,6 +32,7 @@ public class TeamsBot : TeamsActivityHandler
 
     public TeamsBot(
         IFunctionDispatcher dispatcher,
+        ISapClient sap,
         IAuditLogger audit,
         ILogger<TeamsBot> logger,
         ConversationState conversationState,
@@ -38,6 +41,7 @@ public class TeamsBot : TeamsActivityHandler
         UserMappingService userMappingService)
     {
         _dispatcher = dispatcher;
+        _sap = sap;
         _audit = audit;
         _logger = logger;
         _conversationState = conversationState;
@@ -108,16 +112,33 @@ public class TeamsBot : TeamsActivityHandler
                             ? idToken.ToString()
                             : "UNKNOWN";
 
+                        var order = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
+                        if (order is null)
+                        {
+                            await turnContext.SendActivityAsync($"Sales order {salesOrderId} was not found.", cancellationToken: cancellationToken);
+                            return;
+                        }
+
                         await turnContext.SendActivityAsync(
                             MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
                             {
-                                salesOrderNumber = salesOrderId,
-                                customerName = "Sample Customer",
-                                customerId = "1000",
-                                documentDate = DateTime.Now.ToString("dd MMM yyyy"),
-                                netAmount = "$12,500",
-                                currency = "USD",
-                                approvalStatus = "Pending"
+                                salesOrderNumber = order.SoNumber,
+                                customerName = order.CustomerName,
+                                customerId = order.CustomerId,
+                                documentDate = order.OrderDate.ToString("dd MMM yyyy"),
+                                netAmount = $"{order.NetValue:N0}",
+                                currency = order.Currency,
+                                approvalStatus = order.Status.ToString(),
+                                items = order.Items.Select(item => new
+                                {
+                                    itemNumber = item.ItemNumber,
+                                    material = item.Material,
+                                    description = item.Description,
+                                    quantity = item.Quantity.ToString("0"),
+                                    unit = item.Unit,
+                                    netValue = $"{item.NetValue:N0}",
+                                    currency = order.Currency
+                                }).ToList()
                             })),
                             cancellationToken);
                         return;
@@ -213,7 +234,7 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
-            if (TryHandleOrderDetailRequest(normalizedMessage, turnContext, cancellationToken))
+            if (await TryHandleOrderDetailRequest(normalizedMessage, turnContext, cancellationToken))
             {
                 return;
             }
@@ -408,7 +429,7 @@ public class TeamsBot : TeamsActivityHandler
         return d.Result.Success ? "Success" : "Failed";
     }
 
-    private static bool TryHandleOrderDetailRequest(string message, ITurnContext turnContext, CancellationToken cancellationToken)
+    private async Task<bool> TryHandleOrderDetailRequest(string message, ITurnContext turnContext, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(message))
         {
@@ -427,16 +448,33 @@ public class TeamsBot : TeamsActivityHandler
         var match = System.Text.RegularExpressions.Regex.Match(message, @"(?:order|so|sales order|đơn hàng|đơn)\s*(?:no\.?|number|#)?\s*([A-Za-z0-9\-\/]+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         var orderId = match.Success ? match.Groups[1].Value : "UNKNOWN";
 
-        turnContext.SendActivityAsync(
+        var order = await _sap.GetSalesOrderByIdAsync(orderId, cancellationToken);
+        if (order is null)
+        {
+            await turnContext.SendActivityAsync($"Sales order {orderId} was not found.", cancellationToken: cancellationToken);
+            return true;
+        }
+
+        await turnContext.SendActivityAsync(
             MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
             {
-                salesOrderNumber = orderId,
-                customerName = "Sample Customer",
-                customerId = "1000",
-                documentDate = DateTime.Now.ToString("dd MMM yyyy"),
-                netAmount = "$12,500",
-                currency = "USD",
-                approvalStatus = "Pending"
+                salesOrderNumber = order.SoNumber,
+                customerName = order.CustomerName,
+                customerId = order.CustomerId,
+                documentDate = order.OrderDate.ToString("dd MMM yyyy"),
+                netAmount = $"{order.NetValue:N0}",
+                currency = order.Currency,
+                approvalStatus = order.Status.ToString(),
+                items = order.Items.Select(item => new
+                {
+                    itemNumber = item.ItemNumber,
+                    material = item.Material,
+                    description = item.Description,
+                    quantity = item.Quantity.ToString("0"),
+                    unit = item.Unit,
+                    netValue = $"{item.NetValue:N0}",
+                    currency = order.Currency
+                }).ToList()
             })),
             cancellationToken);
         return true;
