@@ -15,7 +15,10 @@
       "type": "FactSet",
       "facts": [
         { "title": "Customer:", "value": "${customerName} (${customerId})" },
+        { "title": "Cust. Reference (PO):", "value": "${customerReference}" },
+        { "title": "Sales Org / Division:", "value": "${salesOrg} / ${division}" },
         { "title": "Document Date:", "value": "${documentDate}" },
+        { "title": "Req. Delivery Date:", "value": "${requestedDeliveryDate}" },
         { "title": "Net Value:", "value": "${netAmount} ${currency}" },
         { "title": "Approval Status:", "value": "${approvalStatus}" }
       ],
@@ -35,7 +38,7 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "• Item ${itemNumber}: ${description} — Qty ${quantity} ${unit} • Amount ${netValue} ${currency}",
+          "text": "• **Item ${itemNumber}**: ${description}\n  🔹 Qty: ${quantity} ${unit} | Plant: ${plant} | Amount: **${netValue} ${currency}**",
           "wrap": true,
           "spacing": "Small"
         }
