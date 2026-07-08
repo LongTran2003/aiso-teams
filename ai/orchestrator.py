@@ -187,17 +187,36 @@ def _mock_response(user_message: str) -> ChatResponse:
         card_type = _get_adaptive_card_type("GetOverdueOrders")
         reply = "[MOCK] Đang lấy danh sách đơn hàng quá hạn từ SAP..."
 
-    elif any(kw in lower for kw in ("tạo đơn", "tạo mới", "đặt hàng mới", "create order", "place order", "new order")):
+    elif any(
+        kw in lower
+        for kw in (
+            "tạo đơn",
+            "tạo mới",
+            "đặt hàng mới",
+            "create order",
+            "place order",
+            "new order",
+        )
+    ):
         intent = "create_order"
         tool_calls.append(
-            ToolCall(
-                id="mock_create_001", function_name="CreateOrder", arguments={}
-            )
+            ToolCall(id="mock_create_001", function_name="CreateOrder", arguments={})
         )
         card_type = _get_adaptive_card_type("CreateOrder")
         reply = "[MOCK] Vui lòng cung cấp thông tin khách hàng và sản phẩm để tạo đơn hàng mới."
 
-    elif any(kw in lower for kw in ("cập nhật reference", "cập nhật po", "đổi po", "update reference", "update po", "change po", "set reference")):
+    elif any(
+        kw in lower
+        for kw in (
+            "cập nhật reference",
+            "cập nhật po",
+            "đổi po",
+            "update reference",
+            "update po",
+            "change po",
+            "set reference",
+        )
+    ):
         match = re.search(r"(ord-\w+)", lower)
         order_id = match.group(1).upper() if match else ""
         if order_id:
@@ -210,7 +229,9 @@ def _mock_response(user_message: str) -> ChatResponse:
                 )
             )
             card_type = _get_adaptive_card_type("UpdateOrderReference")
-            reply = f"[MOCK] Vui lòng cung cấp số PO reference mới cho đơn hàng {order_id}."
+            reply = (
+                f"[MOCK] Vui lòng cung cấp số PO reference mới cho đơn hàng {order_id}."
+            )
         else:
             reply = "[MOCK] Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện."
 
