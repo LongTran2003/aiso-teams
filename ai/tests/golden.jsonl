@@ -63,3 +63,17 @@
 {"query": "Cho tôi xem chi tiết đơn hàng này.", "expected_function": null, "expected_args": {}, "tier": 2}
 {"query": "Hôm nay thời tiết thế nào?", "expected_function": null, "expected_args": {}, "tier": 1}
 {"query": "Write me a Python script to sort a list.", "expected_function": null, "expected_args": {}, "tier": 2}
+{"query": "Tạo đơn hàng cho khách hàng 10100001 gồm 2 cái TG11.", "expected_function": "CreateOrder", "expected_args": {"customer": "10100001", "items": [{"material": "TG11", "qty": 2}]}, "tier": 1}
+{"query": "Place a new order for customer 10100001 with 5 units of material BIKE-01.", "expected_function": "CreateOrder", "expected_args": {"customer": "10100001", "items": [{"material": "BIKE-01", "qty": 5}]}, "tier": 1}
+{"query": "Tạo mới một đơn hàng cho khách hàng 20200002 bao gồm 10 chiếc ROAD-01 và 3 chiếc MTB-02.", "expected_function": "CreateOrder", "expected_args": {"customer": "20200002", "items": [{"material": "ROAD-01", "qty": 10}, {"material": "MTB-02", "qty": 3}]}, "tier": 2}
+{"query": "Create a sales order for customer CUST-10005 with 1 unit of material TG11 in sales org 1010.", "expected_function": "CreateOrder", "expected_args": {"customer": "CUST-10005", "items": [{"material": "TG11", "qty": 1}], "sales_org": "1010"}, "tier": 2}
+{"query": "Đặt hàng mới cho khách 30300003: 20 cái PART-A01, loại tiền tệ USD.", "expected_function": "CreateOrder", "expected_args": {"customer": "30300003", "items": [{"material": "PART-A01", "qty": 20}], "currency": "USD"}, "tier": 2}
+{"query": "Tạo đơn hàng mới gồm 3 cái TG11.", "expected_function": null, "expected_args": {}, "tier": 1}
+{"query": "I want to place a new order but I don't know the customer.", "expected_function": null, "expected_args": {}, "tier": 2}
+{"query": "Cập nhật reference của đơn ORD-202670001 thành PO-2026-0099.", "expected_function": "UpdateOrderReference", "expected_args": {"order_id": "ORD-202670001", "new_reference": "PO-2026-0099"}, "tier": 1}
+{"query": "Change the PO reference of order ORD-202670002 to PO-2026-NEW.", "expected_function": "UpdateOrderReference", "expected_args": {"order_id": "ORD-202670002", "new_reference": "PO-2026-NEW"}, "tier": 1}
+{"query": "Đổi số PO của đơn ORD-202670003 sang PO-EXT-0042.", "expected_function": "UpdateOrderReference", "expected_args": {"order_id": "ORD-202670003", "new_reference": "PO-EXT-0042"}, "tier": 2}
+{"query": "Update the customer PO reference for order ORD-202670004 to REF-20260708.", "expected_function": "UpdateOrderReference", "expected_args": {"order_id": "ORD-202670004", "new_reference": "REF-20260708"}, "tier": 2}
+{"query": "Set reference ORD-202670005 thành EXT-REF-9999.", "expected_function": "UpdateOrderReference", "expected_args": {"order_id": "ORD-202670005", "new_reference": "EXT-REF-9999"}, "tier": 2}
+{"query": "Cập nhật reference của đơn ORD-202670006.", "expected_function": null, "expected_args": {}, "tier": 1}
+{"query": "Update the reference for this order.", "expected_function": null, "expected_args": {}, "tier": 2}
