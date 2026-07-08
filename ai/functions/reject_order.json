@@ -1,16 +1,17 @@
 {
   "name": "RejectOrder",
-  "description": "Reject, decline, or cancel a sales order in the SAP ERP system. Trigger this function when the user requests to reject, deny, or cancel an order. DO NOT call this function if the reason code (reason_code) is missing or not specified in the user message.",
+  "description": "Reject, decline, or cancel a sales order in the SAP ERP system with a mandatory reason code. Trigger this function when the user requests to reject, deny, or cancel an order AND provides a clear reason. DO NOT call this function if either order_id OR reason_code is missing or not specified — NEVER guess reason_code, not even 'OTHER'.",
   "parameters": {
     "type": "object",
     "properties": {
       "order_id": {
         "type": "string",
-        "description": "The unique sales order identifier in SAP (e.g., 'ORD-123456') to be rejected."
+        "description": "The unique sales order identifier in SAP (e.g., 'ORD-123456' or '0000005001') to be rejected. Must be explicitly stated by the user."
       },
       "reason_code": {
-        "type": ["string", "null"],
-        "description": "The reason code for the rejection. Must be one of the following: 'PRICE_ISSUE' (pricing discrepancy or incorrect price), 'OUT_OF_STOCK' (item unavailable), or 'OTHER' (any other unlisted reason)."
+        "type": "string",
+        "enum": ["PRICE_ISSUE", "OUT_OF_STOCK", "OTHER"],
+        "description": "The reason for rejection. Allowed values ONLY: 'PRICE_ISSUE' (sai giá / pricing discrepancy), 'OUT_OF_STOCK' (hết hàng / item unavailable), 'OTHER' (lý do khác / other reason). NEVER infer or guess — the reason must be explicitly stated or clearly implied by the user."
       }
     },
     "required": ["order_id", "reason_code"],
