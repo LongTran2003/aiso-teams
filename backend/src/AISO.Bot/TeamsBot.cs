@@ -66,6 +66,10 @@ public class TeamsBot : TeamsActivityHandler
         var userMessage = turnContext.Activity.RemoveRecipientMention() ?? turnContext.Activity.Text ?? string.Empty;
         userMessage = System.Text.RegularExpressions.Regex.Replace(userMessage, "<[^>]*>", string.Empty);
         
+        var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
+        var conversationId = turnContext.Activity.Conversation?.Id;
+        var activityId = turnContext.Activity.Id;
+
         // When an Adaptive Card button (Action.Submit with msteams.type=messageBack) is clicked,
         // Teams sends BOTH Activity.Text (= button title, e.g. "view order 129998")
         // AND Activity.Value (= the data payload, e.g. { action: "view_details" }).
@@ -162,6 +166,91 @@ public class TeamsBot : TeamsActivityHandler
                         return;
                     }
 
+                    if (string.Equals(action, "forward_so", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmForwardCard(salesOrderId)),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "release_so_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        var comment = valueObj.TryGetValue("comment", StringComparison.OrdinalIgnoreCase, out var commentToken)
+                            ? commentToken.ToString()
+                            : null;
+
+                        var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(sapUsername))
+                        {
+                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            return;
+                        }
+
+                        var updatedOrder = await _sap.ReleaseOrderAsync(salesOrderId, sapUsername, cancellationToken);
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Released")),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "reject_so_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        var reasonCode = valueObj.TryGetValue("reasonCode", StringComparison.OrdinalIgnoreCase, out var reasonToken)
+                            ? reasonToken.ToString()
+                            : "OTHER";
+
+                        var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(sapUsername))
+                        {
+                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            return;
+                        }
+
+                        var sapReasonCode = reasonCode.ToUpperInvariant() switch
+                        {
+                            "PRICE_ISSUE" => "02",
+                            "OUT_OF_STOCK" => "04",
+                            _ => "03"
+                        };
+
+                        var updatedOrder = await _sap.CancelOrderAsync(salesOrderId, sapReasonCode, sapUsername, cancellationToken);
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Rejected")),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "forward_so_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        var forwardToUser = valueObj.TryGetValue("forwardToUser", StringComparison.OrdinalIgnoreCase, out var forwardToken)
+                            ? forwardToken.ToString()
+                            : null;
+
+                        var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(sapUsername))
+                        {
+                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            return;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(forwardToUser))
+                        {
+                            await turnContext.SendActivityAsync("Please select a recipient before forwarding the order.", cancellationToken: cancellationToken);
+                            return;
+                        }
+
+                        var updatedOrder = await _sap.ForwardOrderAsync(salesOrderId, forwardToUser, sapUsername, cancellationToken);
+                        await turnContext.SendActivityAsync(
+                            $"Sales order {updatedOrder.SoNumber} has been forwarded to {forwardToUser}.",
+                            cancellationToken: cancellationToken);
+                        return;
+                    }
+
                     if (string.Equals(action, "view_revenue_kpi", StringComparison.OrdinalIgnoreCase))
                     {
                         await turnContext.SendActivityAsync(
@@ -197,9 +286,6 @@ public class TeamsBot : TeamsActivityHandler
         }
 
         var normalizedMessage = userMessage.Trim();
-        var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
-        var conversationId = turnContext.Activity.Conversation?.Id;
-        var activityId = turnContext.Activity.Id;
 
         // Push activity-scoped properties into Serilog LogContext so every
         // log emitted inside this turn is tagged for end-to-end traceability.

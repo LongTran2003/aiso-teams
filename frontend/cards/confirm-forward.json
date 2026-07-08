@@ -1,0 +1,88 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "🔁 Confirm action",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Are you sure you want to forward sales order ${salesOrderNumber}?",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Choose a recipient to continue the review flow.",
+      "wrap": true,
+      "isSubtle": true,
+      "spacing": "Small"
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "forwardToUser",
+      "label": "Select a recipient",
+      "isRequired": true,
+      "errorMessage": "Please select a recipient",
+      "style": "compact",
+      "choices": [
+        {
+          "title": "Manager Approver (DEV-249)",
+          "value": "DEV-249"
+        },
+        {
+          "title": "Sales Ops (OPS-01)",
+          "value": "OPS-01"
+        },
+        {
+          "title": "Customer Support (CS-01)",
+          "value": "CS-01"
+        }
+      ]
+    },
+    {
+      "type": "Input.Text",
+      "id": "comment",
+      "placeholder": "Enter an optional note for the recipient...",
+      "isMultiline": true
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Confirm Forward",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Forward order ${salesOrderNumber}",
+          "text": "forward order ${salesOrderNumber}"
+        },
+        "action": "forward_so_confirm",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}
