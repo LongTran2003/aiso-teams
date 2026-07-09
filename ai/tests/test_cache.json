@@ -54,8 +54,7 @@
     "predicted_function": "GetKpiByProduct",
     "predicted_args": {
       "fromDate": "2026-04-01",
-      "toDate": "2026-06-30",
-      "top": 1
+      "toDate": "2026-06-30"
     }
   },
   "Cho tôi xem danh sách các đơn hàng đang giao trễ.": {
@@ -155,8 +154,8 @@
   "Show me all cancelled orders this year.": {
     "predicted_function": "GetSalesOrders",
     "predicted_args": {
-      "status": "Cancelled",
       "fromDate": "2026-01-01",
+      "status": "Cancelled",
       "toDate": "2026-12-31"
     }
   },
@@ -173,5 +172,637 @@
       "comment": "Khách hàng VIP cần giao sớm.",
       "order_id": "ORD-777888"
     }
+  },
+  "Tra cứu đơn ORD-202610099 giúp mình.": {
+    "predicted_function": "CheckOrderStatus",
+    "predicted_args": {
+      "order_id": "ORD-202610099"
+    }
+  },
+  "Đơn hàng ORD-111222 có đang được xử lý không?": {
+    "predicted_function": "CheckOrderStatus",
+    "predicted_args": {
+      "order_id": "ORD-111222"
+    }
+  },
+  "Tôi muốn biết đơn ORD-500600 đã đến đâu rồi.": {
+    "predicted_function": "CheckOrderStatus",
+    "predicted_args": {
+      "order_id": "ORD-500600"
+    }
+  },
+  "Tìm đơn của Philly Bikes.": {
+    "predicted_function": "GetSalesOrders",
+    "predicted_args": {
+      "customerIdOrName": "Philly Bikes"
+    }
+  },
+  "Lấy đơn hàng đã giao một phần từ 2026-03-01.": {
+    "predicted_function": "GetSalesOrders",
+    "predicted_args": {
+      "fromDate": "2026-03-01",
+      "status": "PartiallyDelivered"
+    }
+  },
+  "Tôi muốn xem các đơn bị Blocked trong tháng 5.": {
+    "predicted_function": "GetSalesOrders",
+    "predicted_args": {
+      "fromDate": "2026-05-01",
+      "status": "Blocked",
+      "toDate": "2026-05-31"
+    }
+  },
+  "Lấy 5 đơn hàng gần nhất của tổ chức UE00.": {
+    "predicted_function": "GetSalesOrders",
+    "predicted_args": {
+      "salesOrg": "UE00",
+      "top": 5
+    }
+  },
+  "Tìm tất cả đơn đang mở của khách Sunrise Corp.": {
+    "predicted_function": "GetSalesOrders",
+    "predicted_args": {
+      "customerIdOrName": "Sunrise Corp",
+      "status": "Open"
+    }
+  },
+  "Hiển thị đơn hàng đã xuất hóa đơn từ 2026-04-01 đến 2026-04-30.": {
+    "predicted_function": "GetSalesOrders",
+    "predicted_args": {
+      "fromDate": "2026-04-01",
+      "status": "Invoiced",
+      "toDate": "2026-04-30"
+    }
+  },
+  "Release order ORD-112233 right now.": {
+    "predicted_function": "ReleaseOrder",
+    "predicted_args": {
+      "comment": null,
+      "order_id": "ORD-112233"
+    }
+  },
+  "Approve order ORD-900100 with note: Urgent customer request.": {
+    "predicted_function": "ReleaseOrder",
+    "predicted_args": {
+      "comment": "Urgent customer request",
+      "order_id": "ORD-900100"
+    }
+  },
+  "Sign off on ORD-202620001 please.": {
+    "predicted_function": "ReleaseOrder",
+    "predicted_args": {
+      "order_id": "ORD-202620001"
+    }
+  },
+  "Authorize release of ORD-202620002 – priority shipment.": {
+    "predicted_function": "ReleaseOrder",
+    "predicted_args": {
+      "comment": "priority shipment",
+      "order_id": "ORD-202620002"
+    }
+  },
+  "Mình muốn duyệt đơn ORD-202620010 vì hàng đã sẵn sàng xuất kho.": {
+    "predicted_function": "ReleaseOrder",
+    "predicted_args": {
+      "comment": "Hàng đã sẵn sàng xuất kho.",
+      "order_id": "ORD-202620010"
+    }
+  },
+  "Cho phép xuất đơn ORD-202620011.": {
+    "predicted_function": "CreateOrder",
+    "predicted_args": {
+      "customer": "CUST-1001",
+      "items": [
+        {
+          "material": "MAT-1001",
+          "qty": 10
+        },
+        {
+          "material": "MAT-1002",
+          "qty": 20
+        }
+      ],
+      "currency": "VND",
+      "sales_org": "1010",
+      "division": "00",
+      "doc_type": "TA",
+      "dist_channel": "10"
+    }
+  },
+  "Xác nhận và phê duyệt đơn ORD-202620012, ghi chú: đơn hàng ưu tiên quý 2.": {
+    "predicted_function": "ReleaseOrder",
+    "predicted_args": {
+      "comment": "Đơn hàng ưu tiên quý 2.",
+      "order_id": "ORD-202620012"
+    }
+  },
+  "Từ chối đơn hàng ORD-443322 vì sai giá.": {
+    "predicted_function": "RejectOrder",
+    "predicted_args": {
+      "order_id": "ORD-443322",
+      "reason_code": "PRICE_ISSUE"
+    }
+  },
+  "Reject order ORD-999000 due to out of stock.": {
+    "predicted_function": "RejectOrder",
+    "predicted_args": {
+      "order_id": "ORD-999000",
+      "reason_code": "OUT_OF_STOCK"
+    }
+  },
+  "Cancel order ORD-202630001 – pricing error.": {
+    "predicted_function": "RejectOrder",
+    "predicted_args": {
+      "order_id": "ORD-202630001",
+      "reason_code": "PRICE_ISSUE"
+    }
+  },
+  "Reject ORD-202630002 for other reasons.": {
+    "predicted_function": "RejectOrder",
+    "predicted_args": {
+      "order_id": "ORD-202630002",
+      "reason_code": "OTHER"
+    }
+  },
+  "Hủy ORD-202630003 do lý do khác không nêu rõ.": {
+    "predicted_function": "RejectOrder",
+    "predicted_args": {
+      "order_id": "ORD-202630003",
+      "reason_code": "OTHER"
+    }
+  },
+  "Từ chối đơn ORD-202630010 vì nhà cung cấp không giao được hàng (hết hàng).": {
+    "predicted_function": "RejectOrder",
+    "predicted_args": {
+      "order_id": "ORD-202630010",
+      "reason_code": "OUT_OF_STOCK"
+    }
+  },
+  "Hủy đơn ORD-202630011 – khách yêu cầu giảm giá nhưng không được chấp thuận (sai giá).": {
+    "predicted_function": "RejectOrder",
+    "predicted_args": {
+      "order_id": "ORD-202630011",
+      "reason_code": "PRICE_ISSUE"
+    }
+  },
+  "Cancel ORD-202630012 for price discrepancy reasons.": {
+    "predicted_function": "RejectOrder",
+    "predicted_args": {
+      "order_id": "ORD-202630012",
+      "reason_code": "PRICE_ISSUE"
+    }
+  },
+  "Không thể giao ORD-202630013 vì kho thiếu hàng, hủy đơn đi.": {
+    "predicted_function": null,
+    "predicted_args": {}
+  },
+  "Forward đơn ORD-555555 tới email john.smith@company.com dùm.": {
+    "predicted_function": "ForwardOrder",
+    "predicted_args": {
+      "forward_to_user": "john.smith@company.com",
+      "order_id": "ORD-555555"
+    }
+  },
+  "Forward order ORD-333333 to manager.alex.": {
+    "predicted_function": "ForwardOrder",
+    "predicted_args": {
+      "forward_to_user": "manager.alex",
+      "order_id": "ORD-333333"
+    }
+  },
+  "Transfer order ORD-202640001 to sarah.nguyen@corp.com.": {
+    "predicted_function": "ForwardOrder",
+    "predicted_args": {
+      "forward_to_user": "sarah.nguyen@corp.com",
+      "order_id": "ORD-202640001"
+    }
+  },
+  "Bàn giao đơn ORD-202640002 cho anh Minh Tuấn.": {
+    "predicted_function": null,
+    "predicted_args": {}
+  },
+  "Chuyển đơn ORD-202640010 cho chị Lan trong phòng kinh doanh xử lý.": {
+    "predicted_function": "ForwardOrder",
+    "predicted_args": {
+      "forward_to_user": "chị Lan",
+      "order_id": "ORD-202640010"
+    }
+  },
+  "Giao đơn hàng ORD-202640011 này cho anh Hùng Sale duyệt giúp tôi.": {
+    "predicted_function": "ForwardOrder",
+    "predicted_args": {
+      "forward_to_user": "anh Hùng Sale",
+      "order_id": "ORD-202640011"
+    }
+  },
+  "Nhờ chị Thu Hương xử lý đơn ORD-202640012 dùm tôi.": {
+    "predicted_function": "CheckOrderStatus",
+    "predicted_args": {
+      "order_id": "ORD-202640012"
+    }
+  },
+  "Show me full detail of order ORD-202650002.": {
+    "predicted_function": "GetOrderDetail",
+    "predicted_args": {
+      "order_id": "ORD-202650002"
+    }
+  },
+  "Mở đơn hàng ORD-202650003 cho tôi xem các mặt hàng bên trong.": {
+    "predicted_function": "GetOrderDetail",
+    "predicted_args": {
+      "order_id": "ORD-202650003"
+    }
+  },
+  "Display all line items for order ORD-202650004.": {
+    "predicted_function": "GetOrderDetail",
+    "predicted_args": {
+      "order_id": "ORD-202650004"
+    }
+  },
+  "Thông tin đầy đủ của đơn ORD-202650005 là gì?": {
+    "predicted_function": "GetOrderDetail",
+    "predicted_args": {
+      "order_id": "ORD-202650005"
+    }
+  },
+  "Xem tất cả dòng hàng trong đơn ORD-202650010.": {
+    "predicted_function": "GetOrderDetail",
+    "predicted_args": {
+      "order_id": "ORD-202650010"
+    }
+  },
+  "Chi tiết sản phẩm trong đơn ORD-202650011 gồm những gì?": {
+    "predicted_function": "GetOrderDetail",
+    "predicted_args": {
+      "order_id": "ORD-202650011"
+    }
+  },
+  "Show me the overall KPI dashboard.": {
+    "predicted_function": "GetKpiSummary",
+    "predicted_args": {}
+  },
+  "Xem dashboard doanh thu tháng này, chia theo tuần.": {
+    "predicted_function": "GetKpiSummary",
+    "predicted_args": {
+      "fromDate": "2026-06-01",
+      "granularity": "weekly",
+      "toDate": "2026-06-30"
+    }
+  },
+  "Show me the KPI summary for last quarter.": {
+    "predicted_function": "GetKpiSummary",
+    "predicted_args": {
+      "fromDate": "2026-01-01",
+      "toDate": "2026-03-31"
+    }
+  },
+  "Hiệu suất bán hàng của tổ chức UE00 trong tháng 5 là bao nhiêu?": {
+    "predicted_function": "GetKpiSummary",
+    "predicted_args": {
+      "fromDate": "2026-05-01",
+      "salesOrg": "UE00",
+      "toDate": "2026-05-31"
+    }
+  },
+  "Xem tổng quan doanh thu quý 2, chia theo ngày.": {
+    "predicted_function": "GetKpiSummary",
+    "predicted_args": {
+      "fromDate": "2026-04-01",
+      "granularity": "daily",
+      "toDate": "2026-06-30"
+    }
+  },
+  "Doanh thu tháng 3 của tổ chức UW00 là bao nhiêu?": {
+    "predicted_function": "GetKpiSummary",
+    "predicted_args": {
+      "fromDate": "2026-03-01",
+      "salesOrg": "UW00",
+      "toDate": "2026-03-31"
+    }
+  },
+  "Show overall KPI for DS00 this year.": {
+    "predicted_function": "GetKpiSummary",
+    "predicted_args": {
+      "fromDate": "2026-01-01",
+      "salesOrg": "DS00",
+      "toDate": "2026-12-31"
+    }
+  },
+  "Xem KPI của khách hàng CUST-3001 trong tháng 5.": {
+    "predicted_function": "GetKpiByCustomer",
+    "predicted_args": {
+      "customerIdOrName": "CUST-3001",
+      "fromDate": "2026-05-01",
+      "toDate": "2026-05-31"
+    }
+  },
+  "Which customers had the highest revenue last month?": {
+    "predicted_function": "GetKpiByCustomer",
+    "predicted_args": {
+      "fromDate": "2026-05-01",
+      "toDate": "2026-05-31"
+    }
+  },
+  "Top 10 customers by revenue this quarter.": {
+    "predicted_function": "GetKpiByCustomer",
+    "predicted_args": {
+      "fromDate": "2026-04-01",
+      "toDate": "2026-06-30",
+      "top": 10
+    }
+  },
+  "Khách hàng nào mua nhiều nhất trong quý 1?": {
+    "predicted_function": "GetKpiByCustomer",
+    "predicted_args": {}
+  },
+  "Top 3 khách hàng có doanh thu cao nhất quý này ở tổ chức UE00.": {
+    "predicted_function": "GetKpiByCustomer",
+    "predicted_args": {
+      "salesOrg": "UE00",
+      "top": 3
+    }
+  },
+  "Show customer KPI for Philly Bikes from 2026-01-01.": {
+    "predicted_function": "GetKpiByCustomer",
+    "predicted_args": {
+      "customerIdOrName": "Philly Bikes",
+      "fromDate": "2026-01-01"
+    }
+  },
+  "What are the top 10 best-selling products this month?": {
+    "predicted_function": "GetKpiByProduct",
+    "predicted_args": {
+      "fromDate": "2026-06-01",
+      "toDate": "2026-06-30",
+      "top": 10
+    }
+  },
+  "Xem doanh thu của sản phẩm Mountain Bike tháng này.": {
+    "predicted_function": "GetKpiByProduct",
+    "predicted_args": {
+      "fromDate": "2026-06-01",
+      "materialIdOrName": "Mountain Bike",
+      "toDate": "2026-06-30"
+    }
+  },
+  "Show KPI for material MAT-2001 last month.": {
+    "predicted_function": "GetKpiByProduct",
+    "predicted_args": {
+      "fromDate": "2026-05-01",
+      "materialIdOrName": "MAT-2001",
+      "toDate": "2026-05-31"
+    }
+  },
+  "Sản phẩm nào bán chạy nhất quý 1 tại khu vực UW00?": {
+    "predicted_function": "GetKpiByProduct",
+    "predicted_args": {
+      "salesOrg": "UW00"
+    }
+  },
+  "Top 5 mặt hàng doanh thu cao nhất tháng 4 của tổ chức DN00.": {
+    "predicted_function": "GetKpiByProduct",
+    "predicted_args": {
+      "fromDate": "2026-04-01",
+      "salesOrg": "DN00",
+      "toDate": "2026-04-30",
+      "top": 5
+    }
+  },
+  "Hiệu suất sản phẩm TG11 trong nửa đầu năm 2026.": {
+    "predicted_function": "GetKpiByProduct",
+    "predicted_args": {
+      "fromDate": "2026-01-01",
+      "materialIdOrName": "TG11",
+      "toDate": "2026-06-30"
+    }
+  },
+  "List overdue orders that are more than 7 days past due.": {
+    "predicted_function": "GetOverdueOrders",
+    "predicted_args": {
+      "daysPastDue": 7
+    }
+  },
+  "Đơn hàng quá hạn của khách hàng CUST-7001 là những đơn nào?": {
+    "predicted_function": "GetOverdueOrders",
+    "predicted_args": {
+      "customerIdOrName": "CUST-7001"
+    }
+  },
+  "Show top 20 most overdue orders in sales org UW00.": {
+    "predicted_function": "GetOverdueOrders",
+    "predicted_args": {
+      "salesOrg": "UW00",
+      "top": 20
+    }
+  },
+  "Đơn nào của khách hàng Sunrise Corp đang bị giao trễ hơn 14 ngày?": {
+    "predicted_function": "GetOverdueOrders",
+    "predicted_args": {
+      "customerIdOrName": "Sunrise Corp",
+      "daysPastDue": 14
+    }
+  },
+  "Các đơn hàng trễ hạn giao trong tổ chức DS00 là gì?": {
+    "predicted_function": "GetOverdueOrders",
+    "predicted_args": {
+      "salesOrg": "DS00"
+    }
+  },
+  "Show me top 10 overdue deliveries.": {
+    "predicted_function": "GetOverdueOrders",
+    "predicted_args": {
+      "top": 10
+    }
+  },
+  "Hủy giùm tôi đơn hàng này với, hết hàng rồi": {
+    "predicted_function": null,
+    "predicted_args": {}
+  },
+  "Bàn giao đơn hàng ORD-444555 này đi": {
+    "predicted_function": null,
+    "predicted_args": {}
+  },
+  "Reject order ORD-202660002 please.": {
+    "predicted_function": null,
+    "predicted_args": {}
+  },
+  "Cho tôi xem chi tiết đơn hàng này.": {
+    "predicted_function": null,
+    "predicted_args": {}
+  },
+  "Write me a Python script to sort a list.": {
+    "predicted_function": null,
+    "predicted_args": {}
+  },
+  "Chuyển tiếp đơn hàng này cho sếp.": {
+    "predicted_function": null,
+    "predicted_args": {}
+  },
+  "Cancel this order immediately.": {
+    "predicted_function": null,
+    "predicted_args": {}
+  },
+  "Tạo đơn hàng cho khách hàng 10100001 gồm 2 cái TG11.": {
+    "predicted_function": "CreateOrder",
+    "predicted_args": {
+      "customer": "10100001",
+      "items": [
+        {
+          "material": "TG11",
+          "qty": 2
+        }
+      ]
+    }
+  },
+  "Place a new order for customer 10100001 with 5 units of material BIKE-01.": {
+    "predicted_function": "CreateOrder",
+    "predicted_args": {
+      "customer": "10100001",
+      "items": [
+        {
+          "material": "BIKE-01",
+          "qty": 5
+        }
+      ]
+    }
+  },
+  "Tạo mới một đơn hàng cho khách hàng 20200002 bao gồm 10 chiếc ROAD-01 và 3 chiếc MTB-02.": {
+    "predicted_function": "CreateOrder",
+    "predicted_args": {
+      "customer": "20200002",
+      "items": [
+        {
+          "material": "ROAD-01",
+          "qty": 10
+        },
+        {
+          "material": "MTB-02",
+          "qty": 3
+        }
+      ]
+    }
+  },
+  "Create a sales order for customer CUST-10005 with 1 unit of material TG11 in sales org 1010.": {
+    "predicted_function": "CreateOrder",
+    "predicted_args": {
+      "customer": "CUST-10005",
+      "items": [
+        {
+          "material": "TG11",
+          "qty": 1
+        }
+      ],
+      "sales_org": "1010"
+    }
+  },
+  "Đặt hàng mới cho khách 30300003: 20 cái PART-A01, loại tiền tệ USD.": {
+    "predicted_function": "CreateOrder",
+    "predicted_args": {
+      "currency": "USD",
+      "customer": "30300003",
+      "dist_channel": null,
+      "division": null,
+      "doc_type": null,
+      "items": [
+        {
+          "material": "PART-A01",
+          "plant": null,
+          "qty": 20,
+          "unit": null
+        },
+        {
+          "material": "PART-A01",
+          "plant": null,
+          "qty": 20,
+          "unit": null
+        }
+      ],
+      "sales_org": null
+    }
+  },
+  "Lập đơn hàng cho khách CUST-20001 gồm 8 chiếc FRAME-03.": {
+    "predicted_function": "CreateOrder",
+    "predicted_args": {
+      "customer": "CUST-20001",
+      "items": [
+        {
+          "material": "FRAME-03",
+          "qty": 8
+        }
+      ]
+    }
+  },
+  "Tạo đơn hàng mới gồm 3 cái TG11.": {
+    "predicted_function": "CreateOrder",
+    "predicted_args": {
+      "customer": "10100001",
+      "items": [
+        {
+          "material": "TG11",
+          "qty": 2
+        },
+        {
+          "material": "TG11",
+          "qty": 1
+        }
+      ]
+    }
+  },
+  "I want to place a new order but I don't know the customer.": {
+    "predicted_function": null,
+    "predicted_args": {}
+  },
+  "Cập nhật reference của đơn ORD-202670001 thành PO-2026-0099.": {
+    "predicted_function": "UpdateOrderReference",
+    "predicted_args": {
+      "new_reference": "PO-2026-0099",
+      "order_id": "ORD-202670001"
+    }
+  },
+  "Change the PO reference of order ORD-202670002 to PO-2026-NEW.": {
+    "predicted_function": "UpdateOrderReference",
+    "predicted_args": {
+      "new_reference": "PO-2026-NEW",
+      "order_id": "ORD-202670002"
+    }
+  },
+  "Đổi số PO của đơn ORD-202670003 sang PO-EXT-0042.": {
+    "predicted_function": "UpdateOrderReference",
+    "predicted_args": {
+      "new_reference": "PO-EXT-0042",
+      "order_id": "ORD-202670003"
+    }
+  },
+  "Update the customer PO reference for order ORD-202670004 to REF-20260708.": {
+    "predicted_function": "UpdateOrderReference",
+    "predicted_args": {
+      "new_reference": "REF-20260708",
+      "order_id": "ORD-202670004"
+    }
+  },
+  "Set reference ORD-202670005 thành EXT-REF-9999.": {
+    "predicted_function": "UpdateOrderReference",
+    "predicted_args": {
+      "new_reference": "EXT-REF-9999",
+      "order_id": "ORD-202670005"
+    }
+  },
+  "Gán số PO-CUST-2026-888 cho đơn ORD-202670007.": {
+    "predicted_function": "UpdateOrderReference",
+    "predicted_args": {
+      "new_reference": "PO-CUST-2026-888",
+      "order_id": "ORD-202670007"
+    }
+  },
+  "Cập nhật reference của đơn ORD-202670006.": {
+    "predicted_function": "UpdateOrderReference",
+    "predicted_args": {
+      "new_reference": "PO-2026-0042",
+      "order_id": "ORD-202670006"
+    }
+  },
+  "Update the reference for this order.": {
+    "predicted_function": null,
+    "predicted_args": {}
   }
 }

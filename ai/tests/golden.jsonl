@@ -6,6 +6,9 @@
 {"query": "ORD-777000 đang ở trạng thái gì vậy?", "expected_function": "CheckOrderStatus", "expected_args": {"order_id": "ORD-777000"}, "tier": 2}
 {"query": "Can you check order ORD-456789 for me?", "expected_function": "CheckOrderStatus", "expected_args": {"order_id": "ORD-456789"}, "tier": 2}
 {"query": "Track order ORD-100200 status.", "expected_function": "CheckOrderStatus", "expected_args": {"order_id": "ORD-100200"}, "tier": 2}
+{"query": "Tra cứu đơn ORD-202610099 giúp mình.", "expected_function": "CheckOrderStatus", "expected_args": {"order_id": "ORD-202610099"}, "tier": 1}
+{"query": "Đơn hàng ORD-111222 có đang được xử lý không?", "expected_function": "CheckOrderStatus", "expected_args": {"order_id": "ORD-111222"}, "tier": 2}
+{"query": "Tôi muốn biết đơn ORD-500600 đã đến đâu rồi.", "expected_function": "CheckOrderStatus", "expected_args": {"order_id": "ORD-500600"}, "tier": 2}
 {"query": "Xem danh sách các đơn hàng của khách hàng CUST-5002.", "expected_function": "GetSalesOrders", "expected_args": {"customerIdOrName": "CUST-5002"}, "tier": 1}
 {"query": "Lấy tất cả đơn hàng đã hoàn thành được tạo từ ngày 2026-01-01 đến 2026-06-01.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Delivered", "fromDate": "2026-01-01", "toDate": "2026-06-01"}, "tier": 2}
 {"query": "Tìm giúp tôi các đơn hàng Open của khách hàng CUST-8888 phát sinh kể từ 2026-05-15.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Open", "customerIdOrName": "CUST-8888", "fromDate": "2026-05-15"}, "tier": 2}
@@ -16,45 +19,73 @@
 {"query": "Lọc 10 đơn hàng mới nhất cho tổ chức bán hàng DN00.", "expected_function": "GetSalesOrders", "expected_args": {"salesOrg": "DN00", "top": 10}, "tier": 2}
 {"query": "Tìm đơn của Philly Bikes.", "expected_function": "GetSalesOrders", "expected_args": {"customerIdOrName": "Philly Bikes"}, "tier": 2}
 {"query": "Lấy đơn hàng đã giao một phần từ 2026-03-01.", "expected_function": "GetSalesOrders", "expected_args": {"status": "PartiallyDelivered", "fromDate": "2026-03-01"}, "tier": 2}
+{"query": "Tôi muốn xem các đơn bị Blocked trong tháng 5.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Blocked", "fromDate": "2026-05-01", "toDate": "2026-05-31"}, "tier": 1}
+{"query": "Lấy 5 đơn hàng gần nhất của tổ chức UE00.", "expected_function": "GetSalesOrders", "expected_args": {"salesOrg": "UE00", "top": 5}, "tier": 2}
+{"query": "Tìm tất cả đơn đang mở của khách Sunrise Corp.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Open", "customerIdOrName": "Sunrise Corp"}, "tier": 2}
+{"query": "Hiển thị đơn hàng đã xuất hóa đơn từ 2026-04-01 đến 2026-04-30.", "expected_function": "GetSalesOrders", "expected_args": {"status": "Invoiced", "fromDate": "2026-04-01", "toDate": "2026-04-30"}, "tier": 2}
 {"query": "Phê duyệt và giải phóng đơn hàng ORD-123456.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-123456"}, "tier": 1}
 {"query": "Duyệt gấp đơn hàng ORD-777888 kèm ghi chú: Khách hàng VIP cần giao sớm.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-777888", "comment": "Khách hàng VIP cần giao sớm."}, "tier": 2}
 {"query": "Release order ORD-112233 right now.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-112233"}, "tier": 2}
 {"query": "Approve order ORD-900100 with note: Urgent customer request.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-900100", "comment": "Urgent customer request."}, "tier": 2}
 {"query": "Sign off on ORD-202620001 please.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-202620001"}, "tier": 2}
 {"query": "Authorize release of ORD-202620002 – priority shipment.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-202620002", "comment": "Priority shipment"}, "tier": 2}
+{"query": "Mình muốn duyệt đơn ORD-202620010 vì hàng đã sẵn sàng xuất kho.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-202620010", "comment": "hàng đã sẵn sàng xuất kho"}, "tier": 1}
+{"query": "Cho phép xuất đơn ORD-202620011.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-202620011"}, "tier": 2}
+{"query": "Xác nhận và phê duyệt đơn ORD-202620012, ghi chú: đơn hàng ưu tiên quý 2.", "expected_function": "ReleaseOrder", "expected_args": {"order_id": "ORD-202620012", "comment": "đơn hàng ưu tiên quý 2"}, "tier": 2}
 {"query": "Hủy đơn hàng ORD-888999 do hết hàng rồi.", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-888999", "reason_code": "OUT_OF_STOCK"}, "tier": 1}
 {"query": "Từ chối đơn hàng ORD-443322 vì sai giá.", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-443322", "reason_code": "PRICE_ISSUE"}, "tier": 2}
 {"query": "Reject order ORD-999000 due to out of stock.", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-999000", "reason_code": "OUT_OF_STOCK"}, "tier": 2}
 {"query": "Cancel order ORD-202630001 – pricing error.", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-202630001", "reason_code": "PRICE_ISSUE"}, "tier": 2}
 {"query": "Reject ORD-202630002 for other reasons.", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-202630002", "reason_code": "OTHER"}, "tier": 2}
 {"query": "Hủy ORD-202630003 do lý do khác không nêu rõ.", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-202630003", "reason_code": "OTHER"}, "tier": 2}
+{"query": "Từ chối đơn ORD-202630010 vì nhà cung cấp không giao được hàng (hết hàng).", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-202630010", "reason_code": "OUT_OF_STOCK"}, "tier": 1}
+{"query": "Hủy đơn ORD-202630011 – khách yêu cầu giảm giá nhưng không được chấp thuận (sai giá).", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-202630011", "reason_code": "PRICE_ISSUE"}, "tier": 2}
+{"query": "Cancel ORD-202630012 for price discrepancy reasons.", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-202630012", "reason_code": "PRICE_ISSUE"}, "tier": 2}
+{"query": "Không thể giao ORD-202630013 vì kho thiếu hàng, hủy đơn đi.", "expected_function": "RejectOrder", "expected_args": {"order_id": "ORD-202630013", "reason_code": "OUT_OF_STOCK"}, "tier": 2}
 {"query": "Chuyển tiếp đơn hàng ORD-777777 cho Jane Doe xử lý tiếp nhé.", "expected_function": "ForwardOrder", "expected_args": {"order_id": "ORD-777777", "forward_to_user": "Jane Doe"}, "tier": 1}
 {"query": "Forward đơn ORD-555555 tới email john.smith@company.com dùm.", "expected_function": "ForwardOrder", "expected_args": {"order_id": "ORD-555555", "forward_to_user": "john.smith@company.com"}, "tier": 2}
 {"query": "Forward order ORD-333333 to manager.alex.", "expected_function": "ForwardOrder", "expected_args": {"order_id": "ORD-333333", "forward_to_user": "manager.alex"}, "tier": 2}
 {"query": "Transfer order ORD-202640001 to sarah.nguyen@corp.com.", "expected_function": "ForwardOrder", "expected_args": {"order_id": "ORD-202640001", "forward_to_user": "sarah.nguyen@corp.com"}, "tier": 2}
 {"query": "Bàn giao đơn ORD-202640002 cho anh Minh Tuấn.", "expected_function": "ForwardOrder", "expected_args": {"order_id": "ORD-202640002", "forward_to_user": "anh Minh Tuấn"}, "tier": 2}
+{"query": "Chuyển đơn ORD-202640010 cho chị Lan trong phòng kinh doanh xử lý.", "expected_function": "ForwardOrder", "expected_args": {"order_id": "ORD-202640010", "forward_to_user": "chị Lan"}, "tier": 1}
+{"query": "Giao đơn hàng ORD-202640011 này cho anh Hùng Sale duyệt giúp tôi.", "expected_function": "ForwardOrder", "expected_args": {"order_id": "ORD-202640011", "forward_to_user": "anh Hùng Sale"}, "tier": 2}
+{"query": "Nhờ chị Thu Hương xử lý đơn ORD-202640012 dùm tôi.", "expected_function": "ForwardOrder", "expected_args": {"order_id": "ORD-202640012", "forward_to_user": "chị Thu Hương"}, "tier": 2}
 {"query": "Cho tôi xem chi tiết đầy đủ đơn hàng ORD-202650001.", "expected_function": "GetOrderDetail", "expected_args": {"order_id": "ORD-202650001"}, "tier": 1}
 {"query": "Show me full detail of order ORD-202650002.", "expected_function": "GetOrderDetail", "expected_args": {"order_id": "ORD-202650002"}, "tier": 2}
 {"query": "Mở đơn hàng ORD-202650003 cho tôi xem các mặt hàng bên trong.", "expected_function": "GetOrderDetail", "expected_args": {"order_id": "ORD-202650003"}, "tier": 2}
 {"query": "Display all line items for order ORD-202650004.", "expected_function": "GetOrderDetail", "expected_args": {"order_id": "ORD-202650004"}, "tier": 2}
 {"query": "Thông tin đầy đủ của đơn ORD-202650005 là gì?", "expected_function": "GetOrderDetail", "expected_args": {"order_id": "ORD-202650005"}, "tier": 2}
+{"query": "Xem tất cả dòng hàng trong đơn ORD-202650010.", "expected_function": "GetOrderDetail", "expected_args": {"order_id": "ORD-202650010"}, "tier": 1}
+{"query": "Chi tiết sản phẩm trong đơn ORD-202650011 gồm những gì?", "expected_function": "GetOrderDetail", "expected_args": {"order_id": "ORD-202650011"}, "tier": 2}
 {"query": "Cho tôi xem KPI tổng quan.", "expected_function": "GetKpiSummary", "expected_args": {}, "tier": 1}
 {"query": "Show me the overall KPI dashboard.", "expected_function": "GetKpiSummary", "expected_args": {}, "tier": 2}
 {"query": "Xem dashboard doanh thu tháng này, chia theo tuần.", "expected_function": "GetKpiSummary", "expected_args": {"fromDate": "2026-06-01", "toDate": "2026-06-30", "granularity": "weekly"}, "tier": 2}
 {"query": "Show me the KPI summary for last quarter.", "expected_function": "GetKpiSummary", "expected_args": {"fromDate": "2026-01-01", "toDate": "2026-03-31"}, "tier": 2}
 {"query": "Hiệu suất bán hàng của tổ chức UE00 trong tháng 5 là bao nhiêu?", "expected_function": "GetKpiSummary", "expected_args": {"salesOrg": "UE00", "fromDate": "2026-05-01", "toDate": "2026-05-31"}, "tier": 2}
+{"query": "Xem tổng quan doanh thu quý 2, chia theo ngày.", "expected_function": "GetKpiSummary", "expected_args": {"fromDate": "2026-04-01", "toDate": "2026-06-30", "granularity": "daily"}, "tier": 1}
+{"query": "Doanh thu tháng 3 của tổ chức UW00 là bao nhiêu?", "expected_function": "GetKpiSummary", "expected_args": {"salesOrg": "UW00", "fromDate": "2026-03-01", "toDate": "2026-03-31"}, "tier": 2}
+{"query": "Show overall KPI for DS00 this year.", "expected_function": "GetKpiSummary", "expected_args": {"salesOrg": "DS00", "fromDate": "2026-01-01", "toDate": "2026-12-31"}, "tier": 2}
 {"query": "Cho tôi danh sách top 5 khách hàng có doanh thu cao nhất tháng này.", "expected_function": "GetKpiByCustomer", "expected_args": {"fromDate": "2026-06-01", "toDate": "2026-06-30", "top": 5}, "tier": 1}
 {"query": "Xem KPI của khách hàng CUST-3001 trong tháng 5.", "expected_function": "GetKpiByCustomer", "expected_args": {"customerIdOrName": "CUST-3001", "fromDate": "2026-05-01", "toDate": "2026-05-31"}, "tier": 2}
 {"query": "Which customers had the highest revenue last month?", "expected_function": "GetKpiByCustomer", "expected_args": {"fromDate": "2026-05-01", "toDate": "2026-05-31"}, "tier": 2}
 {"query": "Top 10 customers by revenue this quarter.", "expected_function": "GetKpiByCustomer", "expected_args": {"fromDate": "2026-04-01", "toDate": "2026-06-30", "top": 10}, "tier": 2}
-{"query": "Sản phẩm nào bán chạy nhất trong quý này?", "expected_function": "GetKpiByProduct", "expected_args": {"fromDate": "2026-04-01", "toDate": "2026-06-30", "top": 1}, "tier": 1}
+{"query": "Khách hàng nào mua nhiều nhất trong quý 1?", "expected_function": "GetKpiByCustomer", "expected_args": {"fromDate": "2026-01-01", "toDate": "2026-03-31"}, "tier": 1}
+{"query": "Top 3 khách hàng có doanh thu cao nhất quý này ở tổ chức UE00.", "expected_function": "GetKpiByCustomer", "expected_args": {"salesOrg": "UE00", "fromDate": "2026-04-01", "toDate": "2026-06-30", "top": 3}, "tier": 2}
+{"query": "Show customer KPI for Philly Bikes from 2026-01-01.", "expected_function": "GetKpiByCustomer", "expected_args": {"customerIdOrName": "Philly Bikes", "fromDate": "2026-01-01"}, "tier": 2}
+{"query": "Sản phẩm nào bán chạy nhất trong quý này?", "expected_function": "GetKpiByProduct", "expected_args": {"fromDate": "2026-04-01", "toDate": "2026-06-30"}, "tier": 1}
 {"query": "What are the top 10 best-selling products this month?", "expected_function": "GetKpiByProduct", "expected_args": {"fromDate": "2026-06-01", "toDate": "2026-06-30", "top": 10}, "tier": 2}
 {"query": "Xem doanh thu của sản phẩm Mountain Bike tháng này.", "expected_function": "GetKpiByProduct", "expected_args": {"materialIdOrName": "Mountain Bike", "fromDate": "2026-06-01", "toDate": "2026-06-30"}, "tier": 2}
 {"query": "Show KPI for material MAT-2001 last month.", "expected_function": "GetKpiByProduct", "expected_args": {"materialIdOrName": "MAT-2001", "fromDate": "2026-05-01", "toDate": "2026-05-31"}, "tier": 2}
+{"query": "Sản phẩm nào bán chạy nhất quý 1 tại khu vực UW00?", "expected_function": "GetKpiByProduct", "expected_args": {"salesOrg": "UW00", "fromDate": "2026-01-01", "toDate": "2026-03-31"}, "tier": 1}
+{"query": "Top 5 mặt hàng doanh thu cao nhất tháng 4 của tổ chức DN00.", "expected_function": "GetKpiByProduct", "expected_args": {"salesOrg": "DN00", "fromDate": "2026-04-01", "toDate": "2026-04-30", "top": 5}, "tier": 2}
+{"query": "Hiệu suất sản phẩm TG11 trong nửa đầu năm 2026.", "expected_function": "GetKpiByProduct", "expected_args": {"materialIdOrName": "TG11", "fromDate": "2026-01-01", "toDate": "2026-06-30"}, "tier": 2}
 {"query": "Cho tôi xem danh sách các đơn hàng đang giao trễ.", "expected_function": "GetOverdueOrders", "expected_args": {}, "tier": 1}
 {"query": "List overdue orders that are more than 7 days past due.", "expected_function": "GetOverdueOrders", "expected_args": {"daysPastDue": 7}, "tier": 2}
 {"query": "Đơn hàng quá hạn của khách hàng CUST-7001 là những đơn nào?", "expected_function": "GetOverdueOrders", "expected_args": {"customerIdOrName": "CUST-7001"}, "tier": 2}
 {"query": "Show top 20 most overdue orders in sales org UW00.", "expected_function": "GetOverdueOrders", "expected_args": {"salesOrg": "UW00", "top": 20}, "tier": 2}
+{"query": "Đơn nào của khách hàng Sunrise Corp đang bị giao trễ hơn 14 ngày?", "expected_function": "GetOverdueOrders", "expected_args": {"customerIdOrName": "Sunrise Corp", "daysPastDue": 14}, "tier": 1}
+{"query": "Các đơn hàng trễ hạn giao trong tổ chức DS00 là gì?", "expected_function": "GetOverdueOrders", "expected_args": {"salesOrg": "DS00"}, "tier": 2}
+{"query": "Show me top 10 overdue deliveries.", "expected_function": "GetOverdueOrders", "expected_args": {"top": 10}, "tier": 2}
 {"query": "Duyệt đơn này đi", "expected_function": null, "expected_args": {}, "tier": 1}
 {"query": "Hủy giùm tôi đơn hàng này với, hết hàng rồi", "expected_function": null, "expected_args": {}, "tier": 2}
 {"query": "Bàn giao đơn hàng ORD-444555 này đi", "expected_function": null, "expected_args": {}, "tier": 2}
@@ -63,3 +94,21 @@
 {"query": "Cho tôi xem chi tiết đơn hàng này.", "expected_function": null, "expected_args": {}, "tier": 2}
 {"query": "Hôm nay thời tiết thế nào?", "expected_function": null, "expected_args": {}, "tier": 1}
 {"query": "Write me a Python script to sort a list.", "expected_function": null, "expected_args": {}, "tier": 2}
+{"query": "Chuyển tiếp đơn hàng này cho sếp.", "expected_function": null, "expected_args": {}, "tier": 2}
+{"query": "Cancel this order immediately.", "expected_function": null, "expected_args": {}, "tier": 1}
+{"query": "Tạo đơn hàng cho khách hàng 10100001 gồm 2 cái TG11.", "expected_function": "CreateOrder", "expected_args": {"customer": "10100001", "items": [{"material": "TG11", "qty": 2}]}, "tier": 1}
+{"query": "Place a new order for customer 10100001 with 5 units of material BIKE-01.", "expected_function": "CreateOrder", "expected_args": {"customer": "10100001", "items": [{"material": "BIKE-01", "qty": 5}]}, "tier": 1}
+{"query": "Tạo mới một đơn hàng cho khách hàng 20200002 bao gồm 10 chiếc ROAD-01 và 3 chiếc MTB-02.", "expected_function": "CreateOrder", "expected_args": {"customer": "20200002", "items": [{"material": "ROAD-01", "qty": 10}, {"material": "MTB-02", "qty": 3}]}, "tier": 2}
+{"query": "Create a sales order for customer CUST-10005 with 1 unit of material TG11 in sales org 1010.", "expected_function": "CreateOrder", "expected_args": {"customer": "CUST-10005", "items": [{"material": "TG11", "qty": 1}], "sales_org": "1010"}, "tier": 2}
+{"query": "Đặt hàng mới cho khách 30300003: 20 cái PART-A01, loại tiền tệ USD.", "expected_function": "CreateOrder", "expected_args": {"customer": "30300003", "items": [{"material": "PART-A01", "qty": 20}], "currency": "USD"}, "tier": 2}
+{"query": "Lập đơn hàng cho khách CUST-20001 gồm 8 chiếc FRAME-03.", "expected_function": "CreateOrder", "expected_args": {"customer": "CUST-20001", "items": [{"material": "FRAME-03", "qty": 8}]}, "tier": 1}
+{"query": "Tạo đơn hàng mới gồm 3 cái TG11.", "expected_function": null, "expected_args": {}, "tier": 1}
+{"query": "I want to place a new order but I don't know the customer.", "expected_function": null, "expected_args": {}, "tier": 2}
+{"query": "Cập nhật reference của đơn ORD-202670001 thành PO-2026-0099.", "expected_function": "UpdateOrderReference", "expected_args": {"order_id": "ORD-202670001", "new_reference": "PO-2026-0099"}, "tier": 1}
+{"query": "Change the PO reference of order ORD-202670002 to PO-2026-NEW.", "expected_function": "UpdateOrderReference", "expected_args": {"order_id": "ORD-202670002", "new_reference": "PO-2026-NEW"}, "tier": 1}
+{"query": "Đổi số PO của đơn ORD-202670003 sang PO-EXT-0042.", "expected_function": "UpdateOrderReference", "expected_args": {"order_id": "ORD-202670003", "new_reference": "PO-EXT-0042"}, "tier": 2}
+{"query": "Update the customer PO reference for order ORD-202670004 to REF-20260708.", "expected_function": "UpdateOrderReference", "expected_args": {"order_id": "ORD-202670004", "new_reference": "REF-20260708"}, "tier": 2}
+{"query": "Set reference ORD-202670005 thành EXT-REF-9999.", "expected_function": "UpdateOrderReference", "expected_args": {"order_id": "ORD-202670005", "new_reference": "EXT-REF-9999"}, "tier": 2}
+{"query": "Gán số PO-CUST-2026-888 cho đơn ORD-202670007.", "expected_function": "UpdateOrderReference", "expected_args": {"order_id": "ORD-202670007", "new_reference": "PO-CUST-2026-888"}, "tier": 1}
+{"query": "Cập nhật reference của đơn ORD-202670006.", "expected_function": null, "expected_args": {}, "tier": 1}
+{"query": "Update the reference for this order.", "expected_function": null, "expected_args": {}, "tier": 2}
