@@ -103,15 +103,29 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
             "Executing function {FunctionName} with parameters: {Parameters}",
             function.Name, argsJson);
 
-        var result = await function.ExecuteAsync(argsDoc.RootElement, requestingSapUser, ct);
-
-        return new DispatchResult
+        try
         {
-            Handled = true,
-            FunctionName = function.Name,
-            Result = result,
-            ParametersJson = argsJson
-        };
+            var result = await function.ExecuteAsync(argsDoc.RootElement, requestingSapUser, ct);
+
+            return new DispatchResult
+            {
+                Handled = true,
+                FunctionName = function.Name,
+                Result = result,
+                ParametersJson = argsJson
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Exception while executing function {FunctionName}", function.Name);
+            return new DispatchResult
+            {
+                Handled = true,
+                FunctionName = function.Name,
+                Result = FunctionResult.Fail(ex.Message),
+                ParametersJson = argsJson
+            };
+        }
     }
 }
 
