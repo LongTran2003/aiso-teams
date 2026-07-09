@@ -1,12 +1,12 @@
 {
   "name": "GetKpiByCustomer",
-  "description": "Get KPI metrics per customer from SAP: revenue, order count, AOV, cancellation rate. Trigger when user asks about customer performance, top customers by revenue, or per-client sales analysis. All params optional.",
+  "description": "Get KPI metrics per customer from SAP: revenue, order count, average order value, fulfillment rate. Trigger when user asks about customer performance, top customers by revenue, client-level sales analysis, or specific customer KPI. All params optional — call immediately on intent match.",
   "parameters": {
     "type": "object",
     "properties": {
       "customerIdOrName": {
         "type": ["string", "null"],
-        "description": "Customer ID or partial name. Null to return all customers."
+        "description": "Customer ID or partial name to filter to a specific customer (e.g. 'CUST-3001', 'Philly Bikes'). Null to return all customers ranked by revenue."
       },
       "fromDate": {
         "type": ["string", "null"],
@@ -25,7 +25,9 @@
       },
       "top": {
         "type": ["integer", "null"],
-        "description": "Return top N customers by revenue. Null if not specified."
+        "minimum": 1,
+        "maximum": 50,
+        "description": "Return top N customers by revenue (1–50). Null if not specified."
       }
     },
     "required": [],

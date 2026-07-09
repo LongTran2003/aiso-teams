@@ -1,6 +1,6 @@
 {
   "name": "GetKpiSummary",
-  "description": "Get aggregated KPI dashboard from SAP: total revenue, order count, fulfillment rate, cancellation rate. Trigger when user asks about overall performance, KPI overview, revenue totals, or sales dashboard. All params optional.",
+  "description": "Get aggregated KPI dashboard from SAP: total revenue, order count, fulfillment rate, cancellation rate, and revenue time series. Trigger when user asks about overall performance, KPI overview, revenue totals, sales dashboard, or period-level analytics. All params optional — call immediately on intent match.",
   "parameters": {
     "type": "object",
     "properties": {
@@ -22,7 +22,7 @@
       "granularity": {
         "type": ["string", "null"],
         "enum": ["daily", "weekly", "monthly", null],
-        "description": "Time breakdown granularity. Null if not specified."
+        "description": "Time breakdown granularity for revenue series. Values: 'daily' (theo ngày), 'weekly' (theo tuần), 'monthly' (theo tháng). Null if user does not specify."
       }
     },
     "required": [],

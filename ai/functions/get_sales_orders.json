@@ -1,36 +1,38 @@
 {
   "name": "GetSalesOrders",
-  "description": "Retrieve a list of sales orders from the SAP ERP system. Trigger this function when the user wants to query, filter, or view sales orders based on customer ID/name, status, or creation date range.",
+  "description": "Retrieve a list of sales orders from the SAP ERP system. Trigger this function when the user wants to query, filter, search, or view sales orders based on customer ID/name, status, creation date range, sales organization, or quantity limit. All parameters are optional — call immediately when intent is detected.",
   "parameters": {
     "type": "object",
     "properties": {
       "customerIdOrName": {
         "type": ["string", "null"],
-        "description": "Customer ID (e.g. 'CUST-1002') or partial customer name (e.g. 'Philly Bikes'). Use null or omit this property if the user does not specify a customer name or ID."
+        "description": "Customer ID (e.g. 'CUST-1002', '1000') or partial customer name (e.g. 'Philly Bikes'). Use null or omit if the user does not specify a customer."
       },
       "fromDate": {
         "type": ["string", "null"],
         "format": "date",
-        "description": "The starting creation date for filtering orders, formatted strictly as YYYY-MM-DD. Use null or omit this property if the user does not specify a start date or date range."
+        "description": "Start date for filtering orders by creation date. Format: YYYY-MM-DD. Use null or omit if not specified."
       },
       "toDate": {
         "type": ["string", "null"],
         "format": "date",
-        "description": "The ending creation date for filtering orders, formatted strictly as YYYY-MM-DD. Use null or omit this property if the user does not specify an end date or date range."
+        "description": "End date for filtering orders by creation date. Format: YYYY-MM-DD. Use null or omit if not specified."
       },
       "status": {
         "type": ["string", "null"],
         "enum": ["Open", "Blocked", "PartiallyDelivered", "Delivered", "Invoiced", "Cancelled", null],
-        "description": "Filter orders by their current workflow status. Use null or omit this property if the user does not specify a status."
+        "description": "Filter by order workflow status. Values: Open (đang xử lý/pending), Blocked (bị chặn/hold), PartiallyDelivered (giao một phần/partial), Delivered (đã hoàn thành/completed), Invoiced (đã xuất hóa đơn), Cancelled (đã hủy). Use null or omit if not specified."
       },
       "salesOrg": {
         "type": ["string", "null"],
         "enum": ["UE00", "UW00", "DN00", "DS00", null],
-        "description": "Optional sales organization code. Use null or omit this property if not specified."
+        "description": "Sales organization code. Use null or omit if not specified by the user."
       },
       "top": {
         "type": ["integer", "null"],
-        "description": "Optional limit on records returned. Use null or omit this property if not specified."
+        "minimum": 1,
+        "maximum": 50,
+        "description": "Maximum number of records to return (1–50). Use null or omit if not specified."
       }
     },
     "required": [],
