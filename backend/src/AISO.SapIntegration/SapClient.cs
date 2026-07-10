@@ -265,6 +265,9 @@ public class SapClient : ISapClient
     {
         var request = new HttpRequestMessage(HttpMethod.Post, url);
         var jsonString = System.Text.Json.JsonSerializer.Serialize(payload);
+
+        _logger.LogInformation("SAP POST Request: URL={Url}, Payload={Payload}", url, jsonString);
+
         var stringContent = new StringContent(jsonString, System.Text.Encoding.UTF8, "application/json");
         if (stringContent.Headers.ContentType != null)
         {
@@ -288,10 +291,40 @@ public class SapClient : ISapClient
         if (!response.IsSuccessStatusCode)
         {
             var errorBody = await response.Content.ReadAsStringAsync(ct);
-            throw new HttpRequestException($"Response status code does not indicate success: {(int)response.StatusCode} ({response.ReasonPhrase}). Body: {errorBody}");
+            _logger.LogError("SAP POST Failed: HTTP {StatusCode}, URL={Url}, Body={ErrorBody}", (int)response.StatusCode, url, errorBody);
+            throw new SapODataException((int)response.StatusCode, ParseSapErrorMessage(errorBody, (int)response.StatusCode));
         }
 
         return await response.Content.ReadFromJsonAsync<TResult>(cancellationToken: ct);
+    }
+
+    private static string ParseSapErrorMessage(string errorBody, int statusCode)
+    {
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(errorBody);
+            if (doc.RootElement.TryGetProperty("error", out var errorObj))
+            {
+                var code = errorObj.TryGetProperty("code", out var c) ? c.GetString() : null;
+                var message = errorObj.TryGetProperty("message", out var m) ? m.GetString() : null;
+
+                if (string.Equals(code, "RAISE_SHORTDUMP", StringComparison.OrdinalIgnoreCase))
+                {
+                    return $"SAP encountered an internal error (ABAP Short Dump). " +
+                           $"This is typically caused by a data format mismatch in the SAP backend. " +
+                           $"Please contact the SAP team to check transaction ST22 for details. " +
+                           $"(See GitHub issue #105)";
+                }
+
+                return !string.IsNullOrWhiteSpace(message) ? message : $"SAP error {code}: {statusCode}";
+            }
+        }
+        catch
+        {
+            // JSON parse failed, fall through
+        }
+
+        return $"SAP returned HTTP {statusCode}. Raw response: {errorBody[..Math.Min(errorBody.Length, 200)]}";
     }
 
     // -----------------------------------------------------------------------

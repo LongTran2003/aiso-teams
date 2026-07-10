@@ -148,8 +148,16 @@ public class TeamsBot : TeamsActivityHandler
                                 })),
                                 cancellationToken);
                         }
+                        catch (SapODataException sapEx)
+                        {
+                            _logger.LogError(sapEx, "SAP error viewing order {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                cancellationToken: cancellationToken);
+                        }
                         catch (Exception ex)
                         {
+                            _logger.LogError(ex, "Unexpected error viewing order {OrderId}", salesOrderId);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
                                 cancellationToken: cancellationToken);
@@ -205,8 +213,16 @@ public class TeamsBot : TeamsActivityHandler
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Released")),
                                 cancellationToken);
                         }
+                        catch (SapODataException sapEx)
+                        {
+                            _logger.LogError(sapEx, "SAP error releasing order {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                cancellationToken: cancellationToken);
+                        }
                         catch (Exception ex)
                         {
+                            _logger.LogError(ex, "Unexpected error releasing order {OrderId}", salesOrderId);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
                                 cancellationToken: cancellationToken);
@@ -242,8 +258,16 @@ public class TeamsBot : TeamsActivityHandler
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Rejected")),
                                 cancellationToken);
                         }
+                        catch (SapODataException sapEx)
+                        {
+                            _logger.LogError(sapEx, "SAP error rejecting order {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                cancellationToken: cancellationToken);
+                        }
                         catch (Exception ex)
                         {
+                            _logger.LogError(ex, "Unexpected error rejecting order {OrderId}", salesOrderId);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
                                 cancellationToken: cancellationToken);
@@ -278,8 +302,16 @@ public class TeamsBot : TeamsActivityHandler
                                 $"Sales order {updatedOrder.SoNumber} has been forwarded to {forwardToUser}.",
                                 cancellationToken: cancellationToken);
                         }
+                        catch (SapODataException sapEx)
+                        {
+                            _logger.LogError(sapEx, "SAP error forwarding order {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                cancellationToken: cancellationToken);
+                        }
                         catch (Exception ex)
                         {
+                            _logger.LogError(ex, "Unexpected error forwarding order {OrderId}", salesOrderId);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
                                 cancellationToken: cancellationToken);
