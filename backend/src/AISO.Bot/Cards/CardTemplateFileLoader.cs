@@ -21,7 +21,7 @@ internal static class CardTemplateFileLoader
         using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream is not null)
         {
-            using var reader = new StreamReader(stream);
+            using var reader = new StreamReader(stream, System.Text.Encoding.UTF8);
             return reader.ReadToEnd();
         }
 
@@ -32,7 +32,7 @@ internal static class CardTemplateFileLoader
             var candidate = Path.Combine(current.FullName, "frontend", "cards", fileName);
             if (File.Exists(candidate))
             {
-                return File.ReadAllText(candidate);
+                return File.ReadAllText(candidate, System.Text.Encoding.UTF8);
             }
         }
 
