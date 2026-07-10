@@ -199,7 +199,7 @@ public class SapClient : ISapClient
         var payload = new
         {
             REQUESTING_TEAMS_USER = requestingSapUser,
-            REASON = reason
+            REJECTION_CODE = reason
         };
 
         try
@@ -246,7 +246,8 @@ public class SapClient : ISapClient
         var payload = new
         {
             REQUESTING_TEAMS_USER = requestingSapUser,
-            FORWARD_TO = forwardToUser
+            NEW_TEAMS_USER = forwardToUser,
+            REMARKS = "" // Required by SAP struct ZAISO_S_FORWARD_PARAMS
         };
 
         try
