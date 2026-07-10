@@ -190,31 +190,31 @@ public class SapClient : ISapClient
         }
     }
 
-    public async Task<SalesOrder> CancelOrderAsync(string soNumber, string reason, string requestingSapUser, CancellationToken ct = default)
+    public async Task<SalesOrder> RejectOrderAsync(string soNumber, string rejectionCode, string requestingTeamsUser, CancellationToken ct = default)
     {
         var formattedSo = FormatSoNumber(soNumber);
-        var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.cancelOrder?sap-client=324&$format=json";
+        var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.rejectOrder?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
         var payload = new
         {
-            REQUESTING_TEAMS_USER = requestingSapUser,
-            REJECTION_CODE = reason
+            REQUESTING_TEAMS_USER = requestingTeamsUser,
+            REJECTION_CODE = rejectionCode,
         };
 
         try
         {
             var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
-            return result == null ? throw new InvalidOperationException("Failed to deserialize canceled order.") : MapToDomain(result);
+            return result == null ? throw new InvalidOperationException("Failed to deserialize rejected order.") : MapToDomain(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling SAP OData CancelOrderAsync for {SoNumber}", soNumber);
+            _logger.LogError(ex, "Error calling SAP OData RejectOrderAsync for {SoNumber}", soNumber);
             throw;
         }
     }
 
-    public async Task<SalesOrder> ReleaseOrderAsync(string soNumber, string requestingSapUser, CancellationToken ct = default)
+    public async Task<SalesOrder> ReleaseOrderAsync(string soNumber, string requestingTeamsUser, CancellationToken ct = default)
     {
         var formattedSo = FormatSoNumber(soNumber);
         var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.releaseOrder?sap-client=324&$format=json";
@@ -222,7 +222,7 @@ public class SapClient : ISapClient
 
         var payload = new
         {
-            REQUESTING_TEAMS_USER = requestingSapUser
+            REQUESTING_TEAMS_USER = requestingTeamsUser,
         };
 
         try
@@ -237,7 +237,12 @@ public class SapClient : ISapClient
         }
     }
 
-    public async Task<SalesOrder> ForwardOrderAsync(string soNumber, string forwardToUser, string requestingSapUser, CancellationToken ct = default)
+    public async Task<SalesOrder> ForwardOrderAsync(
+        string soNumber,
+        string forwardToUser,
+        string requestingTeamsUser,
+        CancellationToken ct = default,
+        string? remarks = null)
     {
         var formattedSo = FormatSoNumber(soNumber);
         var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.forwardOrder?sap-client=324&$format=json";
@@ -245,9 +250,9 @@ public class SapClient : ISapClient
 
         var payload = new
         {
-            REQUESTING_TEAMS_USER = requestingSapUser,
+            REQUESTING_TEAMS_USER = requestingTeamsUser,
             NEW_TEAMS_USER = forwardToUser,
-            REMARKS = "" // Required by SAP struct ZAISO_S_FORWARD_PARAMS
+            REMARKS = remarks ?? string.Empty,
         };
 
         try
@@ -616,4 +621,3 @@ public class SapClient : ISapClient
         };
     }
 }
-

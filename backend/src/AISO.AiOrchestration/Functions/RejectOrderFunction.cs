@@ -86,26 +86,25 @@ public sealed class RejectOrderFunction : IFunction
 
         try
         {
-            var updatedOrder = await _sap.CancelOrderAsync(orderId, sapReasonCode, requestingSapUser, ct);
-            
+            var updatedOrder = await _sap.RejectOrderAsync(orderId, sapReasonCode, requestingSapUser, ct);
+
             // Audit Log
             _logger.LogInformation("AUDIT: User {User} successfully rejected order {OrderId} with reason: {Reason}", requestingSapUser, orderId, reasonCode);
 
             var result = new
             {
                 order_id = updatedOrder.SoNumber,
-                action = "Canceled",
+                action = "Rejected",
                 reason_code = reasonCode,
-                message = $"Sales order {updatedOrder.SoNumber} has been canceled (reason: {reasonCode}). Status is now {updatedOrder.Status}."
+                message = $"Sales order {updatedOrder.SoNumber} has been rejected (reason: {reasonCode}). Status is now {updatedOrder.Status}."
             };
 
             return FunctionResult.Ok(result);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to cancel order {OrderId}", orderId);
-            return FunctionResult.Fail($"Failed to cancel order in SAP: {ex.Message}");
+            _logger.LogError(ex, "Failed to reject order {OrderId}", orderId);
+            return FunctionResult.Fail($"Failed to reject order in SAP: {ex.Message}");
         }
     }
 }
-
