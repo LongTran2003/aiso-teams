@@ -6,7 +6,7 @@
     "properties": {
       "order_id": {
         "type": "string",
-        "description": "The unique sales order identifier in SAP (e.g., 'ORD-123456' or '0000005001') to be forwarded. Must be explicitly stated by the user."
+        "description": "The unique sales order identifier in SAP (e.g., '5', '8' or '0000005001') to be forwarded. Must be explicitly stated by the user."
       },
       "forward_to_user": {
         "type": "string",

@@ -6,7 +6,7 @@
     "properties": {
       "order_id": {
         "type": "string",
-        "description": "Mã định danh duy nhất của đơn hàng trong hệ thống SAP (ví dụ: 'ORD-123456' hoặc '0000005001'). Phải do người dùng cung cấp rõ ràng trong tin nhắn. / The unique Sales Order number in SAP (e.g. 'ORD-123456' or '0000005001'). Must be explicitly stated by the user."
+        "description": "Mã định danh duy nhất của đơn hàng trong hệ thống SAP (ví dụ: '5', '8' hoặc '0000005001'). Phải do người dùng cung cấp rõ ràng trong tin nhắn. / The unique Sales Order number in SAP (e.g. '5', '8' or '0000005001'). Must be explicitly stated by the user."
       }
     },
     "required": ["order_id"],
