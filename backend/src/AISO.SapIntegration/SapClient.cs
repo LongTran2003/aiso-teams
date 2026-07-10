@@ -130,7 +130,7 @@ public class SapClient : ISapClient
             // TEMPORARY MOCK: SAP Backend is currently throwing ABAP RAISE_SHORTDUMP for createOrder
             // (CALL_FUNCTION_CONFLICT_LENG) due to parameter mismatch.
             _logger.LogWarning("SAP CreateSalesOrder is currently broken (RAISE_SHORTDUMP). Mocking success response.");
-            
+
             return new SalesOrder
             {
                 SoNumber = "0000009999", // Mock generated ID
@@ -302,14 +302,14 @@ public class SapClient : ISapClient
         try
         {
             var response = await _httpClient.GetAsync(url, ct);
-            
+
             // Fallback: If view is missing, aggregate SalesOrders entirely
             if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 _logger.LogWarning("SAP KPI view not found, falling back to manual aggregation for everything");
                 return await GetKpiSummaryFallbackAsync(query, ct);
             }
-            
+
             response.EnsureSuccessStatusCode();
 
             var rawJson = await response.Content.ReadAsStringAsync(ct);
@@ -365,12 +365,12 @@ public class SapClient : ISapClient
             SalesOrg = query.SalesOrg,
             Top = 500 // Aggregate up to 500 recent orders
         }, ct);
-        
+
         var totalOrders = orders.Count;
         var deliveredOrders = orders.Count(o => o.Status == SalesOrderStatus.Delivered);
         var openOrders = orders.Count(o => o.Status == SalesOrderStatus.Open);
         // Note: For cancelled/overdue we'd need more status mappings, simplified here
-        
+
         return new KpiSummary
         {
             TotalRevenue = orders.Sum(o => o.NetValue),
