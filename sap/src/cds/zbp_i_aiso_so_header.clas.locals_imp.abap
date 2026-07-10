@@ -22,8 +22,9 @@ CLASS lhc_SalesOrder DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS forwardOrder FOR MODIFY
       IMPORTING keys FOR ACTION SalesOrder~forwardOrder RESULT result.
+
     METHODS rejectOrder FOR MODIFY
-  IMPORTING keys FOR ACTION SalesOrder~rejectOrder RESULT result.
+      IMPORTING keys FOR ACTION SalesOrder~rejectOrder RESULT result.
 
 ENDCLASS.
 
@@ -95,7 +96,7 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
         created_at  = lv_timestamp
       ) ).
 
-     DATA ls_result LIKE LINE OF result.
+      DATA ls_result LIKE LINE OF result.
       CLEAR ls_result.
       ls_result-%cid = ls_key-%cid.
       ls_result-%param-SoNumber = lv_so_number.
@@ -104,137 +105,137 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD cancelorder.
-  DATA: lt_items_in  TYPE TABLE OF bapisditm,
-        lt_items_inx TYPE TABLE OF bapisditmx,
-        lt_return    TYPE TABLE OF bapiret2,
-        lv_timestamp TYPE c LENGTH 14.
+    DATA: lt_items_in  TYPE TABLE OF bapisditm,
+          lt_items_inx TYPE TABLE OF bapisditmx,
+          lt_return    TYPE TABLE OF bapiret2,
+          lv_timestamp TYPE c LENGTH 14.
 
-  LOOP AT keys INTO DATA(ls_key).
+    LOOP AT keys INTO DATA(ls_key).
 
-    " Fix ALPHA conversion
-    DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+      " Fix ALPHA conversion
+      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
 
-    SELECT SINGLE teams_user_id FROM zaiso_so_map
-      INTO @DATA(lv_owner)
-      WHERE so_number = @lv_so_number.
+      SELECT SINGLE teams_user_id FROM zaiso_so_map
+        INTO @DATA(lv_owner)
+        WHERE so_number = @lv_so_number.
 
-    IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-unauthorized )
-             TO failed-salesorder.
-      CONTINUE.
-    ENDIF.
+      IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unauthorized )
+               TO failed-salesorder.
+        CONTINUE.
+      ENDIF.
 
-    CLEAR: lt_items_in, lt_items_inx, lt_return.
+      CLEAR: lt_items_in, lt_items_inx, lt_return.
 
-    SELECT posnr FROM vbap
-      INTO TABLE @DATA(lt_posnr)
-      WHERE vbeln = @lv_so_number.
+      SELECT posnr FROM vbap
+        INTO TABLE @DATA(lt_posnr)
+        WHERE vbeln = @lv_so_number.
 
-    LOOP AT lt_posnr INTO DATA(ls_posnr).
-      APPEND VALUE #( itm_number = ls_posnr-posnr
-                       reason_rej = 'Z1' ) TO lt_items_in.
-      APPEND VALUE #( itm_number = ls_posnr-posnr
-                       reason_rej = 'X' )  TO lt_items_inx.
+      LOOP AT lt_posnr INTO DATA(ls_posnr).
+        APPEND VALUE #( itm_number = ls_posnr-posnr
+                         reason_rej = 'Z1' ) TO lt_items_in.
+        APPEND VALUE #( itm_number = ls_posnr-posnr
+                         reason_rej = 'X' )  TO lt_items_inx.
+      ENDLOOP.
+
+      CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+        EXPORTING
+          salesdocument  = lv_so_number
+        TABLES
+          order_item_in  = lt_items_in
+          order_item_inx = lt_items_inx
+          return         = lt_return.
+
+      READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
+      IF sy-subrc = 0.
+        CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unspecific )
+               TO failed-salesorder.
+        CONTINUE.
+      ENDIF.
+
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = 'X'.
+
+      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+      INSERT zaiso_audit FROM @( VALUE #(
+        mandt       = sy-mandt
+        audit_id    = cl_system_uuid=>create_uuid_c32_static( )
+        sap_user    = sy-uname
+        action_type = 'CANCEL_SO'
+        so_number   = lv_so_number
+        status      = 'SUCCESS'
+        created_at  = lv_timestamp
+      ) ).
+
+      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
     ENDLOOP.
+  ENDMETHOD.
 
-    CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
-      EXPORTING
-        salesdocument  = lv_so_number
-      TABLES
-        order_item_in  = lt_items_in
-        order_item_inx = lt_items_inx
-        return         = lt_return.
+  METHOD updatereference.
+    DATA: ls_header_in  TYPE bapisdh1,
+          ls_header_inx TYPE bapisdh1x,
+          lt_return     TYPE TABLE OF bapiret2,
+          lv_timestamp  TYPE c LENGTH 14.
 
-    READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
-    IF sy-subrc = 0.
-      CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-unspecific )
-             TO failed-salesorder.
-      CONTINUE.
-    ENDIF.
+    LOOP AT keys INTO DATA(ls_key).
 
-    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = 'X'.
+      " Fix ALPHA conversion
+      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
 
-    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+      SELECT SINGLE teams_user_id FROM zaiso_so_map
+        INTO @DATA(lv_owner)
+        WHERE so_number = @lv_so_number.
 
-    INSERT zaiso_audit FROM @( VALUE #(
-      mandt       = sy-mandt
-      audit_id    = cl_system_uuid=>create_uuid_c32_static( )
-      sap_user    = sy-uname
-      action_type = 'CANCEL_SO'
-      so_number   = lv_so_number
-      status      = 'SUCCESS'
-      created_at  = lv_timestamp
-    ) ).
+      IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unauthorized )
+               TO failed-salesorder.
+        CONTINUE.
+      ENDIF.
 
-    APPEND VALUE #( %tky = ls_key-%tky ) TO result.
-  ENDLOOP.
-ENDMETHOD.
+      CLEAR: ls_header_in, ls_header_inx, lt_return.
+      ls_header_in-purch_no_c  = ls_key-%param-new_reference.
+      ls_header_inx-purch_no_c = 'X'.
 
+      CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+        EXPORTING
+          salesdocument    = lv_so_number
+          order_header_in  = ls_header_in
+          order_header_inx = ls_header_inx
+        TABLES
+          return           = lt_return.
 
-METHOD updatereference.
-  DATA: ls_header_in  TYPE bapisdh1,
-        ls_header_inx TYPE bapisdh1x,
-        lt_return     TYPE TABLE OF bapiret2,
-        lv_timestamp  TYPE c LENGTH 14.
+      READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
+      IF sy-subrc = 0.
+        CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unspecific )
+               TO failed-salesorder.
+        CONTINUE.
+      ENDIF.
 
-  LOOP AT keys INTO DATA(ls_key).
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = 'X'.
 
-    " Fix ALPHA conversion
-    DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
 
-    SELECT SINGLE teams_user_id FROM zaiso_so_map
-      INTO @DATA(lv_owner)
-      WHERE so_number = @lv_so_number.
+      INSERT zaiso_audit FROM @( VALUE #(
+        mandt       = sy-mandt
+        audit_id    = cl_system_uuid=>create_uuid_c32_static( )
+        sap_user    = sy-uname
+        action_type = 'UPDATE_REF_SO'
+        so_number   = lv_so_number
+        status      = 'SUCCESS'
+        created_at  = lv_timestamp
+      ) ).
 
-    IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-unauthorized )
-             TO failed-salesorder.
-      CONTINUE.
-    ENDIF.
+      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
+    ENDLOOP.
+  ENDMETHOD.
 
-    CLEAR: ls_header_in, ls_header_inx, lt_return.
-    ls_header_in-purch_no_c  = ls_key-%param-new_reference.
-    ls_header_inx-purch_no_c = 'X'.
-
-    CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
-      EXPORTING
-        salesdocument    = lv_so_number
-        order_header_in  = ls_header_in
-        order_header_inx = ls_header_inx
-      TABLES
-        return           = lt_return.
-
-    READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
-    IF sy-subrc = 0.
-      CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-unspecific )
-             TO failed-salesorder.
-      CONTINUE.
-    ENDIF.
-
-    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = 'X'.
-
-    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
-
-    INSERT zaiso_audit FROM @( VALUE #(
-      mandt       = sy-mandt
-      audit_id    = cl_system_uuid=>create_uuid_c32_static( )
-      sap_user    = sy-uname
-      action_type = 'UPDATE_REF_SO'
-      so_number   = lv_so_number
-      status      = 'SUCCESS'
-      created_at  = lv_timestamp
-    ) ).
-
-    APPEND VALUE #( %tky = ls_key-%tky ) TO result.
-  ENDLOOP.
-ENDMETHOD.
-METHOD read.
+  METHOD read.
     DATA(lt_keys) = keys.
     SELECT * FROM vbak
       FOR ALL ENTRIES IN @lt_keys
@@ -259,216 +260,212 @@ METHOD read.
       ) TO result.
     ENDLOOP.
   ENDMETHOD.
- METHOD lock.
-  " Can thiệp bẻ khóa keys hệ thống, thêm số 0 đầu trước khi RAP tiến hành lock ngầm định
-  LOOP AT keys ASSIGNING FIELD-SYMBOL(<ls_key>).
-    <ls_key>-SoNumber = |{ <ls_key>-SoNumber ALPHA = IN }|.
-  ENDLOOP.
 
-  " Sau khi mapping lại keys sạch sẽ, bạn có thể gọi logic lock tự động hoặc giữ nguyên code cũ của bạn
-ENDMETHOD.
-METHOD releaseorder.
-  DATA: ls_header_in  TYPE bapisdh1,
-        ls_header_inx TYPE bapisdh1x,
-        lt_return     TYPE TABLE OF bapiret2,
-        lv_timestamp  TYPE c LENGTH 14.
+  METHOD lock.
+    " Đã làm rỗng để tránh lỗi MOVE_TO_LIT_NOTALLOWED_NODATA
+    " BAPI bên trong các action sẽ tự quản lý Enqueue
+  ENDMETHOD.
 
-  LOOP AT keys INTO DATA(ls_key).
+  METHOD releaseorder.
+    DATA: ls_header_in  TYPE bapisdh1,
+          ls_header_inx TYPE bapisdh1x,
+          lt_return     TYPE TABLE OF bapiret2,
+          lv_timestamp  TYPE c LENGTH 14.
 
-    " Fix ALPHA conversion
-    DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+    LOOP AT keys INTO DATA(ls_key).
 
-    SELECT SINGLE teams_user_id FROM zaiso_so_map
-      INTO @DATA(lv_owner)
-      WHERE so_number = @lv_so_number.
+      " Fix ALPHA conversion
+      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
 
-    IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-unauthorized )
-             TO failed-salesorder.
-      CONTINUE.
-    ENDIF.
+      SELECT SINGLE teams_user_id FROM zaiso_so_map
+        INTO @DATA(lv_owner)
+        WHERE so_number = @lv_so_number.
 
-    CLEAR: ls_header_in, ls_header_inx, lt_return.
-    ls_header_in-dlv_block  = ''.
-    ls_header_inx-dlv_block = 'X'.
+      IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unauthorized )
+               TO failed-salesorder.
+        CONTINUE.
+      ENDIF.
 
-    CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
-      EXPORTING
-        salesdocument    = lv_so_number
-        order_header_in  = ls_header_in
-        order_header_inx = ls_header_inx
-      TABLES
-        return           = lt_return.
+      CLEAR: ls_header_in, ls_header_inx, lt_return.
+      ls_header_in-dlv_block  = ''.
+      ls_header_inx-dlv_block = 'X'.
 
-    READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
-    IF sy-subrc = 0.
-      CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-unspecific )
-             TO failed-salesorder.
-      CONTINUE.
-    ENDIF.
+      CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+        EXPORTING
+          salesdocument    = lv_so_number
+          order_header_in  = ls_header_in
+          order_header_inx = ls_header_inx
+        TABLES
+          return           = lt_return.
 
-    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = 'X'.
+      READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
+      IF sy-subrc = 0.
+        CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unspecific )
+               TO failed-salesorder.
+        CONTINUE.
+      ENDIF.
 
-    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = 'X'.
 
-    INSERT zaiso_audit FROM @( VALUE #(
-      mandt       = sy-mandt
-      audit_id    = cl_system_uuid=>create_uuid_c32_static( )
-      sap_user    = sy-uname
-      action_type = 'RELEASE_SO'
-      so_number   = lv_so_number
-      status      = 'SUCCESS'
-      created_at  = lv_timestamp
-    ) ).
+      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
 
-    APPEND VALUE #( %tky = ls_key-%tky ) TO result.
-  ENDLOOP.
-ENDMETHOD.
+      INSERT zaiso_audit FROM @( VALUE #(
+        mandt       = sy-mandt
+        audit_id    = cl_system_uuid=>create_uuid_c32_static( )
+        sap_user    = sy-uname
+        action_type = 'RELEASE_SO'
+        so_number   = lv_so_number
+        status      = 'SUCCESS'
+        created_at  = lv_timestamp
+      ) ).
 
-
-METHOD forwardorder.
-  DATA: lv_timestamp TYPE c LENGTH 14.
-
-  LOOP AT keys INTO DATA(ls_key).
-    DATA(ls_param) = ls_key-%param.
-
-    " Fix ALPHA conversion
-    DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
-
-    SELECT SINGLE teams_user_id FROM zaiso_so_map
-      INTO @DATA(lv_owner)
-      WHERE so_number = @lv_so_number.
-
-    IF lv_owner IS NOT INITIAL AND lv_owner <> ls_param-requesting_teams_user.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-unauthorized )
-             TO failed-SalesOrder.
-      CONTINUE.
-    ENDIF.
-
-    UPDATE zaiso_so_map
-      SET teams_user_id = @ls_param-new_teams_user
-      WHERE so_number   = @lv_so_number.
-
-    IF sy-subrc <> 0.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-unspecific )
-             TO failed-SalesOrder.
-      CONTINUE.
-    ENDIF.
-
-    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
-
-    INSERT zaiso_audit FROM @( VALUE #(
-      mandt       = sy-mandt
-      audit_id    = cl_system_uuid=>create_uuid_c32_static( )
-      sap_user    = sy-uname
-      action_type = 'FORWARD_SO'
-      so_number   = lv_so_number
-      status      = 'SUCCESS'
-      remarks     = ls_param-remarks
-      created_at  = lv_timestamp
-    ) ).
-
-    APPEND VALUE #( %tky = ls_key-%tky ) TO result.
-  ENDLOOP.
-ENDMETHOD.
-
-
-METHOD rejectorder.
-  DATA: lt_items_in  TYPE TABLE OF bapisditm,
-        lt_items_inx TYPE TABLE OF bapisditmx,
-        lt_return    TYPE TABLE OF bapiret2,
-        lv_timestamp TYPE c LENGTH 14.
-
-  LOOP AT keys INTO DATA(ls_key).
-
-    " Fix ALPHA conversion
-    DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
-
-    " Validate rejection code
-    IF ls_key-%param-rejection_code <> '02' AND
-       ls_key-%param-rejection_code <> '03' AND
-       ls_key-%param-rejection_code <> '04'.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-unspecific )
-             TO failed-SalesOrder.
-      CONTINUE.
-    ENDIF.
-
-    " Check role ZROLE_AISO_BOT_RELEASER
-    SELECT SINGLE uname FROM agr_users
-      INTO @DATA(lv_auth_check)
-      WHERE agr_name = 'ZROLE_AISO_BOT_RELEASER'
-        AND uname    = @sy-uname.
-
-    IF sy-subrc <> 0.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-unauthorized )
-             TO failed-SalesOrder.
-      CONTINUE.
-    ENDIF.
-
-    CLEAR: lt_items_in, lt_items_inx, lt_return.
-
-    SELECT posnr FROM vbap
-      INTO TABLE @DATA(lt_posnr)
-      WHERE vbeln = @lv_so_number.
-
-    IF lt_posnr IS INITIAL.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-not_found )
-             TO failed-SalesOrder.
-      CONTINUE.
-    ENDIF.
-
-    LOOP AT lt_posnr INTO DATA(ls_posnr).
-      APPEND VALUE #(
-        itm_number = ls_posnr-posnr
-        reason_rej = ls_key-%param-rejection_code
-      ) TO lt_items_in.
-      APPEND VALUE #(
-        itm_number = ls_posnr-posnr
-        reason_rej = 'X'
-      ) TO lt_items_inx.
+      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
     ENDLOOP.
+  ENDMETHOD.
 
-    CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
-      EXPORTING
-        salesdocument  = lv_so_number
-      TABLES
-        order_item_in  = lt_items_in
-        order_item_inx = lt_items_inx
-        return         = lt_return.
+  METHOD forwardorder.
+    DATA: lv_timestamp TYPE c LENGTH 14.
 
-    READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
-    IF sy-subrc = 0.
-      CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
-      APPEND VALUE #( %tky        = ls_key-%tky
-                       %fail-cause = if_abap_behv=>cause-unspecific )
-             TO failed-SalesOrder.
-      CONTINUE.
-    ENDIF.
+    LOOP AT keys INTO DATA(ls_key).
+      DATA(ls_param) = ls_key-%param.
 
-    CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = 'X'.
+      " Fix ALPHA conversion
+      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
 
-    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+      SELECT SINGLE teams_user_id FROM zaiso_so_map
+        INTO @DATA(lv_owner)
+        WHERE so_number = @lv_so_number.
 
-    INSERT zaiso_audit FROM @( VALUE #(
-      mandt       = sy-mandt
-      audit_id    = cl_system_uuid=>create_uuid_c32_static( )
-      sap_user    = sy-uname
-      action_type = 'REJECT_SO'
-      so_number   = lv_so_number
-      status      = 'SUCCESS'
-      remarks     = ls_key-%param-rejection_code
-      created_at  = lv_timestamp
-    ) ).
+      IF lv_owner IS NOT INITIAL AND lv_owner <> ls_param-requesting_teams_user.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unauthorized )
+               TO failed-SalesOrder.
+        CONTINUE.
+      ENDIF.
 
-    APPEND VALUE #( %tky = ls_key-%tky ) TO result.
-  ENDLOOP.
-ENDMETHOD.
+      UPDATE zaiso_so_map
+        SET teams_user_id = @ls_param-new_teams_user
+        WHERE so_number   = @lv_so_number.
+
+      IF sy-subrc <> 0.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unspecific )
+               TO failed-SalesOrder.
+        CONTINUE.
+      ENDIF.
+
+      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+      INSERT zaiso_audit FROM @( VALUE #(
+        mandt       = sy-mandt
+        audit_id    = cl_system_uuid=>create_uuid_c32_static( )
+        sap_user    = sy-uname
+        action_type = 'FORWARD_SO'
+        so_number   = lv_so_number
+        status      = 'SUCCESS'
+        remarks     = ls_param-remarks
+        created_at  = lv_timestamp
+      ) ).
+
+      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
+    ENDLOOP.
+  ENDMETHOD.
+
+  METHOD rejectorder.
+    DATA: lt_items_in  TYPE TABLE OF bapisditm,
+          lt_items_inx TYPE TABLE OF bapisditmx,
+          lt_return    TYPE TABLE OF bapiret2,
+          lv_timestamp TYPE c LENGTH 14.
+
+    LOOP AT keys INTO DATA(ls_key).
+
+      " Fix ALPHA conversion
+      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+
+      " Validate rejection code
+      IF ls_key-%param-rejection_code <> '02' AND
+         ls_key-%param-rejection_code <> '03' AND
+         ls_key-%param-rejection_code <> '04'.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unspecific )
+               TO failed-SalesOrder.
+        CONTINUE.
+      ENDIF.
+
+      " Check role ZROLE_AISO_BOT_RELEASER
+      SELECT SINGLE uname FROM agr_users
+        INTO @DATA(lv_auth_check)
+        WHERE agr_name = 'ZROLE_AISO_BOT_RELEASER'
+          AND uname    = @sy-uname.
+
+      IF sy-subrc <> 0.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unauthorized )
+               TO failed-SalesOrder.
+        CONTINUE.
+      ENDIF.
+
+      CLEAR: lt_items_in, lt_items_inx, lt_return.
+
+      SELECT posnr FROM vbap
+        INTO TABLE @DATA(lt_posnr)
+        WHERE vbeln = @lv_so_number.
+
+      IF lt_posnr IS INITIAL.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-not_found )
+               TO failed-SalesOrder.
+        CONTINUE.
+      ENDIF.
+
+      LOOP AT lt_posnr INTO DATA(ls_posnr).
+        APPEND VALUE #(
+          itm_number = ls_posnr-posnr
+          reason_rej = ls_key-%param-rejection_code
+        ) TO lt_items_in.
+        APPEND VALUE #(
+          itm_number = ls_posnr-posnr
+          reason_rej = 'X'
+        ) TO lt_items_inx.
+      ENDLOOP.
+
+      CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+        EXPORTING
+          salesdocument  = lv_so_number
+        TABLES
+          order_item_in  = lt_items_in
+          order_item_inx = lt_items_inx
+          return         = lt_return.
+
+      READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
+      IF sy-subrc = 0.
+        CALL FUNCTION 'BAPI_TRANSACTION_ROLLBACK'.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unspecific )
+               TO failed-SalesOrder.
+        CONTINUE.
+      ENDIF.
+
+      CALL FUNCTION 'BAPI_TRANSACTION_COMMIT' EXPORTING wait = 'X'.
+
+      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+      INSERT zaiso_audit FROM @( VALUE #(
+        mandt       = sy-mandt
+        audit_id    = cl_system_uuid=>create_uuid_c32_static( )
+        sap_user    = sy-uname
+        action_type = 'REJECT_SO'
+        so_number   = lv_so_number
+        status      = 'SUCCESS'
+        remarks     = ls_key-%param-rejection_code
+        created_at  = lv_timestamp
+      ) ).
+
+      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
+    ENDLOOP.
+  ENDMETHOD.
 ENDCLASS.
