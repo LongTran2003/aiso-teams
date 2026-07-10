@@ -83,7 +83,7 @@ public class SapTokenManager : ISapTokenManager
                     var db = _redis.GetDatabase();
                     await db.StringSetAsync(CacheKey, JsonSerializer.Serialize(context), TimeSpan.FromMinutes(30));
                 }
-                
+
                 _logger.LogInformation("Successfully fetched and cached new SAP CSRF token and cookie");
 
                 return context;
