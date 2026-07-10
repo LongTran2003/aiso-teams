@@ -1,0 +1,32 @@
+name: Deploy Python AI to Azure
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'ai/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Zip AI folder contents
+        run: |
+          cd ai
+          zip -r ../release.zip .
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'aiso-ai-service'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AI }}
+          package: ./release.zip
