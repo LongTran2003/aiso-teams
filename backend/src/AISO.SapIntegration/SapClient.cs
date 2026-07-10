@@ -22,6 +22,16 @@ public class SapClient : ISapClient
         _logger = logger;
     }
 
+    private string FormatSoNumber(string soNumber)
+    {
+        if (string.IsNullOrWhiteSpace(soNumber)) return soNumber;
+        if (soNumber.Length < 10 && soNumber.All(char.IsDigit))
+        {
+            return soNumber.PadLeft(10, '0');
+        }
+        return soNumber;
+    }
+
     public async Task<IReadOnlyList<SalesOrder>> GetSalesOrdersAsync(SalesOrdersQuery query, CancellationToken ct = default)
     {
         var builder = new ODataQueryBuilder("SalesOrder")
@@ -77,7 +87,8 @@ public class SapClient : ISapClient
 
     public async Task<SalesOrder?> GetSalesOrderByIdAsync(string soNumber, CancellationToken ct = default)
     {
-        var url = $"SalesOrder('{soNumber}')?sap-client=324&$format=json";
+        var formattedSo = FormatSoNumber(soNumber);
+        var url = $"SalesOrder('{formattedSo}')?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
         try
@@ -157,7 +168,8 @@ public class SapClient : ISapClient
 
     public async Task<SalesOrder> UpdateReferenceAsync(string soNumber, string newReference, string requestingSapUser, CancellationToken ct = default)
     {
-        var url = $"SalesOrder('{soNumber}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.updateReference?sap-client=324&$format=json";
+        var formattedSo = FormatSoNumber(soNumber);
+        var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.updateReference?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
         var payload = new
@@ -180,7 +192,8 @@ public class SapClient : ISapClient
 
     public async Task<SalesOrder> CancelOrderAsync(string soNumber, string reason, string requestingSapUser, CancellationToken ct = default)
     {
-        var url = $"SalesOrder('{soNumber}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.cancelOrder?sap-client=324&$format=json";
+        var formattedSo = FormatSoNumber(soNumber);
+        var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.cancelOrder?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
         var payload = new
@@ -203,7 +216,8 @@ public class SapClient : ISapClient
 
     public async Task<SalesOrder> ReleaseOrderAsync(string soNumber, string requestingSapUser, CancellationToken ct = default)
     {
-        var url = $"SalesOrder('{soNumber}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.releaseOrder?sap-client=324&$format=json";
+        var formattedSo = FormatSoNumber(soNumber);
+        var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.releaseOrder?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
         var payload = new
@@ -225,7 +239,8 @@ public class SapClient : ISapClient
 
     public async Task<SalesOrder> ForwardOrderAsync(string soNumber, string forwardToUser, string requestingSapUser, CancellationToken ct = default)
     {
-        var url = $"SalesOrder('{soNumber}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.forwardOrder?sap-client=324&$format=json";
+        var formattedSo = FormatSoNumber(soNumber);
+        var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.forwardOrder?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
         var payload = new
