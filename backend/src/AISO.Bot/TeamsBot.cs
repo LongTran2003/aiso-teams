@@ -116,35 +116,44 @@ public class TeamsBot : TeamsActivityHandler
                             ? idToken.ToString()
                             : "UNKNOWN";
 
-                        var order = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
-                        if (order is null)
+                        try
                         {
-                            await turnContext.SendActivityAsync($"Sales order {salesOrderId} was not found.", cancellationToken: cancellationToken);
-                            return;
-                        }
-
-                        await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
+                            var order = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
+                            if (order is null)
                             {
-                                salesOrderNumber = order.SoNumber,
-                                customerName = order.CustomerName,
-                                customerId = order.CustomerId,
-                                documentDate = order.OrderDate.ToString("dd MMM yyyy"),
-                                netAmount = $"{order.NetValue:N0}",
-                                currency = order.Currency,
-                                approvalStatus = order.Status.ToString(),
-                                items = order.Items.Select(item => new
+                                await turnContext.SendActivityAsync($"Sales order {salesOrderId} was not found.", cancellationToken: cancellationToken);
+                                return;
+                            }
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
                                 {
-                                    itemNumber = item.ItemNumber,
-                                    material = item.Material,
-                                    description = item.Description,
-                                    quantity = item.Quantity.ToString("0"),
-                                    unit = item.Unit,
-                                    netValue = $"{item.NetValue:N0}",
-                                    currency = order.Currency
-                                }).ToList()
-                            })),
-                            cancellationToken);
+                                    salesOrderNumber = order.SoNumber,
+                                    customerName = order.CustomerName,
+                                    customerId = order.CustomerId,
+                                    documentDate = order.OrderDate.ToString("dd MMM yyyy"),
+                                    netAmount = $"{order.NetValue:N0}",
+                                    currency = order.Currency,
+                                    approvalStatus = order.Status.ToString(),
+                                    items = order.Items.Select(item => new
+                                    {
+                                        itemNumber = item.ItemNumber,
+                                        material = item.Material,
+                                        description = item.Description,
+                                        quantity = item.Quantity.ToString("0"),
+                                        unit = item.Unit,
+                                        netValue = $"{item.NetValue:N0}",
+                                        currency = order.Currency
+                                    }).ToList()
+                                })),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken: cancellationToken);
+                        }
                         return;
                     }
 
@@ -189,10 +198,19 @@ public class TeamsBot : TeamsActivityHandler
                             return;
                         }
 
-                        var updatedOrder = await _sap.ReleaseOrderAsync(salesOrderId, sapUsername, cancellationToken);
-                        await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Released")),
-                            cancellationToken);
+                        try
+                        {
+                            var updatedOrder = await _sap.ReleaseOrderAsync(salesOrderId, sapUsername, cancellationToken);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Released")),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken: cancellationToken);
+                        }
                         return;
                     }
 
@@ -217,10 +235,19 @@ public class TeamsBot : TeamsActivityHandler
                             _ => "03"
                         };
 
-                        var updatedOrder = await _sap.CancelOrderAsync(salesOrderId, sapReasonCode, sapUsername, cancellationToken);
-                        await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Rejected")),
-                            cancellationToken);
+                        try
+                        {
+                            var updatedOrder = await _sap.CancelOrderAsync(salesOrderId, sapReasonCode, sapUsername, cancellationToken);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Rejected")),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken: cancellationToken);
+                        }
                         return;
                     }
 
@@ -244,10 +271,19 @@ public class TeamsBot : TeamsActivityHandler
                             return;
                         }
 
-                        var updatedOrder = await _sap.ForwardOrderAsync(salesOrderId, forwardToUser, sapUsername, cancellationToken);
-                        await turnContext.SendActivityAsync(
-                            $"Sales order {updatedOrder.SoNumber} has been forwarded to {forwardToUser}.",
-                            cancellationToken: cancellationToken);
+                        try
+                        {
+                            var updatedOrder = await _sap.ForwardOrderAsync(salesOrderId, forwardToUser, sapUsername, cancellationToken);
+                            await turnContext.SendActivityAsync(
+                                $"Sales order {updatedOrder.SoNumber} has been forwarded to {forwardToUser}.",
+                                cancellationToken: cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken: cancellationToken);
+                        }
                         return;
                     }
 
