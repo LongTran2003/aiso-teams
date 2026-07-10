@@ -8,6 +8,8 @@ define root view entity ZI_AISO_SO_HEADER
   association [0..*] to ZI_AISO_SO_ITEM as _Items
     on $projection.SoNumber = _Items.SoNumber
 {
+  @ObjectModel.foreignKey.association: null 
+  @ObjectModel.text.element: ['SoNumber']
   key vbak.vbeln                          as SoNumber,
       vbak.auart                          as DocType,
       vbak.kunnr                          as Customer,

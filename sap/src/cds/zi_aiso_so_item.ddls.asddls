@@ -5,6 +5,7 @@
 define view entity ZI_AISO_SO_ITEM
   as select from vbap
 {
+ @ObjectModel.text.element: ['SoNumber']
   key vbap.vbeln                              as SoNumber,
   key vbap.posnr                              as ItemNo,
       vbap.matnr                              as Material,
