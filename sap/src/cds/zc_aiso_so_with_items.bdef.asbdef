@@ -8,4 +8,5 @@ define behavior for ZC_AISO_SO_WITH_ITEMS alias SalesOrder
   use action forwardOrder;
   use action updateReference;
   use action createSalesOrder;
+  use action rejectOrder;
 }
