@@ -6,7 +6,7 @@
     "properties": {
       "order_id": {
         "type": "string",
-        "description": "SAP sales order ID (e.g. 'ORD-123456'). Must be stated by user – never infer."
+        "description": "SAP sales order ID (e.g. '5', '8' or '0000005001'). Must be stated by user – never infer."
       }
     },
     "required": ["order_id"],
