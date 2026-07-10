@@ -65,7 +65,7 @@ public class TeamsBot : TeamsActivityHandler
     {
         var userMessage = turnContext.Activity.RemoveRecipientMention() ?? turnContext.Activity.Text ?? string.Empty;
         userMessage = System.Text.RegularExpressions.Regex.Replace(userMessage, "<[^>]*>", string.Empty);
-        
+
         var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
         var conversationId = turnContext.Activity.Conversation?.Id;
         var activityId = turnContext.Activity.Id;
@@ -79,7 +79,7 @@ public class TeamsBot : TeamsActivityHandler
             try
             {
                 var valueObj = Newtonsoft.Json.Linq.JObject.FromObject(turnContext.Activity.Value);
-                
+
                 // For messageBack cards, Teams might not reliably populate Activity.Text. 
                 // We extract msteams.text directly from Value if present.
                 if (valueObj.TryGetValue("msteams", StringComparison.OrdinalIgnoreCase, out var msTeamsToken) && msTeamsToken is Newtonsoft.Json.Linq.JObject msTeamsObj)
@@ -199,8 +199,8 @@ public class TeamsBot : TeamsActivityHandler
                             ? commentToken.ToString()
                             : null;
 
-                        var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
-                        if (string.IsNullOrWhiteSpace(sapUsername))
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
                         {
                             await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
                             return;
@@ -208,7 +208,7 @@ public class TeamsBot : TeamsActivityHandler
 
                         try
                         {
-                            var updatedOrder = await _sap.ReleaseOrderAsync(salesOrderId, sapUsername, cancellationToken);
+                            var updatedOrder = await _sap.ReleaseOrderAsync(salesOrderId, teamsUserId, cancellationToken);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Released")),
                                 cancellationToken);
@@ -237,8 +237,8 @@ public class TeamsBot : TeamsActivityHandler
                             ? reasonToken.ToString()
                             : "OTHER";
 
-                        var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
-                        if (string.IsNullOrWhiteSpace(sapUsername))
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
                         {
                             await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
                             return;
@@ -253,7 +253,7 @@ public class TeamsBot : TeamsActivityHandler
 
                         try
                         {
-                            var updatedOrder = await _sap.CancelOrderAsync(salesOrderId, sapReasonCode, sapUsername, cancellationToken);
+                            var updatedOrder = await _sap.RejectOrderAsync(salesOrderId, sapReasonCode, teamsUserId, cancellationToken);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Rejected")),
                                 cancellationToken);
@@ -281,9 +281,12 @@ public class TeamsBot : TeamsActivityHandler
                         var forwardToUser = valueObj.TryGetValue("forwardToUser", StringComparison.OrdinalIgnoreCase, out var forwardToken)
                             ? forwardToken.ToString()
                             : null;
+                        var remarks = valueObj.TryGetValue("comment", StringComparison.OrdinalIgnoreCase, out var commentToken)
+                            ? commentToken.ToString()
+                            : null;
 
-                        var sapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
-                        if (string.IsNullOrWhiteSpace(sapUsername))
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
                         {
                             await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
                             return;
@@ -297,7 +300,12 @@ public class TeamsBot : TeamsActivityHandler
 
                         try
                         {
-                            var updatedOrder = await _sap.ForwardOrderAsync(salesOrderId, forwardToUser, sapUsername, cancellationToken);
+                            var updatedOrder = await _sap.ForwardOrderAsync(
+                                salesOrderId,
+                                forwardToUser,
+                                teamsUserId,
+                                cancellationToken,
+                                remarks);
                             await turnContext.SendActivityAsync(
                                 $"Sales order {updatedOrder.SoNumber} has been forwarded to {forwardToUser}.",
                                 cancellationToken: cancellationToken);
@@ -372,7 +380,7 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
-            if (string.Equals(normalizedMessage, "cancel", StringComparison.OrdinalIgnoreCase) || 
+            if (string.Equals(normalizedMessage, "cancel", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(normalizedMessage, "thoát", StringComparison.OrdinalIgnoreCase))
             {
                 await _conversationState.ClearStateAsync(turnContext, cancellationToken);

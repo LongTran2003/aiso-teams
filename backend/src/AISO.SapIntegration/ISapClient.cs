@@ -27,22 +27,26 @@ public interface ISapClient
         string requestingSapUser,
         CancellationToken ct = default);
 
-    Task<SalesOrder> CancelOrderAsync(
+    /// <summary>
+    /// Rejects a sales order through the SAP <c>rejectOrder</c> RAP action.
+    /// </summary>
+    Task<SalesOrder> RejectOrderAsync(
         string soNumber,
-        string reason,
-        string requestingSapUser,
+        string rejectionCode,
+        string requestingTeamsUser,
         CancellationToken ct = default);
 
     Task<SalesOrder> ReleaseOrderAsync(
         string soNumber,
-        string requestingSapUser,
+        string requestingTeamsUser,
         CancellationToken ct = default);
 
     Task<SalesOrder> ForwardOrderAsync(
         string soNumber,
         string forwardToUser,
-        string requestingSapUser,
-        CancellationToken ct = default);
+        string requestingTeamsUser,
+        CancellationToken ct = default,
+        string? remarks = null);
 
     // -----------------------------------------------------------------------
     // KPI methods (Sprint 4)
