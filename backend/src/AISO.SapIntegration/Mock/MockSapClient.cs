@@ -178,7 +178,7 @@ public sealed class MockSapClient : ISapClient
     public Task<SalesOrder?> GetSalesOrderByIdAsync(string soNumber, CancellationToken ct = default)
     {
         _logger?.LogDebug("MockSapClient.GetSalesOrderByIdAsync: {SoNumber}", soNumber);
-        return Task.FromResult<SalesOrder?>(SeedData.FirstOrDefault(x => x.SoNumber == soNumber || x.SoNumber.EndsWith(soNumber)));
+        return Task.FromResult(SeedData.FirstOrDefault(x => x.SoNumber == soNumber));
     }
 
     public Task<SalesOrder> CreateSalesOrderAsync(CreateSalesOrderDto dto, CancellationToken ct = default)
@@ -199,28 +199,28 @@ public sealed class MockSapClient : ISapClient
 
     public Task<SalesOrder> UpdateReferenceAsync(string soNumber, string newReference, string requestingSapUser, CancellationToken ct = default)
     {
-        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber || x.SoNumber.EndsWith(soNumber))
+        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
             ?? throw new InvalidOperationException($"Order {soNumber} not found.");
         return Task.FromResult(order);
     }
 
     public Task<SalesOrder> CancelOrderAsync(string soNumber, string reason, string requestingSapUser, CancellationToken ct = default)
     {
-        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber || x.SoNumber.EndsWith(soNumber))
+        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
             ?? throw new InvalidOperationException($"Order {soNumber} not found.");
         return Task.FromResult(order with { Status = SalesOrderStatus.Cancelled });
     }
 
     public Task<SalesOrder> ReleaseOrderAsync(string soNumber, string requestingSapUser, CancellationToken ct = default)
     {
-        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber || x.SoNumber.EndsWith(soNumber))
+        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
             ?? throw new InvalidOperationException($"Order {soNumber} not found.");
         return Task.FromResult(order with { Status = SalesOrderStatus.Open });
     }
 
     public Task<SalesOrder> ForwardOrderAsync(string soNumber, string forwardToUser, string requestingSapUser, CancellationToken ct = default)
     {
-        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber || x.SoNumber.EndsWith(soNumber))
+        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
             ?? throw new InvalidOperationException($"Order {soNumber} not found.");
         // Forwarding might not change the status, just assigning to someone else.
         return Task.FromResult(order);
