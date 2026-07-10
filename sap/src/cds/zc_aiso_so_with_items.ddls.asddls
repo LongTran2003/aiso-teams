@@ -5,6 +5,7 @@
 define root view entity ZC_AISO_SO_WITH_ITEMS
   as projection on ZI_AISO_SO_HEADER
 {
+  @ObjectModel.text.element: ['SoNumber']
   key SoNumber,
       DocType,
       Customer,

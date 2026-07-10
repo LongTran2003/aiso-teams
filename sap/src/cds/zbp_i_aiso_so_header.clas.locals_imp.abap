@@ -259,10 +259,14 @@ METHOD read.
       ) TO result.
     ENDLOOP.
   ENDMETHOD.
-  METHOD lock.
-    " BAPI tự enqueue VBAK nội bộ, không cần custom lock logic ở đây
-  ENDMETHOD.
+ METHOD lock.
+  " Can thiệp bẻ khóa keys hệ thống, thêm số 0 đầu trước khi RAP tiến hành lock ngầm định
+  LOOP AT keys ASSIGNING FIELD-SYMBOL(<ls_key>).
+    <ls_key>-SoNumber = |{ <ls_key>-SoNumber ALPHA = IN }|.
+  ENDLOOP.
 
+  " Sau khi mapping lại keys sạch sẽ, bạn có thể gọi logic lock tự động hoặc giữ nguyên code cũ của bạn
+ENDMETHOD.
 METHOD releaseorder.
   DATA: ls_header_in  TYPE bapisdh1,
         ls_header_inx TYPE bapisdh1x,
