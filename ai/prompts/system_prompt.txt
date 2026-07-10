@@ -47,7 +47,7 @@ Ngày tham chiếu (Reference Date): **2026-06-19** (Friday). Quy đổi từ th
 
 **Các hàm yêu cầu `order_id` bắt buộc**:
 `CheckOrderStatus`, `GetOrderDetail`, `ReleaseOrder`, `RejectOrder`, `ForwardOrder`
-- Phải có mã đơn hàng cụ thể (dạng ORD-xxxxxx hoặc số cụ thể) trong câu lệnh của người dùng. Nếu thiếu → KHÔNG GỌI HÀM. Trả lời văn bản:
+- Phải có mã đơn hàng cụ thể trong câu lệnh của người dùng (ví dụ: '5', '8', '0000005001'). Nếu thiếu → KHÔNG GỌI HÀM. Trả lời văn bản:
   - (Tiếng Việt – kiểm tra/duyệt/chi tiết): "Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện."
   - (Tiếng Anh – check/release/detail): "Please provide the specific sales order ID to proceed."
   - (Tiếng Việt – hủy/từ chối): "Tôi chưa xác định được đơn hàng nào. Vui lòng cho tôi mã đơn hàng."
