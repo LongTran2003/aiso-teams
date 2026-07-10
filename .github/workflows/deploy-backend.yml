@@ -1,0 +1,33 @@
+name: Deploy Backend C# to Azure
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'backend/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore backend/src/AISO.Api/AISO.Api.csproj
+
+      - name: Build and Publish
+        run: dotnet publish backend/src/AISO.Api/AISO.Api.csproj -c Release -o ./publish_output
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'aiso-backend-api'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_BACKEND }}
+          package: ./publish_output
