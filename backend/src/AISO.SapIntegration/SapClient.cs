@@ -317,9 +317,9 @@ public class SapClient : ISapClient
                 if (string.Equals(code, "RAISE_SHORTDUMP", StringComparison.OrdinalIgnoreCase))
                 {
                     return $"SAP encountered an internal error (ABAP Short Dump). " +
-                           $"This is typically caused by a data format mismatch in the SAP backend. " +
+                           $"This is typically caused by a transaction control violation in the RAP handler. " +
                            $"Please contact the SAP team to check transaction ST22 for details. " +
-                           $"(See GitHub issue #105)";
+                           (!string.IsNullOrWhiteSpace(message) ? $"SAP message: {message}" : string.Empty);
                 }
 
                 return !string.IsNullOrWhiteSpace(message) ? message : $"SAP error {code}: {statusCode}";
