@@ -74,7 +74,7 @@ public sealed class ReleaseOrderFunction : IFunction
         {
             // Call SAP RAP action
             var updatedOrder = await _sap.ReleaseOrderAsync(orderId, requestingSapUser, ct);
-            
+
             // Audit Log
             _logger.LogInformation("AUDIT: User {User} successfully released order {OrderId} with comment: {Comment}", requestingSapUser, orderId, comment ?? "None");
 

@@ -85,7 +85,7 @@ public static class ServiceCollectionExtensions
 
         if (!string.IsNullOrEmpty(redisConnStr))
         {
-            services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp => 
+            services.AddSingleton<StackExchange.Redis.IConnectionMultiplexer>(sp =>
                 StackExchange.Redis.ConnectionMultiplexer.Connect(redisConnStr));
         }
 

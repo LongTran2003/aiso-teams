@@ -101,8 +101,8 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
 
                 var reasonMatch = Regex.Match(text, @"reason:\s*(.+)");
-                var reasonCode = reasonMatch.Success 
-                    ? reasonMatch.Groups[1].Value.Trim().ToUpperInvariant() 
+                var reasonCode = reasonMatch.Success
+                    ? reasonMatch.Groups[1].Value.Trim().ToUpperInvariant()
                     : (text.Contains("sai giá") || text.Contains("price") ? "PRICE_ISSUE" : "OTHER");
 
                 var paramsObj = new { order_id = orderId, reason_code = reasonCode };
