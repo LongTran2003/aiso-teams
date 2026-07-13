@@ -269,30 +269,15 @@
     }
   },
   "Cho phép xuất đơn ORD-202620011.": {
-    "predicted_function": "CreateOrder",
+    "predicted_function": "ReleaseOrder",
     "predicted_args": {
-      "customer": "CUST-1001",
-      "items": [
-        {
-          "material": "MAT-1001",
-          "qty": 10
-        },
-        {
-          "material": "MAT-1002",
-          "qty": 20
-        }
-      ],
-      "currency": "VND",
-      "sales_org": "1010",
-      "division": "00",
-      "doc_type": "TA",
-      "dist_channel": "10"
+      "order_id": "ORD-202620011"
     }
   },
   "Xác nhận và phê duyệt đơn ORD-202620012, ghi chú: đơn hàng ưu tiên quý 2.": {
     "predicted_function": "ReleaseOrder",
     "predicted_args": {
-      "comment": "Đơn hàng ưu tiên quý 2.",
+      "comment": "đơn hàng ưu tiên quý 2",
       "order_id": "ORD-202620012"
     }
   },
@@ -353,8 +338,11 @@
     }
   },
   "Không thể giao ORD-202630013 vì kho thiếu hàng, hủy đơn đi.": {
-    "predicted_function": null,
-    "predicted_args": {}
+    "predicted_function": "RejectOrder",
+    "predicted_args": {
+      "order_id": "ORD-202630013",
+      "reason_code": "OUT_OF_STOCK"
+    }
   },
   "Forward đơn ORD-555555 tới email john.smith@company.com dùm.": {
     "predicted_function": "ForwardOrder",
@@ -378,8 +366,11 @@
     }
   },
   "Bàn giao đơn ORD-202640002 cho anh Minh Tuấn.": {
-    "predicted_function": null,
-    "predicted_args": {}
+    "predicted_function": "ForwardOrder",
+    "predicted_args": {
+      "forward_to_user": "anh Minh Tuẩn",
+      "order_id": "ORD-202640002"
+    }
   },
   "Chuyển đơn ORD-202640010 cho chị Lan trong phòng kinh doanh xử lý.": {
     "predicted_function": "ForwardOrder",
@@ -396,8 +387,9 @@
     }
   },
   "Nhờ chị Thu Hương xử lý đơn ORD-202640012 dùm tôi.": {
-    "predicted_function": "CheckOrderStatus",
+    "predicted_function": "ForwardOrder",
     "predicted_args": {
+      "forward_to_user": "chị Thu Hương",
       "order_id": "ORD-202640012"
     }
   },
@@ -698,26 +690,20 @@
   "Đặt hàng mới cho khách 30300003: 20 cái PART-A01, loại tiền tệ USD.": {
     "predicted_function": "CreateOrder",
     "predicted_args": {
-      "currency": "USD",
       "customer": "30300003",
-      "dist_channel": null,
-      "division": null,
-      "doc_type": null,
       "items": [
         {
           "material": "PART-A01",
-          "plant": null,
           "qty": 20,
-          "unit": null
-        },
-        {
-          "material": "PART-A01",
-          "plant": null,
-          "qty": 20,
-          "unit": null
+          "unit": "PC"
         }
       ],
-      "sales_org": null
+      "currency": "USD",
+      "type": "array",
+      "doc_type": "TA",
+      "sales_org": "1010",
+      "division": "00",
+      "dist_channel": "10"
     }
   },
   "Lập đơn hàng cho khách CUST-20001 gồm 8 chiếc FRAME-03.": {
@@ -733,20 +719,8 @@
     }
   },
   "Tạo đơn hàng mới gồm 3 cái TG11.": {
-    "predicted_function": "CreateOrder",
-    "predicted_args": {
-      "customer": "10100001",
-      "items": [
-        {
-          "material": "TG11",
-          "qty": 2
-        },
-        {
-          "material": "TG11",
-          "qty": 1
-        }
-      ]
-    }
+    "predicted_function": null,
+    "predicted_args": {}
   },
   "I want to place a new order but I don't know the customer.": {
     "predicted_function": null,
@@ -795,11 +769,8 @@
     }
   },
   "Cập nhật reference của đơn ORD-202670006.": {
-    "predicted_function": "UpdateOrderReference",
-    "predicted_args": {
-      "new_reference": "PO-2026-0042",
-      "order_id": "ORD-202670006"
-    }
+    "predicted_function": null,
+    "predicted_args": {}
   },
   "Update the reference for this order.": {
     "predicted_function": null,
