@@ -395,95 +395,100 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
 ENDMETHOD.
 
   METHOD rejectorder.
-  DATA: lt_items_in  TYPE TABLE OF bapisditm,
-        lt_items_inx TYPE TABLE OF bapisditmx,
-        lt_return    TYPE TABLE OF bapiret2,
-        lv_timestamp TYPE c LENGTH 14,
-        lv_audit_id  TYPE sysuuid_c32,
-        lv_so_number TYPE vbeln_va.
+  DATA: ls_header_in  TYPE bapisdh1,
+        ls_header_inx TYPE bapisdh1x,
+        lt_items_in   TYPE TABLE OF bapisditm,
+        lt_items_inx  TYPE TABLE OF bapisditmx,
+        lt_return     TYPE TABLE OF bapiret2,
+        lv_timestamp  TYPE c LENGTH 14,
+        lv_audit_id   TYPE sysuuid_c32,
+        lv_so_number  TYPE vbeln_va.
 
   LOOP AT keys INTO DATA(ls_key).
     lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
 
-      IF ls_key-%param-rejection_code <> '02' AND
-         ls_key-%param-rejection_code <> '03' AND
-         ls_key-%param-rejection_code <> '04'.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unspecific )
-               TO failed-SalesOrder.
-        CONTINUE.
-      ENDIF.
+    IF ls_key-%param-rejection_code <> '02' AND
+       ls_key-%param-rejection_code <> '03' AND
+       ls_key-%param-rejection_code <> '04'.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-SalesOrder.
+      CONTINUE.
+    ENDIF.
 
-      SELECT SINGLE uname FROM agr_users
-        INTO @DATA(lv_auth_check)
-        WHERE agr_name = 'ZROLE_AISO_BOT_RELEASER'
-          AND uname    = @sy-uname.
+    SELECT SINGLE uname FROM agr_users
+      INTO @DATA(lv_auth_check)
+      WHERE agr_name = 'ZROLE_AISO_BOT_RELEASER'
+        AND uname    = @sy-uname.
 
-      IF sy-subrc <> 0.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unauthorized )
-               TO failed-SalesOrder.
-        CONTINUE.
-      ENDIF.
+    IF sy-subrc <> 0.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+             TO failed-SalesOrder.
+      CONTINUE.
+    ENDIF.
 
-      CLEAR: lt_items_in, lt_items_inx, lt_return.
+    CLEAR: ls_header_in, ls_header_inx, lt_items_in, lt_items_inx, lt_return.
 
-      SELECT posnr FROM vbap
-        INTO TABLE @DATA(lt_posnr)
-        WHERE vbeln = @lv_so_number.
+    SELECT posnr FROM vbap
+      INTO TABLE @DATA(lt_posnr)
+      WHERE vbeln = @lv_so_number.
 
-      IF lt_posnr IS INITIAL.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-not_found )
-               TO failed-SalesOrder.
-        CONTINUE.
-      ENDIF.
+    IF lt_posnr IS INITIAL.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-not_found )
+             TO failed-SalesOrder.
+      CONTINUE.
+    ENDIF.
 
-      LOOP AT lt_posnr INTO DATA(ls_posnr).
-        APPEND VALUE #( itm_number = ls_posnr-posnr
-                         reason_rej = ls_key-%param-rejection_code ) TO lt_items_in.
-        APPEND VALUE #( itm_number = ls_posnr-posnr
-                         reason_rej = 'X' ) TO lt_items_inx.
-      ENDLOOP.
-
-      CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
-        EXPORTING
-          salesdocument  = lv_so_number
-        TABLES
-          order_item_in  = lt_items_in
-          order_item_inx = lt_items_inx
-          return         = lt_return.
-
-      READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
-      IF sy-subrc = 0.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unspecific )
-               TO failed-SalesOrder.
-        CONTINUE.
-      ENDIF.
-
-      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
-
-      TRY.
-          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
-        CATCH cx_uuid_error.
-          CLEAR lv_audit_id.
-      ENDTRY.
-
-      APPEND VALUE #(
-        mandt       = sy-mandt
-        audit_id    = lv_audit_id
-        sap_user    = sy-uname
-        action_type = 'REJECT_SO'
-        so_number   = lv_so_number
-        status      = 'SUCCESS'
-        remarks     = ls_key-%param-rejection_code
-        created_at  = lv_timestamp
-      ) TO lcl_buffer=>gt_audit_db.
-
-      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
+    LOOP AT lt_posnr INTO DATA(ls_posnr).
+      APPEND VALUE #( itm_number = ls_posnr-posnr
+                       reason_rej = ls_key-%param-rejection_code ) TO lt_items_in.
+      APPEND VALUE #( itm_number = ls_posnr-posnr
+                       reason_rej = 'X' ) TO lt_items_inx.
     ENDLOOP.
-  ENDMETHOD.
+
+    CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+      EXPORTING
+        salesdocument    = lv_so_number
+        order_header_in  = ls_header_in
+        order_header_inx = ls_header_inx
+      TABLES
+        order_item_in    = lt_items_in
+        order_item_inx   = lt_items_inx
+        return           = lt_return.
+
+    READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
+    IF sy-subrc = 0.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-SalesOrder.
+      CONTINUE.
+    ENDIF.
+
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
+
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = sy-uname
+      action_type = 'REJECT_SO'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      remarks     = ls_key-%param-rejection_code
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
+
+    APPEND VALUE #( %tky     = ls_key-%tky
+                     SoNumber = lv_so_number ) TO result.
+  ENDLOOP.
+ENDMETHOD.
 
   METHOD get_instance_authorizations.
   " Ví dụ tối thiểu: cho phép tất cả các action nếu chưa có logic phân quyền cụ thể
