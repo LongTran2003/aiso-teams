@@ -300,18 +300,18 @@ Measured via Application Insights / structured logs in production-like environme
 | Sprint 1 | Phase 2 | 19/05 – 01/06 | Foundation + Spikes | Echo bot in Emulator, Cloud Connector requested, all spikes done |
 | Sprint 2 | Phase 2 | 02/06 – 15/06 | Core Integrations | Bot live in Teams + Mock SAP + first function call |
 | Sprint 3 | Phase 2 | 16/06 – 29/06 | Feature Build I | SO queries + KPIs on real SAP data |
-| Sprint 4 | Phase 2 | 30/06 – 11/07 | Feature Build II + Carryover | Workflow actions, AI Bonus, carryover from Sprint 3, **Mentor Review 2 ready** |
-| Sprint 5 | Phase 2 | ~~14/07 – 27/07~~ _Merged into Sprint 4_ | _(Absorbed)_ | _(Review 2 moved to 12/07)_ |
-| Sprint 6 | Phase 3 | 13/07 – 27/07 | UAT | UAT executed and signed off |
-| Sprint 7 | Phase 4 | 28/07 – 23/08 | Defense Prep | Final docs + rehearsal + defense |
+| Sprint 4 | Phase 2 | 30/06 – 11/07 | Feature Build II + Carryover | Workflow actions, AI Bonus, carryover from Sprint 3 |
+| Sprint 5 | Phase 2 | 14/07 – 27/07 | Finalization | Aggressive polish & bug fixes, **Mentor Review 2 ready** |
+| Sprint 6 | Phase 3 | 28/07 – 05/08 | UAT | UAT executed and signed off |
+| Sprint 7 | Phase 4 | 06/08 – 23/08 | Defense Prep | Final docs + rehearsal + defense |
 
 **Critical dates**:
 - 🎯 17/05 — Mentor Review 1
-- 🎯 ~~27/07~~ **12/07** — Mentor Review 2 (full demo) ⚠️ _MOVED UP 15 days_
-- 🎯 27/07 — Mentor Review 3 (UAT Sign-Off) _(formerly 05/08)_
+- 🎯 27/07 — Mentor Review 2 (full demo)
+- 🎯 05/08 — Mentor Review 3 (UAT Sign-Off)
 - 🎯 23/08 — Thesis Defense
 
-**Key change v3.0** _(01/07/2026)_: Review 2 moved up from 27/07 → **12/07**. Sprint 4 now covers all remaining Sprint 3 carryover items. Sprint 5 is dissolved — its PDF/polish scope is deferred to post-UAT polish if time allows. Sprint 6 (UAT) starts 13/07.
+**Key change v3.1** _(13/07/2026)_: Reverted Review 2 date back to 27/07 (11/07 was only a progress check). Sprint 5 is re-activated for aggressive finalization and bug fixes. UAT (Sprint 6) pushed back to 28/07.
 
 ---
 
