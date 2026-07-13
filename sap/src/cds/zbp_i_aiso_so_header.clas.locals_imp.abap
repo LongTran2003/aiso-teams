@@ -31,6 +31,8 @@ CLASS lhc_SalesOrder DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS rejectOrder FOR MODIFY
       IMPORTING keys FOR ACTION SalesOrder~rejectOrder RESULT result.
+    METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
+      IMPORTING keys REQUEST requested_authorizations FOR SalesOrder RESULT result.
 
 ENDCLASS.
 
@@ -477,6 +479,15 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
       APPEND VALUE #( %tky = ls_key-%tky ) TO result.
     ENDLOOP.
   ENDMETHOD.
+  METHOD get_instance_authorizations.
+  " Ví dụ tối thiểu: cho phép tất cả các action nếu chưa có logic phân quyền cụ thể
+  result = VALUE #( FOR ls_key IN keys
+    ( %tky                   = ls_key-%tky
+      %update                = if_abap_behv=>auth-allowed
+      %action-releaseOrder   = if_abap_behv=>auth-allowed
+      %action-forwardOrder   = if_abap_behv=>auth-allowed
+      %action-rejectOrder    = if_abap_behv=>auth-allowed ) ).
+ENDMETHOD.
 ENDCLASS.
 
 CLASS lsc_zbp_i_aiso_so_header DEFINITION INHERITING FROM cl_abap_behavior_saver.
