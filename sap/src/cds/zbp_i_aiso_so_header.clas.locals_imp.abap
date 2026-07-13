@@ -188,14 +188,15 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD updatereference.
-    DATA: ls_header_in  TYPE bapisdh1,
-          ls_header_inx TYPE bapisdh1x,
-          lt_return     TYPE TABLE OF bapiret2,
-          lv_timestamp  TYPE c LENGTH 14,
-          lv_audit_id   TYPE sysuuid_c32.
+  DATA: ls_header_in  TYPE bapisdh1,
+        ls_header_inx TYPE bapisdh1x,
+        lt_return     TYPE TABLE OF bapiret2,
+        lv_timestamp  TYPE c LENGTH 14,
+        lv_audit_id   TYPE sysuuid_c32,
+        lv_so_number  TYPE vbeln_va.
 
-    LOOP AT keys INTO DATA(ls_key).
-      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+  LOOP AT keys INTO DATA(ls_key).
+    lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
 
       SELECT SINGLE teams_user_id FROM zaiso_so_map
         INTO @DATA(lv_owner)
@@ -280,14 +281,15 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD releaseorder.
-    DATA: ls_header_in  TYPE bapisdh1,
-          ls_header_inx TYPE bapisdh1x,
-          lt_return     TYPE TABLE OF bapiret2,
-          lv_timestamp  TYPE c LENGTH 14,
-          lv_audit_id   TYPE sysuuid_c32.
+  DATA: ls_header_in  TYPE bapisdh1,
+        ls_header_inx TYPE bapisdh1x,
+        lt_return     TYPE TABLE OF bapiret2,
+        lv_timestamp  TYPE c LENGTH 14,
+        lv_audit_id   TYPE sysuuid_c32,
+        lv_so_number  TYPE vbeln_va.
 
-    LOOP AT keys INTO DATA(ls_key).
-      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+  LOOP AT keys INTO DATA(ls_key).
+    lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
 
       SELECT SINGLE teams_user_id FROM zaiso_so_map
         INTO @DATA(lv_owner)
@@ -343,62 +345,65 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD forwardorder.
-    DATA: lv_timestamp TYPE c LENGTH 14,
-          lv_audit_id  TYPE sysuuid_c32.
+  DATA: lv_timestamp TYPE c LENGTH 14,
+        lv_audit_id  TYPE sysuuid_c32,
+        lv_so_number TYPE vbeln_va.
 
-    LOOP AT keys INTO DATA(ls_key).
-      DATA(ls_param) = ls_key-%param.
-      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+  LOOP AT keys INTO DATA(ls_key).
+    DATA(ls_param) = ls_key-%param.
+    lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
 
-      SELECT SINGLE teams_user_id FROM zaiso_so_map
-        INTO @DATA(lv_owner)
-        WHERE so_number = @lv_so_number.
+    SELECT SINGLE teams_user_id FROM zaiso_so_map
+      INTO @DATA(lv_owner)
+      WHERE so_number = @lv_so_number.
 
-      IF lv_owner IS NOT INITIAL AND lv_owner <> ls_param-requesting_teams_user.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unauthorized )
-               TO failed-SalesOrder.
-        CONTINUE.
-      ENDIF.
+    IF lv_owner IS NOT INITIAL AND lv_owner <> ls_param-requesting_teams_user.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+             TO failed-SalesOrder.
+      CONTINUE.
+    ENDIF.
 
-      APPEND VALUE #(
-        mandt         = sy-mandt
-        so_number     = lv_so_number
-        teams_user_id = ls_param-new_teams_user
-      ) TO lcl_buffer=>gt_so_map_db.
+    APPEND VALUE #(
+      mandt         = sy-mandt
+      so_number     = lv_so_number
+      teams_user_id = ls_param-new_teams_user
+    ) TO lcl_buffer=>gt_so_map_db.
 
-      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
 
-      TRY.
-          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
-        CATCH cx_uuid_error.
-          CLEAR lv_audit_id.
-      ENDTRY.
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
 
-      APPEND VALUE #(
-        mandt       = sy-mandt
-        audit_id    = lv_audit_id
-        sap_user    = sy-uname
-        action_type = 'FORWARD_SO'
-        so_number   = lv_so_number
-        status      = 'SUCCESS'
-        remarks     = ls_param-remarks
-        created_at  = lv_timestamp
-      ) TO lcl_buffer=>gt_audit_db.
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = sy-uname
+      action_type = 'FORWARD_SO'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      remarks     = ls_param-remarks
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
 
-      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
-    ENDLOOP.
-  ENDMETHOD.
+    APPEND VALUE #( %tky     = ls_key-%tky
+                     SoNumber = lv_so_number ) TO result.
+  ENDLOOP.
+ENDMETHOD.
 
   METHOD rejectorder.
-    DATA: lt_items_in  TYPE TABLE OF bapisditm,
-          lt_items_inx TYPE TABLE OF bapisditmx,
-          lt_return    TYPE TABLE OF bapiret2,
-          lv_timestamp TYPE c LENGTH 14,
-          lv_audit_id  TYPE sysuuid_c32.
+  DATA: lt_items_in  TYPE TABLE OF bapisditm,
+        lt_items_inx TYPE TABLE OF bapisditmx,
+        lt_return    TYPE TABLE OF bapiret2,
+        lv_timestamp TYPE c LENGTH 14,
+        lv_audit_id  TYPE sysuuid_c32,
+        lv_so_number TYPE vbeln_va.
 
-    LOOP AT keys INTO DATA(ls_key).
-      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+  LOOP AT keys INTO DATA(ls_key).
+    lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
 
       IF ls_key-%param-rejection_code <> '02' AND
          ls_key-%param-rejection_code <> '03' AND
@@ -479,6 +484,7 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
       APPEND VALUE #( %tky = ls_key-%tky ) TO result.
     ENDLOOP.
   ENDMETHOD.
+
   METHOD get_instance_authorizations.
   " Ví dụ tối thiểu: cho phép tất cả các action nếu chưa có logic phân quyền cụ thể
   result = VALUE #( FOR ls_key IN keys
