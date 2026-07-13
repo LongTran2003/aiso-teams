@@ -35,8 +35,8 @@ Phase 1                  Phase 2                                Phase 3         
 Preparation +            Realization                            UAT                     Defense
 Explore                  (Development)                                                  (Golive)
 ─────────                ──────────────────────────────────     ───────                 ─────────
-16/05 — 17/05            19/05 — 12/07                          30/07 — 05/08           23/08
-2 days                   8 weeks (5 sprints)                    1 week                  2.5 weeks
+16/05 — 17/05            19/05 — 27/07                          30/07 — 05/08           06/08 — 23/08
+2 days                   10 weeks (5 sprints)                    1 week                  2.5 weeks
         │                              │                               │                   │
         ▼                              ▼                               ▼                   ▼
    Mentor Review 1            Mentor Review 2                Mentor Review 3         Thesis Defense
@@ -61,7 +61,7 @@ Explore                  (Development)                                          
 
 ---
 
-### Phase 2: Realization (19/05 – 12/07)
+### Phase 2: Realization (19/05 – 27/07)
 
 **Duration**: 10 weeks → **5 sprints × 2 weeks**
 
@@ -80,7 +80,7 @@ Explore                  (Development)                                          
 - Testing documentation
 - User Manual
 
-**Ends with**: 🎯 **Mentor Review 2** (12/07) — full working software demo
+**Ends with**: 🎯 **Mentor Review 2** (27/07) — full working software demo
 
 ---
 
@@ -129,11 +129,11 @@ Four critical milestones drive the project schedule:
 | Milestone | Date | Audience | Format | Demo state required |
 |---|---|---|---|---|
 | **Mentor Review 1** | 17/05 | FSoft Mentor | Workshop presentation | Slides + research findings |
-| **Mentor Review 2** | 12/07 ⚠️ _(moved up from 27/07)_ | FSoft Mentor | Full demo + tech spec | Working software, all features |
+| **Mentor Review 2** | 27/07 | FSoft Mentor | Full demo + tech spec | Working software, all features |
 | **Mentor Review 3** | 05/08 | FSoft Mentor | UAT sign-off | UAT passed, signed off |
 | **Thesis Defense** | 23/08 | School Panel + Supervisor | Defense presentation | Polished demo + Final Report |
 
-**Implication**: Working software must be **demonstrable by 12/07** (Mentor Review 2 — moved up 15 days). UAT cannot find major architecture issues — those must be resolved earlier. **All remaining Sprint 4 work must be complete by 11/07.**
+**Implication**: Working software must be **demonstrable by 27/07** (Mentor Review 2). All remaining Sprint 5 work must be complete by 27/07, ensuring a robust end-to-end flow without bugs.
 
 ---
 
@@ -551,72 +551,54 @@ Each spike is timeboxed to **1 day** and produces a working demo + 1-page learni
 
 ---
 
-### ~~Sprint 5 — PDF Distribution + Polish (Phase 2)~~ _(Dissolved — scope absorbed into Sprint 6)_
+### Sprint 5 — Aggressive Polish & Finalization (Phase 2)
 
-**Note**: Sprint 5 is dissolved as Mentor Review 2 was moved to 12/07. PDF and email features are deferred to post-Review 2 polish if time allows before defense.
-
-### Sprint 6 — UAT + Polish (Phase 3)
-
-**Dates**: 13/07 – 27/07 _(extended UAT window)_
-**Sprint Goal**: UAT execution, bug fixes from Review 2 feedback, documentation polish.
+**Dates**: 14/07 – 27/07
+**Sprint Goal**: 🚨 **CRITICAL SPRINT** 🚨 - Squeeze all team members to finalize all main flows (Approve, Reject, Forward, KPIs), clean up ALL technical debt, eliminate short dumps, and deliver a fully functional product for Mentor Review 2 on 27/07.
 
 #### Sprint deliverables by role
 
-**BE Lead**
-- [ ] `AISO.Reporting`: Azure Functions project for PDF generation
-- [ ] Puppeteer-based PDF rendering from Adaptive Card → HTML → PDF
-- [ ] Monthly consolidated PDF template (cover page, KPI sections, charts)
-- [ ] Microsoft Graph email send integration
-- [ ] On-demand PDF export action button on every detail card
-- [ ] Channel subscription management (subscribe/unsubscribe commands)
-- [ ] Alert threshold configuration (via admin command or env config)
-- [ ] Azure Key Vault integration (move secrets out of env vars) — _Should Have_, cut if behind
-- [ ] Final logging and error handling pass
-- [ ] Tech Spec section: PDF pipeline, distribution, finalization
+**BE Lead (Long)**
+- [ ] Fix all remaining Adaptive Card issues (Emoji Mojibake, dynamic Teams ID bindings).
+- [ ] Stabilize OData connections and error parsing (no more hardcoded GitHub issue references).
+- [ ] Implement robust error boundaries and fallback logging.
+- [ ] Final tech spec compilation and deployment readiness.
 
-**SAP Team**
-- [ ] Cleanup job for audit log (retention policy)
-- [ ] Performance tuning of slow analytical queries (index advisor, view optimization)
-- [ ] Cloud Connector configuration finalized if still pending
-- [ ] All SAP code reviewed and refactored
-- [ ] SAP documentation finalized (transport list, deployment guide)
+**SAP Team (Minh Quân & Nguyễn Quân)**
+- [ ] 🔴 **IMMEDIATE FIX**: Remove @ObjectModel.text.element: ['SoNumber'] from ZC_AISO_SO_WITH_ITEMS and ZI_AISO_SO_HEADER to stop CX_SADL_DUMP_APPL_MODEL_ERROR.
+- [ ] 🔴 **IMMEDIATE FIX**: Remove BAPI_TRANSACTION_COMMIT from 
+eleaseorder, 
+ejectorder and cancelorder RAP Action handlers.
+- [ ] Move UPDATE and INSERT logic in orwardorder to the unmanaged Save phase.
+- [ ] Verify ST22 is completely clean of any Short Dumps during end-to-end tests.
 
-**AI Team**
-- [ ] Weekly report card template (finalized layout)
-- [ ] Alert notification cards
-- [ ] PDF export action buttons wired to bot commands
-- [ ] Email body templates (Vietnamese + English)
-- [ ] Comprehensive test re-run on test set v2
-- [ ] Edge case handling: empty results, SAP timeout, LLM hallucination fallback
-- [ ] Subscription management cards
+**AI Team (Thanh Thuý & Ngọc Tiến)**
+- [ ] Guarantee Vietnamese intent recognition is flawless for all main flows.
+- [ ] Replace demo dropdown values in Adaptive Cards with real testing IDs.
+- [ ] Polish UI responses and finalize all chart/KPI rendering on both Desktop and Mobile.
 
 **All members (parallel)**
-- [ ] **Finalize Technical Specification** (sections already drafted per sprint; final compilation + review)
-- [ ] **User Manual** finalized with all screenshots from previous sprints
-- [ ] **Testing documentation** (test scenarios + results compiled)
-- [ ] Sprint 5 demo dry run with full feature walk-through
+- [ ] Must commit at least 2 hours/day minimum.
+- [ ] Gather in-person whenever free to aggressively squash bugs together.
+- [ ] E2E dry runs daily to ensure the whole system is stable.
 
 #### Sprint 5 Demo criteria (= Mentor Review 2 demo)
-- ✓ Full end-to-end demo with ALL features working
-- ✓ Weekly report appears in subscribed channel
-- ✓ Monthly PDF generated and emailed
-- ✓ On-demand PDF works from any card
-- ✓ All cards working on desktop + mobile
-- ✓ Vietnamese accuracy ≥ 85% (measured on test set v2)
-- ✓ Documentation complete: Technical Spec + User Manual + Testing
+- ✓ Full end-to-end demo with ALL features working flawlessly.
+- ✓ ZERO SAP Short Dumps (ST22 clean).
+- ✓ Manager can Approve/Reject/Forward seamlessly using Teams.
+- ✓ KPIs are accurate and render quickly.
+- ✓ Final Code Freeze for core functions.
 
 #### 🎯 Phase 2 Ends: Mentor Review 2 (27/07)
 - Demo full software to FSoft mentor
 - Present Technical Specification
-- Show test results
-- Walk through User Manual
 - Mentor feedback collected
 
 ---
 
 ### Sprint 6 — UAT (Phase 3)
 
-**Dates**: 30/07 – 05/08 (1 week — short sprint)
+**Dates**: 28/07 – 05/08 (Short sprint)
 **Sprint Goal**: User Acceptance Testing executed, bugs fixed, UAT sign-off obtained.
 
 #### Sprint deliverables by role
