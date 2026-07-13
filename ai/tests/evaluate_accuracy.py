@@ -192,9 +192,15 @@ def validate_parameters(
     forward_to_user = args.get("forward_to_user")
     if forward_to_user:
         import unicodedata
+
         def strip_diacritics(s: str) -> str:
-            nfkd_form = unicodedata.normalize('NFKD', s)
-            return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).replace('đ', 'd').replace('Đ', 'D')
+            nfkd_form = unicodedata.normalize("NFKD", s)
+            return (
+                "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+                .replace("đ", "d")
+                .replace("Đ", "D")
+            )
+
         cleaned_forward_to = strip_diacritics(str(forward_to_user).lower())
         cleaned_msg = strip_diacritics(lower_msg)
         if cleaned_forward_to not in cleaned_msg:
@@ -217,7 +223,15 @@ def validate_parameters(
         if reason_code and str(reason_code).lower() not in ("null", ""):
             REASON_KEYWORDS = {
                 "PRICE_ISSUE": ["giá", "price", "sai giá", "pricing", "giá cả"],
-                "OUT_OF_STOCK": ["hết hàng", "out of stock", "hết", "stock", "thiếu hàng", "thiếu", "không đủ"],
+                "OUT_OF_STOCK": [
+                    "hết hàng",
+                    "out of stock",
+                    "hết",
+                    "stock",
+                    "thiếu hàng",
+                    "thiếu",
+                    "không đủ",
+                ],
                 "OTHER": ["khác", "other reason", "lý do khác"],
             }
             expected_keywords = REASON_KEYWORDS.get(str(reason_code).upper(), [])
@@ -280,7 +294,11 @@ def validate_parameters(
         new_reference = args.get("new_reference")
         if not order_id or order_id == "null" or str(order_id).strip() == "":
             return None
-        if not new_reference or new_reference == "null" or str(new_reference).strip() == "":
+        if (
+            not new_reference
+            or new_reference == "null"
+            or str(new_reference).strip() == ""
+        ):
             return None
 
     # 5. Smart hallucination-stripping for optional-only param functions
@@ -532,8 +550,13 @@ def _normalize_val(v) -> str:
 
     s = str(v).strip().rstrip(".").strip().lower()
     import unicodedata
-    nfkd_form = unicodedata.normalize('NFKD', s)
-    return "".join([c for c in nfkd_form if not unicodedata.combining(c)]).replace('đ', 'd').replace('Đ', 'D')
+
+    nfkd_form = unicodedata.normalize("NFKD", s)
+    return (
+        "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+        .replace("đ", "d")
+        .replace("Đ", "D")
+    )
 
 
 def fuzzy_args_match(
