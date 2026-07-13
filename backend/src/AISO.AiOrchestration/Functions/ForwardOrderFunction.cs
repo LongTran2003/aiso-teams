@@ -79,7 +79,7 @@ public sealed class ForwardOrderFunction : IFunction
         {
             // Call SAP RAP action
             var updatedOrder = await _sap.ForwardOrderAsync(orderId, forwardTo, requestingSapUser, ct);
-            
+
             // Audit Log
             _logger.LogInformation("AUDIT: User {User} successfully forwarded order {OrderId} to {ForwardTo}", requestingSapUser, orderId, forwardTo);
 
