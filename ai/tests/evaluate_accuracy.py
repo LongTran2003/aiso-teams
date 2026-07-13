@@ -190,7 +190,30 @@ def validate_parameters(
 
     # 2. Hallucinated forward_to_user check
     forward_to_user = args.get("forward_to_user")
-    if forward_to_user and str(forward_to_user).lower() not in lower_msg:
+    if forward_to_user:
+        import unicodedata
+
+        def strip_diacritics(s: str) -> str:
+            nfkd_form = unicodedata.normalize("NFKD", s)
+            return (
+                "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+                .replace("đ", "d")
+                .replace("Đ", "D")
+            )
+
+        cleaned_forward_to = strip_diacritics(str(forward_to_user).lower())
+        cleaned_msg = strip_diacritics(lower_msg)
+        if cleaned_forward_to not in cleaned_msg:
+            return None
+
+    # Hallucinated customer check
+    customer = args.get("customer")
+    if customer and str(customer).lower() not in lower_msg:
+        return None
+
+    # Hallucinated new_reference check
+    new_reference = args.get("new_reference")
+    if new_reference and str(new_reference).lower() not in lower_msg:
         return None
 
     # 3. Hallucinated reason_code check for RejectOrder
@@ -200,7 +223,15 @@ def validate_parameters(
         if reason_code and str(reason_code).lower() not in ("null", ""):
             REASON_KEYWORDS = {
                 "PRICE_ISSUE": ["giá", "price", "sai giá", "pricing", "giá cả"],
-                "OUT_OF_STOCK": ["hết hàng", "out of stock", "hết", "stock"],
+                "OUT_OF_STOCK": [
+                    "hết hàng",
+                    "out of stock",
+                    "hết",
+                    "stock",
+                    "thiếu hàng",
+                    "thiếu",
+                    "không đủ",
+                ],
                 "OTHER": ["khác", "other reason", "lý do khác"],
             }
             expected_keywords = REASON_KEYWORDS.get(str(reason_code).upper(), [])
@@ -238,6 +269,35 @@ def validate_parameters(
             not forward_to_user
             or forward_to_user == "null"
             or str(forward_to_user).strip() == ""
+        ):
+            return None
+    elif fn_name == "CreateOrder":
+        customer = args.get("customer")
+        items = args.get("items")
+        if not customer or customer == "null" or str(customer).strip() == "":
+            return None
+        if not items or not isinstance(items, list) or len(items) == 0:
+            return None
+        # Deduplicate items by material to handle model array generation bugs
+        seen_materials = set()
+        deduped_items = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            mat = item.get("material")
+            if mat and mat not in seen_materials:
+                seen_materials.add(mat)
+                deduped_items.append(item)
+        args["items"] = deduped_items
+    elif fn_name == "UpdateOrderReference":
+        order_id = args.get("order_id")
+        new_reference = args.get("new_reference")
+        if not order_id or order_id == "null" or str(order_id).strip() == "":
+            return None
+        if (
+            not new_reference
+            or new_reference == "null"
+            or str(new_reference).strip() == ""
         ):
             return None
 
@@ -469,9 +529,34 @@ _REQUIRED_PARAMS: dict[str, set[str]] = {
 
 
 def _normalize_val(v) -> str:
-    """Lowercase, strip trailing punctuation for lenient string comparison."""
-    s = str(v).strip()
-    return s.rstrip(".").strip().lower()
+    """Lowercase, strip trailing punctuation and diacritics for lenient string comparison."""
+    if isinstance(v, list):
+        cleaned_list = []
+        for item in v:
+            if isinstance(item, dict):
+                cleaned_item = {
+                    k: _normalize_val(val)
+                    for k, val in item.items()
+                    if k in ("material", "qty")
+                }
+                cleaned_list.append(cleaned_item)
+            else:
+                cleaned_list.append(_normalize_val(item))
+        try:
+            cleaned_list.sort(key=lambda x: str(x.get("material", "")))
+        except Exception:
+            pass
+        v = cleaned_list
+
+    s = str(v).strip().rstrip(".").strip().lower()
+    import unicodedata
+
+    nfkd_form = unicodedata.normalize("NFKD", s)
+    return (
+        "".join([c for c in nfkd_form if not unicodedata.combining(c)])
+        .replace("đ", "d")
+        .replace("Đ", "D")
+    )
 
 
 def fuzzy_args_match(
