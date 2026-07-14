@@ -311,8 +311,13 @@ public class TeamsBot : TeamsActivityHandler
                             var displayedSo = updatedOrder.SoNumber == "UNKNOWN"
                                 ? salesOrderId
                                 : updatedOrder.SoNumber;
+                            var recipientLabel = await _userMappingService.GetDisplayNameAsync(forwardToUser, cancellationToken);
+                            if (string.IsNullOrWhiteSpace(recipientLabel))
+                            {
+                                recipientLabel = forwardToUser;
+                            }
                             await turnContext.SendActivityAsync(
-                                $"Sales order {displayedSo} has been forwarded to {forwardToUser}.",
+                                $"Sales order {displayedSo} has been forwarded to {recipientLabel}.",
                                 cancellationToken: cancellationToken);
                         }
                         catch (SapODataException sapEx)
