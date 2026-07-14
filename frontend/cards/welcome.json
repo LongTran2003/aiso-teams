@@ -7,30 +7,31 @@
       "type": "TextBlock",
       "size": "Large",
       "weight": "Bolder",
-      "text": "👋 Hello! I am AISO Bot",
-      "color": "Accent"
+      "text": "Hello, I’m AISO Bot",
+      "color": "Accent",
+      "wrap": true
     },
     {
       "type": "TextBlock",
-      "text": "An AI-powered SAP sales order management system integrated with Microsoft Teams.",
+      "text": "I can help you review sales orders and answer SAP-related questions in Microsoft Teams.",
       "wrap": true
     },
     {
       "type": "FactSet",
       "facts": [
-        { "title": "Account:", "value": "${username}" },
-        { "title": "Status:", "value": "🟢 Connected to SAP S40 system" }
+        { "title": "Name", "value": "${username}" },
+        { "title": "Status", "value": "Ready to help" }
       ]
     }
   ],
   "actions": [
     {
       "type": "Action.Submit",
-      "title": "View Recent Orders",
+      "title": "View recent orders",
       "data": {
         "msteams": {
           "type": "messageBack",
-          "displayText": "View Recent Orders",
+          "displayText": "View recent orders",
           "text": "recent orders"
         }
       }
