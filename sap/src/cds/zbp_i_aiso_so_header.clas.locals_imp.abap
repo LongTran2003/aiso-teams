@@ -376,6 +376,12 @@ ENDMETHOD.
       APPEND VALUE #( %tky        = ls_key-%tky
                        %fail-cause = if_abap_behv=>cause-unauthorized )
              TO failed-SalesOrder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                   %msg = new_message( id       = '00'
+                                        number   = '001'
+                                        severity = if_abap_behv_message=>severity-error
+                                        v1       = 'Order owned by another user' ) )
+         TO reported-SalesOrder.
       CONTINUE.
     ENDIF.
 
