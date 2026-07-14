@@ -775,5 +775,45 @@
   "Update the reference for this order.": {
     "predicted_function": null,
     "predicted_args": {}
+  },
+  "Duyệt đơn 0000000009.": {
+    "predicted_function": "ReleaseOrder",
+    "predicted_args": {
+      "order_id": "0000000009"
+    }
+  },
+  "Từ chối đơn hàng 0000000009 vì hết hàng.": {
+    "predicted_function": "RejectOrder",
+    "predicted_args": {
+      "order_id": "0000000009",
+      "reason_code": "OUT_OF_STOCK"
+    }
+  },
+  "Nhờ chị Thu Hương xử lý đơn 0000000009 dùm tôi.": {
+    "predicted_function": "ForwardOrder",
+    "predicted_args": {
+      "forward_to_user": "chị Thu Hương",
+      "order_id": "0000000009"
+    }
+  },
+  "Xem chi tiết đơn hàng 0000000009.": {
+    "predicted_function": "GetOrderDetail",
+    "predicted_args": {
+      "order_id": "0000000009"
+    }
+  },
+  "Kiểm tra trạng thái đơn 0000000009.": {
+    "predicted_function": "CheckOrderStatus",
+    "predicted_args": {
+      "order_id": "0000000009"
+    }
+  },
+  "Chuyển tiếp đơn hàng này cho anh Minh Tuấn.": {
+    "predicted_function": null,
+    "predicted_args": {}
+  },
+  "Từ chối đơn hàng này vì hết hàng.": {
+    "predicted_function": null,
+    "predicted_args": {}
   }
 }
