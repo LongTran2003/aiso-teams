@@ -291,58 +291,73 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
   LOOP AT keys INTO DATA(ls_key).
     lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
 
-      SELECT SINGLE teams_user_id FROM zaiso_so_map
-        INTO @DATA(lv_owner)
-        WHERE so_number = @lv_so_number.
+    SELECT SINGLE teams_user_id FROM zaiso_so_map
+      INTO @DATA(lv_owner)
+      WHERE so_number = @lv_so_number.
 
-      IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unauthorized )
-               TO failed-salesorder.
-        CONTINUE.
-      ENDIF.
+    IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Order owned by another user' ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
 
-      CLEAR: ls_header_in, ls_header_inx, lt_return.
-      ls_header_in-dlv_block  = ''.
-      ls_header_inx-dlv_block = 'X'.
+    CLEAR: ls_header_in, ls_header_inx, lt_return.
+    ls_header_inx-updateflag = 'U'.
+    ls_header_in-dlv_block   = ''.
+    ls_header_inx-dlv_block  = 'X'.
 
-      CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
-        EXPORTING
-          salesdocument    = lv_so_number
-          order_header_in  = ls_header_in
-          order_header_inx = ls_header_inx
-        TABLES
-          return           = lt_return.
+    CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+      EXPORTING
+        salesdocument    = lv_so_number
+        order_header_in  = ls_header_in
+        order_header_inx = ls_header_inx
+      TABLES
+        return           = lt_return.
 
-      READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
-      IF sy-subrc = 0.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unspecific )
-               TO failed-salesorder.
-        CONTINUE.
-      ENDIF.
+    READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
+    IF sy-subrc = 0.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = ls_error-id
+                                            number   = ls_error-number
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = ls_error-message_v1
+                                            v2       = ls_error-message_v2 ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
 
-      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
 
-      TRY.
-          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
-        CATCH cx_uuid_error.
-          CLEAR lv_audit_id.
-      ENDTRY.
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
 
-      APPEND VALUE #(
-        mandt       = sy-mandt
-        audit_id    = lv_audit_id
-        sap_user    = sy-uname
-        action_type = 'RELEASE_SO'
-        so_number   = lv_so_number
-        status      = 'SUCCESS'
-        created_at  = lv_timestamp
-      ) TO lcl_buffer=>gt_audit_db.
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = sy-uname
+      action_type = 'RELEASE_SO'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
 
-      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
-    ENDLOOP.
-  ENDMETHOD.
+    APPEND VALUE #( %tky     = ls_key-%tky
+                     SoNumber = lv_so_number ) TO result.
+  ENDLOOP.
+ENDMETHOD.
 
   METHOD forwardorder.
   DATA: lv_timestamp TYPE c LENGTH 14,
@@ -413,6 +428,12 @@ ENDMETHOD.
       APPEND VALUE #( %tky        = ls_key-%tky
                        %fail-cause = if_abap_behv=>cause-unspecific )
              TO failed-SalesOrder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Invalid rejection code' ) )
+             TO reported-SalesOrder.
       CONTINUE.
     ENDIF.
 
@@ -425,10 +446,17 @@ ENDMETHOD.
       APPEND VALUE #( %tky        = ls_key-%tky
                        %fail-cause = if_abap_behv=>cause-unauthorized )
              TO failed-SalesOrder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Bot user missing releaser role' ) )
+             TO reported-SalesOrder.
       CONTINUE.
     ENDIF.
 
     CLEAR: ls_header_in, ls_header_inx, lt_items_in, lt_items_inx, lt_return.
+    ls_header_inx-updateflag = 'U'.
 
     SELECT posnr FROM vbap
       INTO TABLE @DATA(lt_posnr)
@@ -438,6 +466,12 @@ ENDMETHOD.
       APPEND VALUE #( %tky        = ls_key-%tky
                        %fail-cause = if_abap_behv=>cause-not_found )
              TO failed-SalesOrder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Sales order items not found' ) )
+             TO reported-SalesOrder.
       CONTINUE.
     ENDIF.
 
@@ -458,11 +492,18 @@ ENDMETHOD.
         order_item_inx   = lt_items_inx
         return           = lt_return.
 
-    READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
+    READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
     IF sy-subrc = 0.
       APPEND VALUE #( %tky        = ls_key-%tky
                        %fail-cause = if_abap_behv=>cause-unspecific )
              TO failed-SalesOrder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = ls_error-id
+                                            number   = ls_error-number
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = ls_error-message_v1
+                                            v2       = ls_error-message_v2 ) )
+             TO reported-SalesOrder.
       CONTINUE.
     ENDIF.
 
