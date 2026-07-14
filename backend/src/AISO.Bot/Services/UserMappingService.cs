@@ -26,6 +26,24 @@ public class UserMappingService
         return mapping?.SapUserId;
     }
 
+    public async Task<IReadOnlyList<(string Title, string Value)>> GetForwardRecipientChoicesAsync(CancellationToken cancellationToken = default)
+    {
+        var mappings = await _dbContext.UserMappings
+            .Where(u => !string.IsNullOrWhiteSpace(u.SapUserId))
+            .OrderBy(u => u.DisplayName)
+            .ThenBy(u => u.SapUserId)
+            .Select(u => new { u.DisplayName, u.SapUserId })
+            .ToListAsync(cancellationToken);
+
+        return mappings
+            .Select(mapping => (
+                Title: string.IsNullOrWhiteSpace(mapping.DisplayName)
+                    ? mapping.SapUserId!
+                    : $"{mapping.DisplayName} ({mapping.SapUserId})",
+                Value: mapping.SapUserId!))
+            .ToList();
+    }
+
     public async Task MapUserAsync(string teamsUserId, string displayName, string sapUserId, CancellationToken cancellationToken = default)
     {
         var mapping = await _dbContext.UserMappings

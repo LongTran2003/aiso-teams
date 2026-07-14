@@ -186,8 +186,10 @@ public class TeamsBot : TeamsActivityHandler
                     if (string.Equals(action, "forward_so", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        var recipientChoices = await _userMappingService.GetForwardRecipientChoicesAsync(cancellationToken);
+
                         await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmForwardCard(salesOrderId)),
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmForwardCard(salesOrderId, recipientChoices)),
                             cancellationToken);
                         return;
                     }
