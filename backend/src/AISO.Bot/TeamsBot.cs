@@ -419,9 +419,10 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
-            await turnContext.SendActivityAsync(
+            var loadingActivity = await turnContext.SendActivityAsync(
                 MessageFactory.Attachment(TeamsCardBuilder.BuildLoadingCard()),
                 cancellationToken);
+            var loadingActivityId = loadingActivity?.Id;
 
             var stopwatch = Stopwatch.StartNew();
             var dispatch = await _dispatcher.DispatchAsync(userMessage, sapUsername, cancellationToken);
@@ -448,8 +449,10 @@ public class TeamsBot : TeamsActivityHandler
 
             if (!dispatch.Handled)
             {
-                await turnContext.SendActivityAsync(
-                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("UNHANDLED", dispatch.Reason ?? "Unknown request")),
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildErrorCard("UNHANDLED", dispatch.Reason ?? "Unknown request"),
                     cancellationToken);
                 return;
             }
@@ -460,17 +463,17 @@ public class TeamsBot : TeamsActivityHandler
                     "Function {Function} returned failure: {Error}",
                     dispatch.FunctionName, dispatch.Result?.ErrorMessage);
 
-                await turnContext.SendActivityAsync(
-                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("FUNCTION_FAILED", dispatch.Result?.ErrorMessage ?? "Unknown error")),
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildErrorCard("FUNCTION_FAILED", dispatch.Result?.ErrorMessage ?? "Unknown error"),
                     cancellationToken);
                 return;
             }
 
             if (result.Payload is string textReply)
             {
-                await turnContext.SendActivityAsync(
-                    textReply,
-                    cancellationToken: cancellationToken);
+                await ReplaceLoadingActivityAsync(turnContext, loadingActivityId, textReply, cancellationToken);
 
                 _logger.LogInformation("Bot replied with AI text response");
                 return;
@@ -481,8 +484,10 @@ public class TeamsBot : TeamsActivityHandler
                 var orders = getOrdersResponse.Orders;
                 if (orders.Count == 0)
                 {
-                    await turnContext.SendActivityAsync(
-                        MessageFactory.Attachment(TeamsCardBuilder.BuildEmptyCard()),
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        TeamsCardBuilder.BuildEmptyCard(),
                         cancellationToken);
                     return;
                 }
@@ -490,8 +495,10 @@ public class TeamsBot : TeamsActivityHandler
                 var kpiCard = TeamsCardBuilder.BuildKpiCardForRequest(normalizedMessage, orders, getOrdersResponse.ChartUrl);
                 if (kpiCard is not null)
                 {
-                    await turnContext.SendActivityAsync(
-                        MessageFactory.Attachment(kpiCard),
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        kpiCard,
                         cancellationToken);
 
                     _logger.LogInformation(
@@ -501,8 +508,11 @@ public class TeamsBot : TeamsActivityHandler
                 }
 
                 var card = TeamsCardBuilder.BuildSoSummaryCard(orders);
-                await turnContext.SendActivityAsync(
-                    MessageFactory.Attachment(card), cancellationToken);
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    card,
+                    cancellationToken);
 
                 _logger.LogInformation(
                     "Bot replied with Adaptive Card listing {Count} orders", orders.Count);
@@ -513,15 +523,20 @@ public class TeamsBot : TeamsActivityHandler
             {
                 if (ordersList.Count == 0)
                 {
-                    await turnContext.SendActivityAsync(
-                        MessageFactory.Attachment(TeamsCardBuilder.BuildEmptyCard()),
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        TeamsCardBuilder.BuildEmptyCard(),
                         cancellationToken);
                     return;
                 }
 
                 var card = TeamsCardBuilder.BuildSoSummaryCard(ordersList);
-                await turnContext.SendActivityAsync(
-                    MessageFactory.Attachment(card), cancellationToken);
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    card,
+                    cancellationToken);
 
                 _logger.LogInformation(
                     "Bot replied with Adaptive Card listing {Count} orders from CheckOrderStatus", ordersList.Count);
@@ -536,8 +551,10 @@ public class TeamsBot : TeamsActivityHandler
 
                 if (TeamsCardBuilder.TryBuildWorkflowSuccessCard(doc.RootElement, dispatch.FunctionName, out var workflowCard))
                 {
-                    await turnContext.SendActivityAsync(
-                        MessageFactory.Attachment(workflowCard),
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        workflowCard,
                         cancellationToken);
 
                     _logger.LogInformation(
@@ -549,17 +566,18 @@ public class TeamsBot : TeamsActivityHandler
                     ? msg.GetString()
                     : $"✅ Function {dispatch.FunctionName} executed successfully.";
 
-                await turnContext.SendActivityAsync(
-                    message, cancellationToken: cancellationToken);
+                await ReplaceLoadingActivityAsync(turnContext, loadingActivityId, message, cancellationToken);
 
                 _logger.LogInformation(
                     "Bot replied with action result for {Function}", dispatch.FunctionName);
                 return;
             }
 
-            await turnContext.SendActivityAsync(
+            await ReplaceLoadingActivityAsync(
+                turnContext,
+                loadingActivityId,
                 $"Function {dispatch.FunctionName} executed (no result).",
-                cancellationToken: cancellationToken);
+                cancellationToken);
         }
     }
 
@@ -594,6 +612,59 @@ public class TeamsBot : TeamsActivityHandler
         if (!d.Handled) return "Unrecognized";
         if (d.Result is null) return "Failed";
         return d.Result.Success ? "Success" : "Failed";
+    }
+
+    private static async Task ReplaceLoadingActivityAsync(ITurnContext turnContext, string? loadingActivityId, Attachment? attachment, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(loadingActivityId) || attachment is null)
+        {
+            if (attachment is not null)
+            {
+                await turnContext.SendActivityAsync(MessageFactory.Attachment(attachment), cancellationToken);
+            }
+            return;
+        }
+
+        var replacement = new Microsoft.Bot.Schema.Activity
+        {
+            Type = ActivityTypes.Message,
+            Id = loadingActivityId,
+            Conversation = turnContext.Activity.Conversation,
+            ChannelId = turnContext.Activity.ChannelId,
+            ServiceUrl = turnContext.Activity.ServiceUrl,
+            From = turnContext.Activity.Recipient,
+            Recipient = turnContext.Activity.From,
+            Attachments = new List<Attachment> { attachment },
+            Text = string.Empty
+        };
+
+        await turnContext.UpdateActivityAsync(replacement, cancellationToken);
+    }
+
+    private static async Task ReplaceLoadingActivityAsync(ITurnContext turnContext, string? loadingActivityId, string? text, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(loadingActivityId) || string.IsNullOrWhiteSpace(text))
+        {
+            if (!string.IsNullOrWhiteSpace(text))
+            {
+                await turnContext.SendActivityAsync(text, cancellationToken: cancellationToken);
+            }
+            return;
+        }
+
+        var replacement = new Microsoft.Bot.Schema.Activity
+        {
+            Type = ActivityTypes.Message,
+            Id = loadingActivityId,
+            Conversation = turnContext.Activity.Conversation,
+            ChannelId = turnContext.Activity.ChannelId,
+            ServiceUrl = turnContext.Activity.ServiceUrl,
+            From = turnContext.Activity.Recipient,
+            Recipient = turnContext.Activity.From,
+            Text = text
+        };
+
+        await turnContext.UpdateActivityAsync(replacement, cancellationToken);
     }
 
     private async Task<bool> TryHandleOrderDetailRequest(string message, ITurnContext turnContext, CancellationToken cancellationToken)
