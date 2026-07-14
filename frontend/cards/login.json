@@ -1,0 +1,76 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Emphasis",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Sign in to continue",
+          "weight": "Bolder",
+          "size": "Large",
+          "color": "Accent",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Use your work account to continue with AISO Teams.",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "username",
+      "label": "User",
+      "placeholder": "Enter your username",
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Password",
+      "id": "password",
+      "label": "Password",
+      "placeholder": "Enter your password",
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "If you do not have access, contact your system administrator.",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small",
+      "spacing": "Medium"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Sign in",
+      "data": {
+        "action": "sign_in",
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Sign in",
+          "text": "sign in"
+        }
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "action": "cancel",
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}
