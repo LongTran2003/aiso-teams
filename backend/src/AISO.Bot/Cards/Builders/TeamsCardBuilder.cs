@@ -30,8 +30,16 @@ internal static class TeamsCardBuilder
     public static Attachment BuildConfirmReleaseCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-release.json", new { salesOrderNumber });
 
-    public static Attachment BuildConfirmForwardCard(string salesOrderNumber) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-forward.json", new { salesOrderNumber });
+    public static Attachment BuildConfirmForwardCard(string salesOrderNumber, IEnumerable<(string Title, string Value)>? choices = null)
+    {
+        var recipientChoices = (choices ?? Array.Empty<(string Title, string Value)>())
+            .Select(choice => new { title = choice.Title, value = choice.Value })
+            .ToList();
+
+        return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "confirm-forward.json",
+            new { salesOrderNumber, choices = recipientChoices });
+    }
 
     public static Attachment BuildKpiSummaryCard(object data) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("kpi-summary.json", data);
