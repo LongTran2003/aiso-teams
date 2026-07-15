@@ -14,6 +14,16 @@ from pydantic import BaseModel, Field
 # ---------------------------------------------------------------------------
 
 
+from typing import Optional
+
+
+class ChatMessage(BaseModel):
+    role: str = Field(
+        ..., description="Vai trò của người gửi tin nhắn (user hoặc assistant)."
+    )
+    content: str = Field(..., description="Nội dung tin nhắn.")
+
+
 class ChatRequest(BaseModel):
     """Payload gửi lên endpoint POST /api/v1/orchestrate."""
 
@@ -24,10 +34,23 @@ class ChatRequest(BaseModel):
         description="Câu hỏi / lệnh của người dùng.",
         examples=["Kiểm tra trạng thái đơn hàng ORD-20240001"],
     )
+    chat_history: Optional[list[ChatMessage]] = Field(
+        default=None,
+        description="Lịch sử cuộc trò chuyện (danh sách tin nhắn trước đó).",
+    )
 
     model_config = {
         "json_schema_extra": {
-            "example": {"user_message": "Kiểm tra trạng thái đơn hàng ORD-20240001"}
+            "example": {
+                "user_message": "Kiểm tra trạng thái đơn hàng ORD-20240001",
+                "chat_history": [
+                    {"role": "user", "content": "Hủy đơn hàng giúp tôi"},
+                    {
+                        "role": "assistant",
+                        "content": "Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện.",
+                    },
+                ],
+            }
         }
     }
 

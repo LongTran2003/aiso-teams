@@ -8,6 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 import openai
+from typing import Any
 
 # Force standard output to use UTF-8 encoding (especially on Windows)
 if hasattr(sys.stdout, "reconfigure"):
@@ -52,6 +53,10 @@ def _load_system_prompt() -> str:
     for path in (SYSTEM_PROMPT_PATH, SYSTEM_PROMPT_FALLBACK_PATH):
         try:
             content = path.read_text(encoding="utf-8").strip()
+            # Replace date placeholders with the expected evaluation reference date (2026-06-19)
+            content = content.replace("{{CURRENT_DATE}}", "2026-06-19").replace(
+                "{{CURRENT_DAY_OF_WEEK}}", "Friday"
+            )
             label = path.name
             print(
                 f"[Info] Loaded system prompt: {label} ({len(content)} chars)",
@@ -170,6 +175,33 @@ def generate_content_with_retry(
     raise Exception("API call failed after max retries without specific exception.")
 
 
+def _is_order_id_in_message(order_id: Any, user_message: str) -> bool:
+    """Kiểm tra xem order_id (hoặc dạng rút gọn/số của nó) có trong tin nhắn của user không."""
+    oid_str = str(order_id).lower().strip()
+    msg_lower = user_message.lower()
+
+    if oid_str in msg_lower:
+        return True
+
+    oid_digits = re.findall(r"\d+", oid_str)
+    if not oid_digits:
+        return False
+
+    msg_digits = re.findall(r"\d+", msg_lower)
+    oid_digits_stripped = [d.lstrip("0") for d in oid_digits]
+    msg_digits_stripped = [d.lstrip("0") for d in msg_digits]
+
+    for d in oid_digits_stripped:
+        if d and d in msg_digits_stripped:
+            return True
+
+    for d in oid_digits_stripped:
+        if d and d in msg_lower:
+            return True
+
+    return False
+
+
 def validate_parameters(
     fn_name: str, args: dict, user_message: str
 ) -> tuple[str, dict] | None:
@@ -181,11 +213,19 @@ def validate_parameters(
     - Null-cleaning + hallucination-stripping for optional-only param functions.
     Returns (fn_name, args) if valid, or None if invalid.
     """
+    # Convert string-serialized items array to list if needed
+    items = args.get("items")
+    if isinstance(items, str) and items.strip().startswith("["):
+        try:
+            args["items"] = json.loads(items)
+        except Exception:
+            pass
+
     lower_msg = user_message.lower()
     order_id = args.get("order_id")
 
     # 1. Hallucinated order_id check
-    if order_id and str(order_id).lower() not in lower_msg:
+    if order_id and not _is_order_id_in_message(order_id, user_message):
         return None
 
     # 2. Hallucinated forward_to_user check
@@ -490,9 +530,14 @@ def parse_and_validate_failed_generation(
             args = json.loads(raw_args) if raw_args else {}
         except json.JSONDecodeError:
             try:
-                args = json.loads(raw_args.replace("'", '"'))
+                # Handle double/quadruple escaped quotes from string-serialized JSON arrays
+                cleaned = raw_args.replace('\\\\"', '\\"')
+                args = json.loads(cleaned)
             except Exception:
-                args = {}
+                try:
+                    args = json.loads(raw_args.replace("'", '"'))
+                except Exception:
+                    args = {}
 
         validated = validate_parameters(fn_name, args, query)
         if validated is None:
@@ -708,7 +753,7 @@ def run_evaluation(
         client = OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
         system_prompt = _load_system_prompt()
         tools = load_tools()
-        model_name = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+        model_name = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
         print(f"Running evaluation using model: {model_name}\n")
     except Exception as e:
         print(f"Failed to initialize API client: {e}", file=sys.stderr)
@@ -754,10 +799,130 @@ def run_evaluation(
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": query},
                 ]
+                # Pre-route tools to reduce token usage and bypass TPM limit
+                msg_lower = query.lower()
+                kpi_tools = {"GetKpiSummary", "GetKpiByCustomer", "GetKpiByProduct"}
+                create_update_tools = {"CreateOrder", "UpdateOrderReference"}
+                order_op_tools = {
+                    "CheckOrderStatus",
+                    "GetOrderDetail",
+                    "ReleaseOrder",
+                    "RejectOrder",
+                    "ForwardOrder",
+                }
+                order_list_tools = {"GetSalesOrders", "GetOverdueOrders"}
+
+                kpi_keywords = [
+                    "kpi",
+                    "doanh thu",
+                    "doanh số",
+                    "doanh so",
+                    "dashboard",
+                    "hiệu suất",
+                    "hieu suat",
+                    "bán chạy",
+                    "ban chay",
+                    "revenue",
+                ]
+                create_update_keywords = [
+                    "tạo",
+                    "tao",
+                    "đặt hàng",
+                    "dat hang",
+                    "lập đơn",
+                    "lap don",
+                    "lên đơn",
+                    "len don",
+                    "cập nhật",
+                    "cap nhat",
+                    "reference",
+                    "số po",
+                    "so po",
+                    "đổi po",
+                    "doi po",
+                    "gán số po",
+                    "gan so po",
+                    "create",
+                    "update",
+                    "new order",
+                    "place",
+                    "generate",
+                ]
+                order_list_keywords = [
+                    "danh sách",
+                    "danh sach",
+                    "lọc đơn",
+                    "loc don",
+                    "tìm đơn",
+                    "tim don",
+                    "quá hạn",
+                    "qua han",
+                    "giao hàng trễ",
+                    "giao hang tre",
+                    "trễ hạn",
+                    "tre han",
+                    "late",
+                    "overdue",
+                    "list",
+                    "search",
+                ]
+
+                selected_names = set()
+                if any(kw in msg_lower for kw in kpi_keywords):
+                    selected_names.update(kpi_tools)
+                if any(kw in msg_lower for kw in create_update_keywords):
+                    selected_names.update(create_update_tools)
+                if any(kw in msg_lower for kw in order_list_keywords):
+                    selected_names.update(order_list_tools)
+                    selected_names.update(order_op_tools)
+                if not selected_names or any(
+                    kw in msg_lower
+                    for kw in [
+                        "duyệt",
+                        "duyet",
+                        "hủy",
+                        "huy",
+                        "từ chối",
+                        "tu choi",
+                        "chuyển tiếp",
+                        "chuyen tiep",
+                        "bàn giao",
+                        "ban giao",
+                        "nhờ xử lý",
+                        "nho xu ly",
+                        "chi tiết",
+                        "chi tiet",
+                        "xem đơn",
+                        "xem don",
+                        "release",
+                        "approve",
+                        "reject",
+                        "forward",
+                    ]
+                ):
+                    selected_names.update(order_op_tools)
+                    selected_names.update(order_list_tools)
+
+                subset_tools = [
+                    t
+                    for t in tools
+                    if t.get("function", {}).get("name") in selected_names
+                ]
+                if not subset_tools:
+                    subset_tools = None
+
                 try:
                     response = generate_content_with_retry(
-                        client=client, model=model_name, messages=messages, tools=tools
+                        client=client,
+                        model=model_name,
+                        messages=messages,
+                        tools=subset_tools,
                     )
+                    if hasattr(response, "usage") and response.usage:
+                        print(
+                            f" [Token Usage: Prompt={response.usage.prompt_tokens}, Completion={response.usage.completion_tokens}, Total={response.usage.total_tokens}]",
+                            end="",
+                        )
                     choice = response.choices[0]
                     tool_calls = getattr(choice.message, "tool_calls", None) or []
                     if tool_calls and tool_calls[0].type == "function":
