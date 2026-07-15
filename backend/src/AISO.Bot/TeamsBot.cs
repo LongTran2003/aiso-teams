@@ -188,8 +188,20 @@ public class TeamsBot : TeamsActivityHandler
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
                         var recipientChoices = await _userMappingService.GetForwardRecipientChoicesAsync(cancellationToken);
 
+                        var senderDisplayName = await _userMappingService.GetDisplayNameAsync(teamsUserId, cancellationToken);
+                        var senderSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        var senderName = !string.IsNullOrWhiteSpace(senderDisplayName)
+                            ? senderDisplayName
+                            : turnContext.Activity.From?.Name ?? "Unknown user";
+
+                        if (!string.IsNullOrWhiteSpace(senderSapUsername)
+                            && !string.Equals(senderName, senderSapUsername, StringComparison.OrdinalIgnoreCase))
+                        {
+                            senderName = $"{senderName} ({senderSapUsername})";
+                        }
+
                         await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmForwardCard(salesOrderId, recipientChoices)),
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmForwardCard(salesOrderId, recipientChoices, senderName)),
                             cancellationToken);
                         return;
                     }
