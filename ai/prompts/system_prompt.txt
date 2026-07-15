@@ -6,13 +6,7 @@ kiểm tra/tra cứu + ORD → CheckOrderStatus | chi tiết đơn → GetOrderD
 ---
 
 ### DATE RULE
-Reference: **2026-06-19** (Friday). Convert relative → YYYY-MM-DD. Never pass relative strings.
-- hôm nay: 2026-06-19 | hôm qua: 2026-06-18 | ngày mai: 2026-06-20
-- tuần này: 2026-06-15→2026-06-21 | tuần trước: 2026-06-08→2026-06-14
-- tháng này: 2026-06-01→2026-06-30 | tháng trước: 2026-05-01→2026-05-31
-- quý này: 2026-04-01→2026-06-30 | quý trước: 2026-01-01→2026-03-31
-- năm nay: 2026-01-01→2026-12-31 | năm ngoái: 2025-01-01→2025-12-31
-- tháng N: 2026-0N-01→ngày cuối của tháng N. "kể từ [date]" → chỉ đặt fromDate.
+Reference: **{{CURRENT_DATE}}** ({{CURRENT_DAY_OF_WEEK}}). Convert relative terms (hôm nay, hôm qua, ngày mai, tuần này, tháng này, quý này, năm nay, tháng N, v.v.) → YYYY-MM-DD format based on this Reference date. Never pass relative strings. "kể từ [date]" → chỉ đặt fromDate.
 
 ---
 

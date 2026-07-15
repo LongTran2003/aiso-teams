@@ -38,7 +38,7 @@ _FUNCTIONS_DIR = _BASE_DIR / "functions"
 
 # Groq credentials (from .env)
 _GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-_GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+_GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +49,14 @@ _GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
 def _load_system_prompt() -> str:
     """Đọc system prompt từ disk; fallback về chuỗi mặc định nếu không tìm thấy."""
     try:
-        return _SYSTEM_PROMPT_PATH.read_text(encoding="utf-8").strip()
+        base_prompt = _SYSTEM_PROMPT_PATH.read_text(encoding="utf-8").strip()
+        import datetime
+
+        today = datetime.date.today()
+        day_of_week = today.strftime("%A")
+        return base_prompt.replace(
+            "{{CURRENT_DATE}}", today.strftime("%Y-%m-%d")
+        ).replace("{{CURRENT_DAY_OF_WEEK}}", day_of_week)
     except FileNotFoundError:
         logger.warning("system_prompt.txt not found – using built-in default.")
         return "You are a helpful AI assistant."
@@ -284,6 +291,40 @@ def _mock_response(user_message: str) -> ChatResponse:
     )
 
 
+def _is_order_id_in_message(order_id: Any, user_message: str) -> bool:
+    """Kiểm tra xem order_id (hoặc dạng rút gọn/số của nó) có trong tin nhắn của user không."""
+    oid_str = str(order_id).lower().strip()
+    msg_lower = user_message.lower()
+
+    # Khớp chuỗi trực tiếp
+    if oid_str in msg_lower:
+        return True
+
+    # Trích xuất các cụm số liên tiếp
+    oid_digits = re.findall(r"\d+", oid_str)
+    if not oid_digits:
+        return False
+
+    # Trích xuất các cụm số trong tin nhắn gốc
+    msg_digits = re.findall(r"\d+", msg_lower)
+
+    # Loại bỏ số 0 ở đầu để so khớp dạng rút gọn (ví dụ: 0000000009 -> 9)
+    oid_digits_stripped = [d.lstrip("0") for d in oid_digits]
+    msg_digits_stripped = [d.lstrip("0") for d in msg_digits]
+
+    # Kiểm tra xem các cụm số đã rút gọn của order_id có nằm trong cụm số rút gọn của tin nhắn không
+    for d in oid_digits_stripped:
+        if d and d in msg_digits_stripped:
+            return True
+
+    # Fallback: Kiểm tra xem cụm số rút gọn có xuất hiện dưới dạng chuỗi con trong tin nhắn không
+    for d in oid_digits_stripped:
+        if d and d in msg_lower:
+            return True
+
+    return False
+
+
 # ---------------------------------------------------------------------------
 # AIOrchestrator class – Groq (OpenAI Client)
 # ---------------------------------------------------------------------------
@@ -466,14 +507,28 @@ class AIOrchestrator:
         ]
         return subset if subset else None
 
-    def process(self, user_message: str) -> ChatResponse:
+    def process(
+        self, user_message: str, chat_history: list[Any] | None = None
+    ) -> ChatResponse:
         """
         Gửi user_message tới Groq và parse kết quả.
         """
         messages = [
             {"role": "system", "content": self._system_prompt},
-            {"role": "user", "content": user_message},
         ]
+        if chat_history:
+            for msg in chat_history:
+                # msg can be a ChatMessage model or a dict
+                role = getattr(msg, "role", None) or (
+                    msg.get("role") if isinstance(msg, dict) else None
+                )
+                content = getattr(msg, "content", None) or (
+                    msg.get("content") if isinstance(msg, dict) else None
+                )
+                if role and content:
+                    messages.append({"role": role, "content": content})
+
+        messages.append({"role": "user", "content": user_message})
 
         kwargs: dict[str, Any] = {
             "model": _GROQ_MODEL,
@@ -580,7 +635,7 @@ class AIOrchestrator:
 
         # ── Chống ảo tưởng order_id ──────────────────────────────────────────
         if order_id and not self._is_missing_or_null(order_id):
-            if str(order_id).lower() not in lower_msg:
+            if not _is_order_id_in_message(order_id, user_message):
                 logger.warning(
                     "Hallucinated order_id detected: '%s' not in query: '%s'",
                     order_id,
@@ -879,7 +934,9 @@ def process_user_message(request: ChatRequest) -> ChatResponse:
     """
     if _is_real_key_configured():
         try:
-            return _get_orchestrator().process(request.user_message)
+            return _get_orchestrator().process(
+                request.user_message, request.chat_history
+            )
         except Exception as exc:
             logger.error("Groq orchestration error: %s – raising exception.", exc)
             raise

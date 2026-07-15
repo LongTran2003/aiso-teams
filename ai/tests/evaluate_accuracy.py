@@ -8,6 +8,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 import openai
+from typing import Any
 
 # Force standard output to use UTF-8 encoding (especially on Windows)
 if hasattr(sys.stdout, "reconfigure"):
@@ -52,6 +53,10 @@ def _load_system_prompt() -> str:
     for path in (SYSTEM_PROMPT_PATH, SYSTEM_PROMPT_FALLBACK_PATH):
         try:
             content = path.read_text(encoding="utf-8").strip()
+            # Replace date placeholders with the expected evaluation reference date (2026-06-19)
+            content = content.replace("{{CURRENT_DATE}}", "2026-06-19").replace(
+                "{{CURRENT_DAY_OF_WEEK}}", "Friday"
+            )
             label = path.name
             print(
                 f"[Info] Loaded system prompt: {label} ({len(content)} chars)",
@@ -170,6 +175,33 @@ def generate_content_with_retry(
     raise Exception("API call failed after max retries without specific exception.")
 
 
+def _is_order_id_in_message(order_id: Any, user_message: str) -> bool:
+    """Kiểm tra xem order_id (hoặc dạng rút gọn/số của nó) có trong tin nhắn của user không."""
+    oid_str = str(order_id).lower().strip()
+    msg_lower = user_message.lower()
+
+    if oid_str in msg_lower:
+        return True
+
+    oid_digits = re.findall(r"\d+", oid_str)
+    if not oid_digits:
+        return False
+
+    msg_digits = re.findall(r"\d+", msg_lower)
+    oid_digits_stripped = [d.lstrip("0") for d in oid_digits]
+    msg_digits_stripped = [d.lstrip("0") for d in msg_digits]
+
+    for d in oid_digits_stripped:
+        if d and d in msg_digits_stripped:
+            return True
+
+    for d in oid_digits_stripped:
+        if d and d in msg_lower:
+            return True
+
+    return False
+
+
 def validate_parameters(
     fn_name: str, args: dict, user_message: str
 ) -> tuple[str, dict] | None:
@@ -193,7 +225,7 @@ def validate_parameters(
     order_id = args.get("order_id")
 
     # 1. Hallucinated order_id check
-    if order_id and str(order_id).lower() not in lower_msg:
+    if order_id and not _is_order_id_in_message(order_id, user_message):
         return None
 
     # 2. Hallucinated forward_to_user check
@@ -721,7 +753,7 @@ def run_evaluation(
         client = OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
         system_prompt = _load_system_prompt()
         tools = load_tools()
-        model_name = os.getenv("GROQ_MODEL", "llama-3.1-8b-instant")
+        model_name = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
         print(f"Running evaluation using model: {model_name}\n")
     except Exception as e:
         print(f"Failed to initialize API client: {e}", file=sys.stderr)
