@@ -508,6 +508,20 @@ class AIOrchestrator:
                     "Groq API Connection error. Retrying in %s seconds...", sleep_time
                 )
                 time.sleep(sleep_time)
+            except openai.BadRequestError as exc:
+                logger.error(
+                    "Groq API Bad Request (Invalid parameters/schema): %s", exc
+                )
+                recovered = self._recover_failed_generation(exc, user_message)
+                if recovered is not None:
+                    logger.info(
+                        "Successfully recovered from Groq API Bad Request (tool_use_failed)."
+                    )
+                    return recovered
+                raise
+            except openai.AuthenticationError as exc:
+                logger.error("Groq API Authentication Error (Invalid API Key): %s", exc)
+                raise
             except openai.APIStatusError as exc:
                 if exc.status_code >= 500:
                     last_exc = exc
@@ -523,20 +537,6 @@ class AIOrchestrator:
                         "Groq API returned status code %s: %s", exc.status_code, exc
                     )
                     raise
-            except openai.AuthenticationError as exc:
-                logger.error("Groq API Authentication Error (Invalid API Key): %s", exc)
-                raise
-            except openai.BadRequestError as exc:
-                logger.error(
-                    "Groq API Bad Request (Invalid parameters/schema): %s", exc
-                )
-                recovered = self._recover_failed_generation(exc, user_message)
-                if recovered is not None:
-                    logger.info(
-                        "Successfully recovered from Groq API Bad Request (tool_use_failed)."
-                    )
-                    return recovered
-                raise
             except Exception as exc:
                 logger.error("Groq API unexpected error: %s", exc)
                 raise
@@ -701,56 +701,71 @@ class AIOrchestrator:
             if not failed_gen:
                 return None
 
-            match = re.search(
-                r"<function=(\w+)>(.*?)(?:<function>|</function>|$)",
-                failed_gen,
-                re.DOTALL,
-            )
-            if not match:
+            # Let's find all function calls in failed_gen!
+            # e.g. <function=Name>args...
+            pattern = r"<function=(\w+)>(.*?)(?=<function=|</function>|<function>|$)"
+            matches = list(re.finditer(pattern, failed_gen, re.DOTALL))
+            if not matches:
                 return None
 
-            fn_name = match.group(1)
-            raw_args = match.group(2).strip()
+            recovered_tool_calls = []
+            first_fn = None
+            for idx, match in enumerate(matches):
+                fn_name = match.group(1)
+                raw_args = match.group(2).strip()
+                # strip trailing <function> or </function> tags if present in raw_args
+                raw_args = re.sub(r"</?function>", "", raw_args).strip()
 
-            try:
-                args = json.loads(raw_args) if raw_args else {}
-            except json.JSONDecodeError:
                 try:
-                    # Handle double/quadruple escaped quotes from string-serialized JSON arrays
-                    cleaned = raw_args.replace('\\\\"', '\\"')
-                    args = json.loads(cleaned)
-                except Exception:
+                    args = json.loads(raw_args) if raw_args else {}
+                except json.JSONDecodeError:
                     try:
-                        args = json.loads(raw_args.replace("'", '"'))
+                        # Handle double/quadruple escaped quotes from string-serialized JSON arrays
+                        cleaned = raw_args.replace('\\\\"', '\\"')
+                        args = json.loads(cleaned)
                     except Exception:
-                        args = {}
+                        try:
+                            args = json.loads(raw_args.replace("'", '"'))
+                        except Exception:
+                            args = {}
 
-            # Validation các quy tắc
-            validation_resp = self._validate_and_build_response(
-                fn_name, args, user_message
-            )
-            if validation_resp is not None:
-                return validation_resp
+                # Validation các quy tắc
+                validation_resp = self._validate_and_build_response(
+                    fn_name, args, user_message
+                )
+                if validation_resp is not None:
+                    return validation_resp
 
-            # Làm sạch null/empty cho hàm có optional-only params
-            schema = self._schema_cache.get(fn_name, {})
-            if not schema.get("required"):
-                args = {
-                    k: v
-                    for k, v in args.items()
-                    if v is not None and str(v).strip() != "" and str(v) != "null"
-                }
+                # Làm sạch null/empty cho hàm có optional-only params
+                schema = self._schema_cache.get(fn_name, {})
+                if not schema.get("required"):
+                    args = {
+                        k: v
+                        for k, v in args.items()
+                        if v is not None and str(v).strip() != "" and str(v) != "null"
+                    }
 
-            recovered_tool_call = ToolCall(
-                id="recovered_" + fn_name.lower(), function_name=fn_name, arguments=args
-            )
-            intent = _function_name_to_intent(fn_name)
-            card_type = _get_adaptive_card_type(fn_name)
+                if not first_fn:
+                    first_fn = fn_name
+
+                recovered_tool_calls.append(
+                    ToolCall(
+                        id=f"recovered_{fn_name.lower()}_{idx}",
+                        function_name=fn_name,
+                        arguments=args,
+                    )
+                )
+
+            if not recovered_tool_calls:
+                return None
+
+            intent = _function_name_to_intent(first_fn)
+            card_type = _get_adaptive_card_type(first_fn)
 
             return ChatResponse(
                 reply="",
                 intent=intent,
-                tool_calls=[recovered_tool_call],
+                tool_calls=recovered_tool_calls,
                 adaptive_card_type=card_type,
             )
         except Exception as e:
