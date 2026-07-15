@@ -6,6 +6,7 @@ on:
       - develop
     paths:
       - 'ai/**'
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
@@ -27,6 +28,6 @@ jobs:
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'aiso-ai-service'
+          app-name: 'aiso-ai'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_AI }}
           package: ./release.zip
