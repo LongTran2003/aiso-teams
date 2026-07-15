@@ -45,11 +45,10 @@
       "isRequired": true,
       "errorMessage": "Please select a recipient",
       "style": "compact",
-      "$data": "${choices}",
       "choices": [
         {
-          "title": "${title}",
-          "value": "${value}"
+          "title": "${recipientChoice.title}",
+          "value": "${recipientChoice.value}"
         }
       ]
     },
