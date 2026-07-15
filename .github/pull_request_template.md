@@ -1,32 +1,30 @@
-## Mô tả thay đổi
+## Summary
 
-<!-- Brief description of what this PR does -->
+<!-- Thay đổi gì và tại sao. 1-2 câu. -->
 
-## Loại thay đổi
+## Type
 
-- [ ] Feature mới
-- [ ] Bug fix
-- [ ] Refactor / code cleanup
-- [ ] Documentation update
-- [ ] Configuration / CI change
+- [ ] Feature
+- [ ] Fix
+- [ ] Refactor
+- [ ] Docs
+- [ ] CI / Config
 
-## Role / Module
+## Scope
 
-- [ ] Backend (.NET)
-- [ ] AI orchestration
-- [ ] SAP (ABAP/CDS/RAP)
-- [ ] Frontend (Teams app / Cards)
-- [ ] Infrastructure / DevOps
+- [ ] Backend
+- [ ] AI
+- [ ] SAP
+- [ ] Frontend
+- [ ] Infra
 
 ## Checklist
 
-- [ ] Code builds without errors
-- [ ] Tests pass locally
-- [ ] Documentation updated (if applicable)
-- [ ] Đã test feature trong local environment
-- [ ] CODEOWNERS auto-assigned đúng reviewers
-- [ ] PR title theo convention: `type(scope): description`
+- [ ] Build pass, tests pass locally
+- [ ] Đã test thủ công
+- [ ] PR title theo convention `type(scope): description`
+- [ ] Docs updated (nếu đổi API)
 
-## Related issues
+## Related
 
 Closes #
