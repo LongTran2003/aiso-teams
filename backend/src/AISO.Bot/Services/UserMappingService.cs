@@ -46,6 +46,15 @@ public class UserMappingService
             .ToList();
     }
 
+    public async Task<string?> GetDisplayNameAsync(string teamsUserId, CancellationToken cancellationToken = default)
+    {
+        var mapping = await _dbContext.UserMappings
+            .Where(u => u.TeamsUserId == teamsUserId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return string.IsNullOrWhiteSpace(mapping?.DisplayName) ? mapping?.SapUserId : mapping.DisplayName;
+    }
+
     public async Task<string?> GetDisplayNameForSapUserAsync(string sapUserId, CancellationToken cancellationToken = default)
     {
         var mapping = await _dbContext.UserMappings
