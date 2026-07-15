@@ -29,30 +29,30 @@ public class UserMappingService
     public async Task<IReadOnlyList<(string Title, string Value)>> GetForwardRecipientChoicesAsync(CancellationToken cancellationToken = default)
     {
         var mappings = await _dbContext.UserMappings
-            .Where(u => !string.IsNullOrWhiteSpace(u.TeamsUserId) && !string.IsNullOrWhiteSpace(u.SapUserId))
+            .Where(u => !string.IsNullOrWhiteSpace(u.SapUserId))
             .OrderBy(u => u.DisplayName)
             .ThenBy(u => u.SapUserId)
-            .Select(u => new { u.DisplayName, u.SapUserId, u.TeamsUserId })
+            .Select(u => new { u.DisplayName, u.SapUserId })
             .ToListAsync(cancellationToken);
 
-        // Value is the Teams User ID so the SAP owner (zaiso_so_map.teams_user_id)
-        // is stored in the same identity used by every owner check.
+        // Value is the SAP User ID: it is the canonical order owner stored in
+        // zaiso_so_map and fits SAP's 50-char field (Teams IDs are too long).
         return mappings
             .Select(mapping => (
                 Title: string.IsNullOrWhiteSpace(mapping.DisplayName)
                     ? mapping.SapUserId!
                     : $"{mapping.DisplayName} ({mapping.SapUserId})",
-                Value: mapping.TeamsUserId))
+                Value: mapping.SapUserId!))
             .ToList();
     }
 
-    public async Task<string?> GetDisplayNameAsync(string teamsUserId, CancellationToken cancellationToken = default)
+    public async Task<string?> GetDisplayNameForSapUserAsync(string sapUserId, CancellationToken cancellationToken = default)
     {
         var mapping = await _dbContext.UserMappings
-            .Where(u => u.TeamsUserId == teamsUserId)
+            .Where(u => u.SapUserId == sapUserId)
             .FirstOrDefaultAsync(cancellationToken);
 
-        return string.IsNullOrWhiteSpace(mapping?.DisplayName) ? mapping?.SapUserId : mapping.DisplayName;
+        return string.IsNullOrWhiteSpace(mapping?.DisplayName) ? sapUserId : mapping.DisplayName;
     }
 
     public async Task MapUserAsync(string teamsUserId, string displayName, string sapUserId, CancellationToken cancellationToken = default)

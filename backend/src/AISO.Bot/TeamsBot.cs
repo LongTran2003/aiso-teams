@@ -210,7 +210,7 @@ public class TeamsBot : TeamsActivityHandler
 
                         try
                         {
-                            var updatedOrder = await _sap.ReleaseOrderAsync(salesOrderId, teamsUserId, cancellationToken);
+                            var updatedOrder = await _sap.ReleaseOrderAsync(salesOrderId, linkedSapUsername, cancellationToken);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Released")),
                                 cancellationToken);
@@ -255,7 +255,7 @@ public class TeamsBot : TeamsActivityHandler
 
                         try
                         {
-                            var updatedOrder = await _sap.RejectOrderAsync(salesOrderId, sapReasonCode, teamsUserId, cancellationToken);
+                            var updatedOrder = await _sap.RejectOrderAsync(salesOrderId, sapReasonCode, linkedSapUsername, cancellationToken);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Rejected")),
                                 cancellationToken);
@@ -305,13 +305,13 @@ public class TeamsBot : TeamsActivityHandler
                             var updatedOrder = await _sap.ForwardOrderAsync(
                                 salesOrderId,
                                 forwardToUser,
-                                teamsUserId,
+                                linkedSapUsername,
                                 cancellationToken,
                                 remarks);
                             var displayedSo = updatedOrder.SoNumber == "UNKNOWN"
                                 ? salesOrderId
                                 : updatedOrder.SoNumber;
-                            var recipientLabel = await _userMappingService.GetDisplayNameAsync(forwardToUser, cancellationToken);
+                            var recipientLabel = await _userMappingService.GetDisplayNameForSapUserAsync(forwardToUser, cancellationToken);
                             if (string.IsNullOrWhiteSpace(recipientLabel))
                             {
                                 recipientLabel = forwardToUser;
