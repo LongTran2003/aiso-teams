@@ -323,13 +323,10 @@ public class TeamsBot : TeamsActivityHandler
                             var displayedSo = updatedOrder.SoNumber == "UNKNOWN"
                                 ? salesOrderId
                                 : updatedOrder.SoNumber;
-                            var recipientLabel = await _userMappingService.GetDisplayNameForSapUserAsync(forwardToUser, cancellationToken);
-                            if (string.IsNullOrWhiteSpace(recipientLabel))
-                            {
-                                recipientLabel = forwardToUser;
-                            }
+                            // Show the SAP User ID directly: several Teams users may map
+                            // to the same SAP account, so a name lookup would be ambiguous.
                             await turnContext.SendActivityAsync(
-                                $"Sales order {displayedSo} has been forwarded to {recipientLabel}.",
+                                $"Sales order {displayedSo} has been forwarded to {forwardToUser}.",
                                 cancellationToken: cancellationToken);
                         }
                         catch (SapODataException sapEx)
