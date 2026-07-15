@@ -1,33 +1,33 @@
 {
   "name": "GetKpiByCustomer",
-  "description": "Get KPI metrics per customer from SAP: revenue, order count, average order value, fulfillment rate. Trigger when user asks about customer performance, top customers by revenue, client-level sales analysis, or specific customer KPI. All params optional — call immediately on intent match.",
+  "description": "Get KPI metrics per customer (revenue, performance). All params optional.",
   "parameters": {
     "type": "object",
     "properties": {
       "customerIdOrName": {
         "type": ["string", "null"],
-        "description": "Customer ID or partial name to filter to a specific customer (e.g. 'CUST-3001', 'Philly Bikes'). Null to return all customers ranked by revenue."
+        "description": "Customer ID or partial name (e.g. 'CUST-3001')."
       },
       "fromDate": {
         "type": ["string", "null"],
         "format": "date",
-        "description": "Start date YYYY-MM-DD. Null if not specified."
+        "description": "Start date YYYY-MM-DD."
       },
       "toDate": {
         "type": ["string", "null"],
         "format": "date",
-        "description": "End date YYYY-MM-DD. Null if not specified."
+        "description": "End date YYYY-MM-DD."
       },
       "salesOrg": {
         "type": ["string", "null"],
         "enum": ["UE00", "UW00", "DN00", "DS00", null],
-        "description": "Sales org filter. Null if not specified."
+        "description": "Sales org."
       },
       "top": {
         "type": ["integer", "null"],
         "minimum": 1,
         "maximum": 50,
-        "description": "Return top N customers by revenue (1–50). Null if not specified."
+        "description": "Top N customers by revenue."
       }
     },
     "required": [],

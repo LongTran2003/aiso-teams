@@ -694,16 +694,10 @@
       "items": [
         {
           "material": "PART-A01",
-          "qty": 20,
-          "unit": "PC"
+          "qty": 20
         }
       ],
-      "currency": "USD",
-      "type": "array",
-      "doc_type": "TA",
-      "sales_org": "1010",
-      "division": "00",
-      "dist_channel": "10"
+      "currency": "USD"
     }
   },
   "Lập đơn hàng cho khách CUST-20001 gồm 8 chiếc FRAME-03.": {

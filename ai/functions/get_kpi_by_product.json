@@ -1,33 +1,33 @@
 {
   "name": "GetKpiByProduct",
-  "description": "Get KPI metrics per product/material from SAP: quantity sold, revenue, delivery fulfillment rate. Trigger when user asks about product performance, best-selling items, top products, or per-SKU revenue analysis. All params optional — call immediately on intent match.",
+  "description": "Get KPI metrics per product (revenue, quantity sold). All params optional.",
   "parameters": {
     "type": "object",
     "properties": {
       "materialIdOrName": {
         "type": ["string", "null"],
-        "description": "Material ID or partial product name to filter to a specific product (e.g. 'TG11', 'Mountain Bike'). Null to return all products."
+        "description": "Material ID or product name (e.g. 'TG11')."
       },
       "fromDate": {
         "type": ["string", "null"],
         "format": "date",
-        "description": "Start date YYYY-MM-DD. Null if not specified."
+        "description": "Start date YYYY-MM-DD."
       },
       "toDate": {
         "type": ["string", "null"],
         "format": "date",
-        "description": "End date YYYY-MM-DD. Null if not specified."
+        "description": "End date YYYY-MM-DD."
       },
       "salesOrg": {
         "type": ["string", "null"],
         "enum": ["UE00", "UW00", "DN00", "DS00", null],
-        "description": "Sales organization code filter. Null if not specified by the user."
+        "description": "Sales org."
       },
       "top": {
         "type": ["integer", "null"],
         "minimum": 1,
         "maximum": 50,
-        "description": "Return top N products by revenue (1–50). Null if not specified."
+        "description": "Top N products by revenue."
       }
     },
     "required": [],
