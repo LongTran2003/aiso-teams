@@ -1,16 +1,16 @@
 {
   "name": "ReleaseOrder",
-  "description": "Approve and release a pending sales order in the SAP ERP system. Trigger this function when the user explicitly requests to approve, release, sign off, or authorize a sales order.",
+  "description": "Approve and release a sales order. Requires order_id.",
   "parameters": {
     "type": "object",
     "properties": {
       "order_id": {
         "type": "string",
-        "description": "The unique sales order identifier in SAP (e.g., '5', '8' or '0000005001') that needs approval and release."
+        "description": "Sales order number."
       },
       "comment": {
         "type": ["string", "null"],
-        "description": "An optional note, remark, or justification explaining the reason for approving and releasing the order. Use null or omit this property if the user did not provide any comment or note."
+        "description": "Optional comment or note."
       }
     },
     "required": ["order_id"],

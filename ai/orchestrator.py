@@ -338,6 +338,134 @@ class AIOrchestrator:
             len(self._tools) if self._tools else 0,
         )
 
+    def _get_subset_tools(self, user_message: str) -> list[dict[str, Any]] | None:
+        """
+        Phân tích user_message để chọn ra subset tools phù hợp, giảm lượng token payload.
+        """
+        if not self._tools:
+            return None
+
+        msg_lower = user_message.lower()
+
+        # Định nghĩa các group tools
+        kpi_tools = {"GetKpiSummary", "GetKpiByCustomer", "GetKpiByProduct"}
+        create_update_tools = {"CreateOrder", "UpdateOrderReference"}
+        order_op_tools = {
+            "CheckOrderStatus",
+            "GetOrderDetail",
+            "ReleaseOrder",
+            "RejectOrder",
+            "ForwardOrder",
+        }
+        order_list_tools = {"GetSalesOrders", "GetOverdueOrders"}
+
+        # Từ khóa định vị nhóm (gồm cả Tiếng Việt không dấu và synonyms)
+        kpi_keywords = [
+            "kpi",
+            "doanh thu",
+            "doanh số",
+            "doanh so",
+            "dashboard",
+            "hiệu suất",
+            "hieu suat",
+            "bán chạy",
+            "ban chay",
+            "revenue",
+        ]
+        create_update_keywords = [
+            "tạo",
+            "tao",
+            "đặt hàng",
+            "dat hang",
+            "lập đơn",
+            "lap don",
+            "lên đơn",
+            "len don",
+            "cập nhật",
+            "cap nhat",
+            "reference",
+            "số po",
+            "so po",
+            "đổi po",
+            "doi po",
+            "gán số po",
+            "gan so po",
+            "create",
+            "update",
+            "new order",
+            "place",
+            "generate",
+        ]
+        order_list_keywords = [
+            "danh sách",
+            "danh sach",
+            "lọc đơn",
+            "loc don",
+            "tìm đơn",
+            "tim don",
+            "quá hạn",
+            "qua han",
+            "giao hàng trễ",
+            "giao hang tre",
+            "trễ hạn",
+            "tre han",
+            "late",
+            "overdue",
+            "list",
+            "search",
+        ]
+
+        selected_names = set()
+
+        # 1. Khớp nhóm KPI
+        if any(kw in msg_lower for kw in kpi_keywords):
+            selected_names.update(kpi_tools)
+
+        # 2. Khớp nhóm Create/Update
+        if any(kw in msg_lower for kw in create_update_keywords):
+            selected_names.update(create_update_tools)
+
+        # 3. Khớp nhóm List
+        if any(kw in msg_lower for kw in order_list_keywords):
+            selected_names.update(order_list_tools)
+            selected_names.update(order_op_tools)
+
+        # 4. Nếu không khớp nhóm đặc trưng nào hoặc khớp thao tác đơn lẻ, mặc định dùng Fallback (Op + List)
+        if not selected_names or any(
+            kw in msg_lower
+            for kw in [
+                "duyệt",
+                "duyet",
+                "hủy",
+                "huy",
+                "từ chối",
+                "tu choi",
+                "chuyển tiếp",
+                "chuyen tiep",
+                "bàn giao",
+                "ban giao",
+                "nhờ xử lý",
+                "nho xu ly",
+                "chi tiết",
+                "chi tiet",
+                "xem đơn",
+                "xem don",
+                "release",
+                "approve",
+                "reject",
+                "forward",
+            ]
+        ):
+            selected_names.update(order_op_tools)
+            selected_names.update(order_list_tools)
+
+        subset = [
+            tool
+            for tool in self._tools
+            if tool.get("function", {}).get("name") in selected_names
+        ]
+        return subset if subset else None
+
     def process(self, user_message: str) -> ChatResponse:
         """
         Gửi user_message tới Groq và parse kết quả.
@@ -352,8 +480,9 @@ class AIOrchestrator:
             "messages": messages,
             "temperature": 0.1,
         }
-        if self._tools:
-            kwargs["tools"] = self._tools
+        subset_tools = self._get_subset_tools(user_message)
+        if subset_tools:
+            kwargs["tools"] = subset_tools
             kwargs["tool_choice"] = "auto"
 
         max_retries = 6
@@ -437,6 +566,14 @@ class AIOrchestrator:
         Trả về ChatResponse nếu cần yêu cầu người dùng cung cấp thêm thông tin,
         hoặc None nếu tất cả tham số hợp lệ.
         """
+        # Convert string-serialized items array to list if needed
+        items = args.get("items")
+        if isinstance(items, str) and items.strip().startswith("["):
+            try:
+                args["items"] = json.loads(items)
+            except Exception:
+                pass
+
         lower_msg = user_message.lower()
         order_id = args.get("order_id")
         is_reject_intent = fn_name == "RejectOrder"
@@ -579,9 +716,14 @@ class AIOrchestrator:
                 args = json.loads(raw_args) if raw_args else {}
             except json.JSONDecodeError:
                 try:
-                    args = json.loads(raw_args.replace("'", '"'))
+                    # Handle double/quadruple escaped quotes from string-serialized JSON arrays
+                    cleaned = raw_args.replace('\\\\"', '\\"')
+                    args = json.loads(cleaned)
                 except Exception:
-                    args = {}
+                    try:
+                        args = json.loads(raw_args.replace("'", '"'))
+                    except Exception:
+                        args = {}
 
             # Validation các quy tắc
             validation_resp = self._validate_and_build_response(

@@ -181,6 +181,14 @@ def validate_parameters(
     - Null-cleaning + hallucination-stripping for optional-only param functions.
     Returns (fn_name, args) if valid, or None if invalid.
     """
+    # Convert string-serialized items array to list if needed
+    items = args.get("items")
+    if isinstance(items, str) and items.strip().startswith("["):
+        try:
+            args["items"] = json.loads(items)
+        except Exception:
+            pass
+
     lower_msg = user_message.lower()
     order_id = args.get("order_id")
 
@@ -490,9 +498,14 @@ def parse_and_validate_failed_generation(
             args = json.loads(raw_args) if raw_args else {}
         except json.JSONDecodeError:
             try:
-                args = json.loads(raw_args.replace("'", '"'))
+                # Handle double/quadruple escaped quotes from string-serialized JSON arrays
+                cleaned = raw_args.replace('\\\\"', '\\"')
+                args = json.loads(cleaned)
             except Exception:
-                args = {}
+                try:
+                    args = json.loads(raw_args.replace("'", '"'))
+                except Exception:
+                    args = {}
 
         validated = validate_parameters(fn_name, args, query)
         if validated is None:
@@ -754,10 +767,130 @@ def run_evaluation(
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": query},
                 ]
+                # Pre-route tools to reduce token usage and bypass TPM limit
+                msg_lower = query.lower()
+                kpi_tools = {"GetKpiSummary", "GetKpiByCustomer", "GetKpiByProduct"}
+                create_update_tools = {"CreateOrder", "UpdateOrderReference"}
+                order_op_tools = {
+                    "CheckOrderStatus",
+                    "GetOrderDetail",
+                    "ReleaseOrder",
+                    "RejectOrder",
+                    "ForwardOrder",
+                }
+                order_list_tools = {"GetSalesOrders", "GetOverdueOrders"}
+
+                kpi_keywords = [
+                    "kpi",
+                    "doanh thu",
+                    "doanh số",
+                    "doanh so",
+                    "dashboard",
+                    "hiệu suất",
+                    "hieu suat",
+                    "bán chạy",
+                    "ban chay",
+                    "revenue",
+                ]
+                create_update_keywords = [
+                    "tạo",
+                    "tao",
+                    "đặt hàng",
+                    "dat hang",
+                    "lập đơn",
+                    "lap don",
+                    "lên đơn",
+                    "len don",
+                    "cập nhật",
+                    "cap nhat",
+                    "reference",
+                    "số po",
+                    "so po",
+                    "đổi po",
+                    "doi po",
+                    "gán số po",
+                    "gan so po",
+                    "create",
+                    "update",
+                    "new order",
+                    "place",
+                    "generate",
+                ]
+                order_list_keywords = [
+                    "danh sách",
+                    "danh sach",
+                    "lọc đơn",
+                    "loc don",
+                    "tìm đơn",
+                    "tim don",
+                    "quá hạn",
+                    "qua han",
+                    "giao hàng trễ",
+                    "giao hang tre",
+                    "trễ hạn",
+                    "tre han",
+                    "late",
+                    "overdue",
+                    "list",
+                    "search",
+                ]
+
+                selected_names = set()
+                if any(kw in msg_lower for kw in kpi_keywords):
+                    selected_names.update(kpi_tools)
+                if any(kw in msg_lower for kw in create_update_keywords):
+                    selected_names.update(create_update_tools)
+                if any(kw in msg_lower for kw in order_list_keywords):
+                    selected_names.update(order_list_tools)
+                    selected_names.update(order_op_tools)
+                if not selected_names or any(
+                    kw in msg_lower
+                    for kw in [
+                        "duyệt",
+                        "duyet",
+                        "hủy",
+                        "huy",
+                        "từ chối",
+                        "tu choi",
+                        "chuyển tiếp",
+                        "chuyen tiep",
+                        "bàn giao",
+                        "ban giao",
+                        "nhờ xử lý",
+                        "nho xu ly",
+                        "chi tiết",
+                        "chi tiet",
+                        "xem đơn",
+                        "xem don",
+                        "release",
+                        "approve",
+                        "reject",
+                        "forward",
+                    ]
+                ):
+                    selected_names.update(order_op_tools)
+                    selected_names.update(order_list_tools)
+
+                subset_tools = [
+                    t
+                    for t in tools
+                    if t.get("function", {}).get("name") in selected_names
+                ]
+                if not subset_tools:
+                    subset_tools = None
+
                 try:
                     response = generate_content_with_retry(
-                        client=client, model=model_name, messages=messages, tools=tools
+                        client=client,
+                        model=model_name,
+                        messages=messages,
+                        tools=subset_tools,
                     )
+                    if hasattr(response, "usage") and response.usage:
+                        print(
+                            f" [Token Usage: Prompt={response.usage.prompt_tokens}, Completion={response.usage.completion_tokens}, Total={response.usage.total_tokens}]",
+                            end="",
+                        )
                     choice = response.choices[0]
                     tool_calls = getattr(choice.message, "tool_calls", None) or []
                     if tool_calls and tool_calls[0].type == "function":

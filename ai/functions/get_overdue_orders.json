@@ -1,25 +1,25 @@
 {
   "name": "GetOverdueOrders",
-  "description": "Get sales orders that have exceeded their scheduled delivery date from SAP. Trigger when user asks about late orders, overdue deliveries, delayed shipments, or orders past due date. All params optional.",
+  "description": "Get overdue SAP sales orders. All params optional.",
   "parameters": {
     "type": "object",
     "properties": {
       "customerIdOrName": {
         "type": ["string", "null"],
-        "description": "Customer ID or partial name filter. Null if not specified."
+        "description": "Customer ID or partial name."
       },
       "salesOrg": {
         "type": ["string", "null"],
         "enum": ["UE00", "UW00", "DN00", "DS00", null],
-        "description": "Sales org filter. Null if not specified."
+        "description": "Sales org."
       },
       "daysPastDue": {
         "type": ["integer", "null"],
-        "description": "Min days past scheduled delivery date (positive integer). Null if not specified."
+        "description": "Minimum days past due."
       },
       "top": {
         "type": ["integer", "null"],
-        "description": "Max records returned, ordered most-overdue first. Null if not specified."
+        "description": "Max records to return."
       }
     },
     "required": [],
