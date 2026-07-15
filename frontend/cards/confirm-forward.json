@@ -26,6 +26,13 @@
     },
     {
       "type": "TextBlock",
+      "text": "Sender: ${senderName}",
+      "wrap": true,
+      "isSubtle": true,
+      "spacing": "Small"
+    },
+    {
+      "type": "TextBlock",
       "text": "Select a recipient and add an optional note.",
       "wrap": true,
       "isSubtle": true,
