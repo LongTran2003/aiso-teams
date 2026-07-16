@@ -205,7 +205,14 @@ public class SapClient : ISapClient
         try
         {
             var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
-            return result == null ? throw new InvalidOperationException("Failed to deserialize rejected order.") : MapToDomain(result);
+            if (result == null)
+                throw new InvalidOperationException("Failed to deserialize rejected order.");
+
+            // RAP action often returns only %tky (no SoNumber in body). Keep the known key.
+            var order = MapToDomain(result);
+            return order.SoNumber is "UNKNOWN"
+                ? order with { SoNumber = formattedSo }
+                : order;
         }
         catch (Exception ex)
         {
@@ -228,7 +235,14 @@ public class SapClient : ISapClient
         try
         {
             var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
-            return result == null ? throw new InvalidOperationException("Failed to deserialize released order.") : MapToDomain(result);
+            if (result == null)
+                throw new InvalidOperationException("Failed to deserialize released order.");
+
+            // RAP action often returns only %tky (no SoNumber in body). Keep the known key.
+            var order = MapToDomain(result);
+            return order.SoNumber is "UNKNOWN"
+                ? order with { SoNumber = formattedSo }
+                : order;
         }
         catch (Exception ex)
         {
