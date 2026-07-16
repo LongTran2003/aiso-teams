@@ -449,100 +449,112 @@ ENDMETHOD.
 ENDMETHOD.
 ENDCLASS.
 
-CLASS lsc_zbp_i_aiso_so_header DEFINITION INHERITING FROM cl_abap_behavior_saver.
+CLASS lsc_zbp_i_aiso_so_header DEFINITION INHERITING FROM cl_abap_behavior_saver_failed.
   PROTECTED SECTION.
     METHODS save REDEFINITION.
     METHODS cleanup REDEFINITION.
 ENDCLASS.
 
 CLASS lsc_zbp_i_aiso_so_header IMPLEMENTATION.
-   METHOD save.
-  DATA: ls_header_in  TYPE bapisdh1,
-        ls_header_inx TYPE bapisdh1x,
-        lt_items_in   TYPE TABLE OF bapisditm,
-        lt_items_inx  TYPE TABLE OF bapisditmx,
-        lt_return     TYPE TABLE OF bapiret2,
-        lv_timestamp  TYPE c LENGTH 14,
-        lv_audit_id   TYPE sysuuid_c32,
-        lv_status     TYPE string,
-        lv_error_msg  TYPE string.
+  METHOD save.
+    DATA: ls_header_in  TYPE bapisdh1,
+          ls_header_inx TYPE bapisdh1x,
+          lt_items_in   TYPE TABLE OF bapisditm,
+          lt_items_inx  TYPE TABLE OF bapisditmx,
+          lt_return     TYPE TABLE OF bapiret2,
+          lv_timestamp  TYPE c LENGTH 14,
+          lv_audit_id   TYPE sysuuid_c32,
+          lv_status     TYPE string.
 
-  LOOP AT lcl_buffer=>gt_release_reject INTO DATA(ls_rr).
-    CLEAR: ls_header_in, ls_header_inx, lt_items_in, lt_items_inx, lt_return, lv_error_msg.
-    ls_header_inx-updateflag = 'U'.
+    LOOP AT lcl_buffer=>gt_release_reject INTO DATA(ls_rr).
+      CLEAR: ls_header_in, ls_header_inx, lt_items_in, lt_items_inx, lt_return.
+      ls_header_inx-updateflag = 'U'.
 
-    IF ls_rr-action_type = 'RELEASE'.
-      ls_header_in-dlv_block  = ''.
-      ls_header_inx-dlv_block = 'X'.
+      IF ls_rr-action_type = 'RELEASE'.
+        ls_header_in-dlv_block  = ''.
+        ls_header_inx-dlv_block = 'X'.
 
-      CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
-        EXPORTING
-          salesdocument    = ls_rr-so_number
-          order_header_in  = ls_header_in
-          order_header_inx = ls_header_inx
-        TABLES
-          return           = lt_return.
+        CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+          EXPORTING
+            salesdocument    = ls_rr-so_number
+            order_header_in  = ls_header_in
+            order_header_inx = ls_header_inx
+          TABLES
+            return           = lt_return.
 
-    ELSEIF ls_rr-action_type = 'REJECT'.
-      SELECT posnr FROM vbap
-        INTO TABLE @DATA(lt_posnr)
-        WHERE vbeln = @ls_rr-so_number.
+      ELSEIF ls_rr-action_type = 'REJECT'.
+        SELECT posnr FROM vbap
+          INTO TABLE @DATA(lt_posnr)
+          WHERE vbeln = @ls_rr-so_number.
 
-      LOOP AT lt_posnr INTO DATA(ls_posnr).
-        APPEND VALUE #( itm_number = ls_posnr-posnr
-                         reason_rej = ls_rr-rejection_code ) TO lt_items_in.
-        APPEND VALUE #( itm_number = ls_posnr-posnr
-                         reason_rej = 'X' ) TO lt_items_inx.
-      ENDLOOP.
+        LOOP AT lt_posnr INTO DATA(ls_posnr).
+          APPEND VALUE #( itm_number = ls_posnr-posnr
+                           reason_rej = ls_rr-rejection_code ) TO lt_items_in.
+          APPEND VALUE #( itm_number = ls_posnr-posnr
+                           reason_rej = 'X' ) TO lt_items_inx.
+        ENDLOOP.
 
-      CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
-        EXPORTING
-          salesdocument    = ls_rr-so_number
-          order_header_in  = ls_header_in
-          order_header_inx = ls_header_inx
-        TABLES
-          order_item_in    = lt_items_in
-          order_item_inx   = lt_items_inx
-          return           = lt_return.
+        CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+          EXPORTING
+            salesdocument    = ls_rr-so_number
+            order_header_in  = ls_header_in
+            order_header_inx = ls_header_inx
+          TABLES
+            order_item_in    = lt_items_in
+            order_item_inx   = lt_items_inx
+            return           = lt_return.
+      ENDIF.
+
+      " KHÔNG gọi BAPI_TRANSACTION_COMMIT — RAP tự commit sau save()
+
+      READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
+      IF sy-subrc = 0.
+        lv_status = 'FAILED'.
+
+        " Báo lỗi thật về OData — chỉ khả thi vì kế thừa cl_abap_behavior_saver_failed
+        APPEND VALUE #( %tky-SoNumber = ls_rr-so_number
+                         %fail-cause  = if_abap_behv=>cause-unspecific )
+               TO failed-salesorder.
+        APPEND VALUE #( %tky-SoNumber = ls_rr-so_number
+                         %msg = new_message( id       = ls_error-id
+                                              number   = ls_error-number
+                                              severity = if_abap_behv_message=>severity-error
+                                              v1       = ls_error-message_v1
+                                              v2       = ls_error-message_v2
+                                              v3       = ls_error-message_v3
+                                              v4       = ls_error-message_v4 ) )
+               TO reported-salesorder.
+      ELSE.
+        lv_status = 'SUCCESS'.
+      ENDIF.
+
+      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+      TRY.
+          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+        CATCH cx_uuid_error.
+          CLEAR lv_audit_id.
+      ENDTRY.
+
+      APPEND VALUE #(
+        mandt       = sy-mandt
+        audit_id    = lv_audit_id
+        sap_user    = sy-uname
+        action_type = COND #( WHEN ls_rr-action_type = 'RELEASE' THEN 'RELEASE_SO' ELSE 'REJECT_SO' )
+        so_number   = ls_rr-so_number
+        status      = lv_status
+        remarks     = COND #( WHEN lv_status = 'FAILED' THEN ls_error-message ELSE ls_rr-rejection_code )
+        created_at  = lv_timestamp
+      ) TO lcl_buffer=>gt_audit_db.
+    ENDLOOP.
+
+    IF lcl_buffer=>gt_so_map_db IS NOT INITIAL.
+      MODIFY zaiso_so_map FROM TABLE @lcl_buffer=>gt_so_map_db.
     ENDIF.
 
-    " KHÔNG gọi BAPI_TRANSACTION_COMMIT — RAP tự commit sau save()
-
-    READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
-    IF sy-subrc = 0.
-      lv_status    = 'FAILED'.
-      lv_error_msg = ls_error-message.
-    ELSE.
-      lv_status = 'SUCCESS'.
+    IF lcl_buffer=>gt_audit_db IS NOT INITIAL.
+      INSERT zaiso_audit FROM TABLE @lcl_buffer=>gt_audit_db.
     ENDIF.
-
-    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
-    TRY.
-        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
-      CATCH cx_uuid_error.
-        CLEAR lv_audit_id.
-    ENDTRY.
-
-    APPEND VALUE #(
-      mandt       = sy-mandt
-      audit_id    = lv_audit_id
-      sap_user    = sy-uname
-      action_type = COND #( WHEN ls_rr-action_type = 'RELEASE' THEN 'RELEASE_SO' ELSE 'REJECT_SO' )
-      so_number   = ls_rr-so_number
-      status      = lv_status
-      remarks     = COND #( WHEN lv_status = 'FAILED' THEN lv_error_msg ELSE ls_rr-rejection_code )
-      created_at  = lv_timestamp
-    ) TO lcl_buffer=>gt_audit_db.
-  ENDLOOP.
-
-  IF lcl_buffer=>gt_so_map_db IS NOT INITIAL.
-    MODIFY zaiso_so_map FROM TABLE @lcl_buffer=>gt_so_map_db.
-  ENDIF.
-
-  IF lcl_buffer=>gt_audit_db IS NOT INITIAL.
-    INSERT zaiso_audit FROM TABLE @lcl_buffer=>gt_audit_db.
-  ENDIF.
-ENDMETHOD.
+  ENDMETHOD.
 
   METHOD cleanup.
     CLEAR: lcl_buffer=>gt_so_map_db, lcl_buffer=>gt_audit_db, lcl_buffer=>gt_release_reject.
