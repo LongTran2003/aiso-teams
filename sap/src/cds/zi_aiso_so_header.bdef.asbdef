@@ -11,5 +11,10 @@ lock master
   action releaseOrder parameter zaiso_s_release_params  result [1] $self;
   action forwardOrder parameter zaiso_s_forward_params result [1] $self;
   action rejectOrder parameter zaiso_a_reject_so result [1] $self;
+  action approveOrder parameter zaiso_a_approve result [1] $self;
+  action rejectApproval parameter zaiso_a_approve result [1] $self;
+  action reassignOwner parameter zaiso_a_reassign result [1] $self;
+  action forceCancel parameter zaiso_a_override result [1] $self;
+  action forceRelease parameter zaiso_a_override result [1] $self;
   field ( readonly ) SoNumber, OverallStatus, Customer, SalesOrg, DistChannel, Division, Currency, NetValue, DocDate, CreatedBy, CreatedDate;
 }
