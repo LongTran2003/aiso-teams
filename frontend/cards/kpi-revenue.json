@@ -31,7 +31,8 @@
       "url": "${chartUrl}",
       "altText": "Revenue chart",
       "spacing": "Medium",
-      "horizontalAlignment": "Center"
+      "horizontalAlignment": "Center",
+      "$when": "${chartUrl != ''}"
     }
   ],
   "actions": [

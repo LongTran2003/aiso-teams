@@ -82,7 +82,7 @@ internal static class TeamsCardBuilder
                 delayedCount = delayedCount.ToString(),
                 completedToday = deliveredCount.ToString(),
                 deliveryProgress = (int)onTimeRate,
-                chartUrl
+                chartUrl = chartUrl ?? string.Empty
             });
         }
 
@@ -94,7 +94,7 @@ internal static class TeamsCardBuilder
                 totalRevenue = $"{totalRevenue:N0} {currency}",
                 growthRate = orders.Count > 5 ? "+12%" : "+8%",
                 targetRevenue = $"{targetRevenue:N0} {currency}",
-                chartUrl
+                chartUrl = chartUrl ?? string.Empty
             });
         }
 
@@ -102,9 +102,14 @@ internal static class TeamsCardBuilder
         {
             return BuildKpiSummaryCard(new
             {
+                period = "Current results",
                 revenueValue = $"{totalRevenue:N0} {currency}",
                 orderCount = orders.Count,
-                chartUrl
+                openOrders = orders.Count(o => o.Status == SalesOrderStatus.Open),
+                deliveredOrders = orders.Count(o => o.Status is SalesOrderStatus.Delivered or SalesOrderStatus.Invoiced),
+                overdueOrders = orders.Count(o => o.Status == SalesOrderStatus.Blocked),
+                fulfillmentRate = orders.Count == 0 ? "0%" : $"{Math.Round((double)orders.Count(o => o.Status is SalesOrderStatus.Delivered or SalesOrderStatus.Invoiced) / orders.Count * 100, 1):0.0}%",
+                chartUrl = chartUrl ?? string.Empty
             });
         }
 
