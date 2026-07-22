@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AISO.Domain.Users;
 using AISO.Persistence;
 using AISO.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -44,6 +45,29 @@ public class UserMappingService
                     : $"{mapping.DisplayName} ({mapping.SapUserId})",
                 Value: mapping.SapUserId!))
             .ToList();
+    }
+
+    /// <summary>
+    /// Returns the RBAC role for a user. Unknown/unmapped users default to
+    /// <see cref="UserRole.Employee"/> (least privilege).
+    /// </summary>
+    public async Task<UserRole> GetRoleAsync(string teamsUserId, CancellationToken cancellationToken = default)
+    {
+        var mapping = await _dbContext.UserMappings
+            .Where(u => u.TeamsUserId == teamsUserId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return mapping?.Role ?? UserRole.Employee;
+    }
+
+    /// <summary>Sales organization (VKORG) scope for Manager filtering. Null if unset.</summary>
+    public async Task<string?> GetSalesOrgAsync(string teamsUserId, CancellationToken cancellationToken = default)
+    {
+        var mapping = await _dbContext.UserMappings
+            .Where(u => u.TeamsUserId == teamsUserId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return string.IsNullOrWhiteSpace(mapping?.SalesOrg) ? null : mapping.SalesOrg;
     }
 
     public async Task<string?> GetDisplayNameAsync(string teamsUserId, CancellationToken cancellationToken = default)

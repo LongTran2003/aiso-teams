@@ -1,6 +1,6 @@
 {
-  "name": "ReleaseOrder",
-  "description": "Directly release a sales order in SAP. Manager or Admin only. Prefer ApproveOrder when a pending release request exists; Employees should use RequestRelease instead.",
+  "name": "RejectApproval",
+  "description": "Reject a pending release-approval request (does not reject the sales order itself). Manager or Admin only.",
   "parameters": {
     "type": "object",
     "properties": {
@@ -10,7 +10,7 @@
       },
       "comment": {
         "type": ["string", "null"],
-        "description": "Optional comment or note."
+        "description": "Reason for rejecting the approval request."
       }
     },
     "required": ["order_id"],

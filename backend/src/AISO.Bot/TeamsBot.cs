@@ -3,7 +3,9 @@ using System.Diagnostics;
 using AISO.AiOrchestration;
 using AISO.Bot.Cards;
 using AISO.Bot.Cards.Builders;
+using AISO.Domain.Approvals;
 using AISO.Domain.SalesOrders;
+using AISO.Domain.Users;
 using AISO.Persistence.Auditing;
 using AISO.SapIntegration;
 using Microsoft.Bot.Builder;
@@ -24,6 +26,7 @@ public class TeamsBot : TeamsActivityHandler
     private readonly IFunctionDispatcher _dispatcher;
     private readonly ISapClient _sap;
     private readonly IAuditLogger _audit;
+    private readonly IOrderApprovalService _approvals;
     private readonly ILogger<TeamsBot> _logger;
     private readonly ConversationState _conversationState;
     private readonly UserState _userState;
@@ -34,6 +37,7 @@ public class TeamsBot : TeamsActivityHandler
         IFunctionDispatcher dispatcher,
         ISapClient sap,
         IAuditLogger audit,
+        IOrderApprovalService approvals,
         ILogger<TeamsBot> logger,
         ConversationState conversationState,
         UserState userState,
@@ -43,6 +47,7 @@ public class TeamsBot : TeamsActivityHandler
         _dispatcher = dispatcher;
         _sap = sap;
         _audit = audit;
+        _approvals = approvals;
         _logger = logger;
         _conversationState = conversationState;
         _userState = userState;
@@ -220,12 +225,85 @@ public class TeamsBot : TeamsActivityHandler
                             return;
                         }
 
+                        var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+
                         try
                         {
+                            // Maker-checker: Employees submit a request; Managers/Admins release (or approve pending).
+                            if (role == UserRole.Employee)
+                            {
+                                var order = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
+                                if (order is null)
+                                {
+                                    await turnContext.SendActivityAsync(
+                                        MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("NOT_FOUND", $"Sales order {salesOrderId} was not found.")),
+                                        cancellationToken);
+                                    return;
+                                }
+
+                                var request = await _approvals.RequestReleaseAsync(
+                                    order.SoNumber,
+                                    linkedSapUsername,
+                                    order.SalesOrg,
+                                    comment,
+                                    cancellationToken);
+
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(
+                                        TeamsCardBuilder.BuildSuccessCard(request.SoNumber, "ReleaseRequested")),
+                                    cancellationToken);
+                                return;
+                            }
+
+                            var pending = await _approvals.GetPendingBySoNumberAsync(salesOrderId, cancellationToken);
+                            if (pending is not null)
+                            {
+                                var managerSalesOrg = await _userMappingService.GetSalesOrgAsync(teamsUserId, cancellationToken);
+                                var isAdmin = role == UserRole.Admin;
+                                if (!isAdmin
+                                    && !string.IsNullOrWhiteSpace(managerSalesOrg)
+                                    && !string.IsNullOrWhiteSpace(pending.SalesOrg)
+                                    && !string.Equals(pending.SalesOrg, managerSalesOrg, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    await turnContext.SendActivityAsync(
+                                        MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                            "NOT_AUTHORIZED",
+                                            $"Order {pending.SoNumber} belongs to sales org {pending.SalesOrg}; your scope is {managerSalesOrg}.")),
+                                        cancellationToken);
+                                    return;
+                                }
+
+                                var updated = await _sap.ReleaseOrderAsync(pending.SoNumber, linkedSapUsername, cancellationToken);
+                                await _approvals.ApproveAsync(
+                                    pending.SoNumber,
+                                    linkedSapUsername,
+                                    managerSalesOrg,
+                                    isAdmin,
+                                    comment,
+                                    cancellationToken);
+
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updated.SoNumber, "Approved")),
+                                    cancellationToken);
+                                return;
+                            }
+
                             var updatedOrder = await _sap.ReleaseOrderAsync(salesOrderId, linkedSapUsername, cancellationToken);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Released")),
                                 cancellationToken);
+                        }
+                        catch (UnauthorizedAccessException authEx)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("NOT_AUTHORIZED", authEx.Message)),
+                                cancellationToken: cancellationToken);
+                        }
+                        catch (InvalidOperationException invEx)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", invEx.Message)),
+                                cancellationToken: cancellationToken);
                         }
                         catch (SapODataException sapEx)
                         {
@@ -438,8 +516,10 @@ public class TeamsBot : TeamsActivityHandler
                 cancellationToken);
             var loadingActivityId = loadingActivity?.Id;
 
+            var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+
             var stopwatch = Stopwatch.StartNew();
-            var dispatch = await _dispatcher.DispatchAsync(userMessage, sapUsername, cancellationToken);
+            var dispatch = await _dispatcher.DispatchAsync(userMessage, sapUsername, role, cancellationToken);
             stopwatch.Stop();
 
             // Audit — best-effort: a write failure must not break the bot.
@@ -468,6 +548,22 @@ public class TeamsBot : TeamsActivityHandler
                     loadingActivityId,
                     TeamsCardBuilder.BuildErrorCard("UNHANDLED", dispatch.Reason ?? "Unknown request"),
                     cancellationToken);
+                return;
+            }
+
+            if (dispatch.Denied)
+            {
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildErrorCard(
+                        "NOT_AUTHORIZED",
+                        dispatch.Result?.ErrorMessage ?? "You are not authorized to perform this action."),
+                    cancellationToken);
+
+                _logger.LogWarning(
+                    "Blocked {Function} for user {TeamsUserId} (role {Role})",
+                    dispatch.FunctionName, teamsUserId, role);
                 return;
             }
 
@@ -649,6 +745,7 @@ public class TeamsBot : TeamsActivityHandler
     private static string DeriveStatus(DispatchResult d)
     {
         if (!d.Handled) return "Unrecognized";
+        if (d.Denied) return "Denied";
         if (d.Result is null) return "Failed";
         return d.Result.Success ? "Success" : "Failed";
     }

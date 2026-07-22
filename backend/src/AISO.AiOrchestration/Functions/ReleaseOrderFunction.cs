@@ -59,14 +59,8 @@ public sealed class ReleaseOrderFunction : IFunction
             return FunctionResult.Fail("Missing required parameter: order_id");
         }
 
-        // Authorization Check
-        var allowedManagers = new[] { "DEV-249" };
-        if (!allowedManagers.Contains(requestingSapUser.ToUpperInvariant()))
-        {
-            _logger.LogWarning("AUDIT: User {User} attempted to release order {OrderId} but does not have manager role.", requestingSapUser, orderId);
-            return FunctionResult.Fail("Authorization failed: You do not have the required 'Manager' role to approve sales orders.");
-        }
-
+        // Role gating is enforced by RolePolicy in the dispatcher (Manager+).
+        // Prefer ApproveOrder for the maker-checker path when a pending request exists.
         _logger.LogInformation(
             "ReleaseOrder: orderId={OrderId}, comment={Comment}, sapUser={SapUser}", orderId, comment, requestingSapUser);
 

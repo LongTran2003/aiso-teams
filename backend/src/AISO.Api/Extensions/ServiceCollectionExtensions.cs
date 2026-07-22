@@ -30,6 +30,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFunction, CreateOrderFunction>();
         services.AddSingleton<IFunction, UpdateOrderReferenceFunction>();
 
+        // Maker-checker + admin
+        services.AddSingleton<IFunction, RequestReleaseFunction>();
+        services.AddSingleton<IFunction, ApproveOrderFunction>();
+        services.AddSingleton<IFunction, RejectApprovalFunction>();
+        services.AddSingleton<IFunction, GetPendingApprovalsFunction>();
+        services.AddSingleton<IFunction, ViewAuditLogFunction>();
+
         // KPI functions
         services.AddSingleton<IFunction, GetKpiSummaryFunction>();
         services.AddSingleton<IFunction, GetKpiByCustomerFunction>();

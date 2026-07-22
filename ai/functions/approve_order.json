@@ -1,6 +1,6 @@
 {
-  "name": "ReleaseOrder",
-  "description": "Directly release a sales order in SAP. Manager or Admin only. Prefer ApproveOrder when a pending release request exists; Employees should use RequestRelease instead.",
+  "name": "ApproveOrder",
+  "description": "Approve a pending release request and release the sales order in SAP. Manager or Admin only. Use when a manager says approve order, approve release, or confirm release request.",
   "parameters": {
     "type": "object",
     "properties": {
@@ -10,7 +10,7 @@
       },
       "comment": {
         "type": ["string", "null"],
-        "description": "Optional comment or note."
+        "description": "Optional approval comment."
       }
     },
     "required": ["order_id"],

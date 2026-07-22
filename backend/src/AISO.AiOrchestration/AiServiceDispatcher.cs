@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AISO.AiOrchestration.Services;
+using AISO.Domain.Users;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.AiOrchestration;
@@ -34,7 +35,11 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
         _logger = logger;
     }
 
-    public async Task<DispatchResult> DispatchAsync(string userMessage, string requestingSapUser, CancellationToken ct = default)
+    public async Task<DispatchResult> DispatchAsync(
+        string userMessage,
+        string requestingSapUser,
+        UserRole role,
+        CancellationToken ct = default)
     {
         AiOrchestratorResponse aiResponse;
 
@@ -98,6 +103,26 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
         // Convert the AI arguments dict to a JsonElement for IFunction.ExecuteAsync
         var argsJson = JsonSerializer.Serialize(toolCall.Arguments);
         using var argsDoc = JsonDocument.Parse(argsJson);
+
+        // Role-based access control (Phase B): block the action before any side effect.
+        if (!RolePolicy.CanExecute(role, function.Name))
+        {
+            var requiredRole = RolePolicy.RequiredRole(function.Name);
+            _logger.LogWarning(
+                "Access denied: user (role {Role}) attempted {FunctionName} which requires {RequiredRole}",
+                role, function.Name, requiredRole);
+
+            return new DispatchResult
+            {
+                Handled = true,
+                Denied = true,
+                FunctionName = function.Name,
+                ParametersJson = argsJson,
+                Result = FunctionResult.Fail(
+                    $"You do not have permission to perform this action. " +
+                    $"'{function.Name}' requires the {requiredRole} role, but your role is {role}.")
+            };
+        }
 
         _logger.LogInformation(
             "Executing function {FunctionName} with parameters: {Parameters}",
