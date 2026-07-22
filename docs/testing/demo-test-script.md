@@ -1,0 +1,182 @@
+# Kịch bản demo Mentor Review 2 — AISO-Teams
+
+> Mục tiêu: chứng minh **RBAC 3 role + maker-checker** (Phase B: BE enforce) end-to-end trên MS Teams thật.
+> Thời lượng gợi ý: **12–15 phút** (+ 2 phút backup nếu lỗi).
+
+Liên quan: [#157](https://github.com/LongTran2003/aiso-teams/issues/157) · [#158](https://github.com/LongTran2003/aiso-teams/issues/158)
+
+---
+
+## 0. Chuẩn bị (trước ngày demo ≥ 1 ngày)
+
+### 0.1 Deploy & DB
+
+| # | Việc | Owner | Done |
+|---|---|---|---|
+| P1 | Merge + deploy BE/Bot bản RBAC (`feature/be-rbac-role-gating`) | BE | [ ] |
+| P2 | Deploy AI (có schema `RequestRelease`, `ApproveOrder`, …) | AI | [ ] |
+| P3 | Chạy migration Postgres trên Azure (`Role`, `SalesOrg`, `order_approvals`) | BE | [ ] |
+| P4 | Smoke: bot online, login OK | BE | [ ] |
+
+### 0.2 Seed 3 tài khoản test (Postgres `user_mappings`)
+
+| Role | Teams user (người demo) | `SapUserId` (ví dụ) | `Role` | `SalesOrg` |
+|---|---|---|---|---|
+| **Employee** | Người A (maker) | `DEV-249` | `Employee` | `UE00` (tuỳ chọn) |
+| **Manager** | Người B (checker) | `DEV-300` (hoặc user khác) | `Manager` | **`UE00`** (khớp order) |
+| **Admin** | Người C / cùng máy khác | `DEV-xxx` | `Admin` | `null` |
+
+> Sau login lần đầu, cập nhật cột `Role` / `SalesOrg` trong DB (Phase B chưa có UI gán role).
+
+SQL gợi ý:
+
+```sql
+UPDATE user_mappings
+SET "Role" = 'Employee', "SalesOrg" = 'UE00', "UpdatedAt" = NOW()
+WHERE "SapUserId" = 'DEV-249';
+
+UPDATE user_mappings
+SET "Role" = 'Manager', "SalesOrg" = 'UE00', "UpdatedAt" = NOW()
+WHERE "SapUserId" = 'DEV-300';
+
+UPDATE user_mappings
+SET "Role" = 'Admin', "SalesOrg" = NULL, "UpdatedAt" = NOW()
+WHERE "SapUserId" = 'DEV-xxx';
+```
+
+### 0.3 Dữ liệu SAP
+
+| # | Cần có | Ghi chú |
+|---|---|---|
+| D1 | ≥ **3 SO Open** thuộc owner Employee (`zaiso_so_map` = SAP ID Employee) | Mỗi bước 1 order riêng |
+| D2 | Ít nhất 1 SO Open thuộc **cùng VKORG** Manager (`UE00`) | Để Approve trong scope |
+| D3 | (Tuỳ chọn) 1 SO đã Delivered | Demo lỗi nghiệp vụ SAP |
+| D4 | Ghi sẵn số SO: `SO_A`, `SO_B`, `SO_C` | Dán vào script khi rehearse |
+
+### 0.4 Backup
+
+| # | Việc | Done |
+|---|---|---|
+| B1 | Video demo quay sẵn (full flow maker-checker) | [ ] |
+| B2 | Screenshot Adaptive Card KPI / list / success | [ ] |
+
+---
+
+## 1. Kịch bản demo theo thời gian (live)
+
+### Act 0 — Mở đầu (1 phút)
+
+Nói ngắn: *Bot MS Teams → AI → .NET BE → SAP S/4. Hôm nay demo phân quyền Employee / Manager / Admin và luồng maker-checker phê duyệt release.*
+
+---
+
+### Act 1 — Employee (maker) · ~4 phút
+
+**Đăng nhập bằng tài khoản Employee.**
+
+| # | Hành động / câu lệnh | Kỳ vọng | Pass |
+|---|---|---|---|
+| E1 | `hi` → login SAP ID Employee | Map OK | [ ] |
+| E2 | `Show my sales orders` | List / card orders | [ ] |
+| E3 | `Show detail of order <SO_A>` | Chi tiết đúng số SO | [ ] |
+| E4 | `Show KPI summary` | **Thẻ KPI** (không chỉ text success) | [ ] |
+| E5 | `Approve order <SO_A>` / `Release order <SO_A>` | **`NOT_AUTHORIZED`** — Employee không release trực tiếp | [ ] |
+| E6 | `Request release for order <SO_A>` *hoặc* bấm Confirm Release trên card | Success **`ReleaseRequested`**; order **chưa** released trên SAP | [ ] |
+| E7 | `Request release for order <SO_A>` lần 2 | Lỗi: đã có pending request | [ ] |
+| E8 | `Show pending approvals` | **`NOT_AUTHORIZED`** (Manager+) | [ ] |
+| E9 | `View audit log` | **`NOT_AUTHORIZED`** (Admin) | [ ] |
+
+**Câu nói demo:** *Employee chỉ đề xuất; Manager mới duyệt.*
+
+---
+
+### Act 2 — Manager (checker) · ~5 phút
+
+**Logout Employee → login Manager** (`logout` rồi map lại / máy khác).
+
+| # | Hành động / câu lệnh | Kỳ vọng | Pass |
+|---|---|---|---|
+| M1 | Login Manager | Role Manager trong DB | [ ] |
+| M2 | `Show pending approvals` / `Đơn chờ duyệt` | Thấy `SO_A` (requested by Employee, sales org UE00) | [ ] |
+| M3 | `Approve order <SO_A>` | Success **`Approved`** / Released; số SO **không UNKNOWN** | [ ] |
+| M4 | Kiểm tra nhanh SAP / `Check status of order <SO_A>` | Order đã release (block gỡ / status đổi) | [ ] |
+| M5 | Employee (hoặc Manager) `Request release <SO_B>` trước → Manager: `Reject approval for order <SO_B>` | **`ApprovalRejected`**; SAP **không** release | [ ] |
+| M6 | (Tuỳ chọn) Approve order **VKORG khác** scope Manager | `NOT_AUTHORIZED` / message sai sales org | [ ] |
+
+**Câu nói demo:** *Maker-checker: request ở BE, approve mới gọi SAP `releaseOrder`.*
+
+---
+
+### Act 3 — Admin · ~2 phút
+
+**Login Admin.**
+
+| # | Hành động / câu lệnh | Kỳ vọng | Pass |
+|---|---|---|---|
+| A1 | `View audit log` | Danh sách audit gần đây (Denied / Success / …) | [ ] |
+| A2 | `Show pending approvals` | Thấy pending (Admin = all orgs) | [ ] |
+| A3 | (Tuỳ chọn) Approve 1 pending ngoài VKORG | Thành công (Admin bypass scope) | [ ] |
+
+---
+
+### Act 4 — Workflow còn lại + lỗi thật · ~3 phút
+
+Dùng **Employee hoặc Manager** tùy ownership.
+
+| # | Hành động | Kỳ vọng | Pass |
+|---|---|---|---|
+| W1 | `Reject order <SO_C Open>` → chọn reason → Confirm | Success, số SO đúng | [ ] |
+| W2 | `Forward order <SO…>` → chọn recipient → Send | Message hiện **SAP User ID** người nhận | [ ] |
+| W3 | (Tuỳ chọn) Reject order đã Delivered | Thẻ lỗi SAP thật (error propagation) | [ ] |
+| W4 | `logout` | Đăng xuất OK | [ ] |
+
+---
+
+### Act 5 — Kết / Roadmap (30 giây)
+
+Nói: *Phase B = BE enforce roles (demo hôm nay). Phase A tiếp theo = principal propagation / PFCG per-user trên SAP (#157).*
+
+---
+
+## 2. Ma trận quyền (để hỏi đáp)
+
+| Lệnh | Employee | Manager | Admin |
+|---|:---:|:---:|:---:|
+| Query / KPI | ✅ | ✅ | ✅ |
+| `RequestRelease` | ✅ | ✅* | ✅* |
+| `ReleaseOrder` (trực tiếp) | ❌ | ✅ | ✅ |
+| `ApproveOrder` / `RejectApproval` | ❌ | ✅ (VKORG) | ✅ (all) |
+| `GetPendingApprovals` | ❌ | ✅ | ✅ |
+| `ViewAuditLog` | ❌ | ❌ | ✅ |
+| Reject / Forward (owner) | ✅ | ✅ | ✅ |
+
+\* Manager/Admin cũng có thể request; demo tập trung Employee = maker.
+
+---
+
+## 3. Troubleshooting nhanh khi live
+
+| Triệu chứng | Việc kiểm tra |
+|---|---|
+| Employee vẫn release được | Migration/role chưa seed → cột `Role` vẫn `Employee`? Deploy đúng bản? |
+| `NOT_AUTHORIZED` sai role | `user_mappings.Role` đúng chưa? Logout/login lại |
+| Approve: no pending | Employee đã `RequestRelease` chưa? Đúng số SO? |
+| Approve: sai sales org | Manager `SalesOrg` khớp order / `UE00` |
+| KPI chỉ text success | Bản fix KPI card (#156) đã deploy? |
+| Overdue 404 | Known (#154) — **không demo** lệnh này |
+| Filter by status | Known (#153) — tránh demo “show Open only” nếu chưa fix |
+| SAP auth / dump | Có video backup; báo Phase B BE OK, SAP infra |
+
+---
+
+## 4. Checklist “go / no-go” sáng demo
+
+- [ ] 3 role seed xong, login từng role verify `GetRole` hành vi (E5 deny)
+- [ ] `SO_A` pending sẵn **hoặc** rehearse E6 nhanh
+- [ ] Manager approve `SO_A` thành công trên SAP
+- [ ] AI nhận diện `RequestRelease` / `ApproveOrder` / `GetPendingApprovals`
+- [ ] Video backup sẵn trên máy trình chiếu
+
+---
+
+*Cập nhật: Sprint 5 — sau Phase B RBAC + maker-checker (`feature/be-rbac-role-gating`).*

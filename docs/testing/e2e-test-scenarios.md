@@ -12,14 +12,19 @@ Dùng để test tay trên Teams và làm checklist cho buổi demo.
 
 | # | Việc cần làm | Ghi chú |
 |---|---|---|
-| 0.1 | BE + Bot đã publish bản mới nhất lên Azure | Có fix hiển thị số SO + error propagation |
-| 0.2 | SAP đã activate bản `cl_abap_behavior_saver_failed` | Để lỗi BAPI trả đúng về bot |
-| 0.3 | Chuẩn bị sẵn danh sách SO theo trạng thái | Cần vài order **Open** (chưa xử lý) để test release/reject thành công |
-| 0.4 | Biết SAP User ID đang test | VD `DEV-249` |
+| 0.1 | BE + Bot đã publish bản RBAC + maker-checker | Branch `feature/be-rbac-role-gating` / đã merge |
+| 0.2 | Migration Postgres: `Role`, `SalesOrg`, `order_approvals` | Seed 3 role trước khi test |
+| 0.3 | AI đã deploy schema `RequestRelease` / `ApproveOrder` / … | Hot-load `ai/functions/*.json` |
+| 0.4 | SAP đã activate `cl_abap_behavior_saver_failed` | Lỗi BAPI trả đúng về bot |
+| 0.5 | Chuẩn bị ≥ 3 SO **Open** (owner = Employee) | Mỗi lệnh một order riêng |
+| 0.6 | Biết SAP User ID + role từng người test | Employee / Manager (`SalesOrg`) / Admin |
+
+**Demo có thời gian (Mentor Review):** xem [`demo-test-script.md`](./demo-test-script.md).
 
 **Lưu ý trạng thái order (quan trọng):**
-- **Release** chỉ thành công với order chưa release (còn delivery block / Open).
-- **Reject** chỉ thành công với order chưa delivered/chưa xử lý. Order đã release+deliver sẽ báo lỗi SAP thật (đúng nghiệp vụ).
+- **Release / Approve** chỉ thành công với order chưa release (còn delivery block / Open).
+- **Employee không release trực tiếp** — dùng `RequestRelease`; Manager `ApproveOrder`.
+- **Reject** chỉ thành công với order chưa delivered/chưa xử lý.
 - Nên chuẩn bị **mỗi lệnh một order riêng** để tránh vướng trạng thái.
 
 ---
@@ -60,14 +65,20 @@ Dùng để test tay trên Teams và làm checklist cho buổi demo.
 
 ---
 
-## 4. Release Order (Approve)
+## 4. Maker-checker Release (RBAC Phase B)
 
-| # | Câu lệnh | Kết quả mong đợi |
-|---|---|---|
-| 4.1 (happy) | `Approve order <SO đang Open>` → bấm **Confirm Approve** | Thẻ "Action completed", **Sales order = đúng số SO** (không phải UNKNOWN), Status = `Released` |
-| 4.2 (đã release) | `Approve order <SO đã Released>` | Báo lỗi SAP thật (vd delivery block đã gỡ / không đổi được) |
-| 4.3 (huỷ) | `Approve order ...` → bấm **Cancel** | Không thực thi, không đổi trạng thái SAP |
-| 4.4 (owner khác) | Release order do user khác sở hữu | Báo `Order owned by another user` |
+| # | Role | Câu lệnh | Kết quả mong đợi |
+|---|---|---|---|
+| 4.1 | Employee | `Release order <SO Open>` / Approve trực tiếp | **`NOT_AUTHORIZED`** (cần Manager+) |
+| 4.2 | Employee | `Request release for order <SO Open>` hoặc Confirm Release trên card | **`ReleaseRequested`**; SAP chưa release |
+| 4.3 | Employee | `Show pending approvals` | **`NOT_AUTHORIZED`** |
+| 4.4 | Manager | `Show pending approvals` | List chứa `SO` vừa request (đúng VKORG) |
+| 4.5 | Manager | `Approve order <SO pending>` | **`Approved`** + SAP released; số SO đúng (không UNKNOWN) |
+| 4.6 | Manager | `Reject approval for order <SO pending khác>` | **`ApprovalRejected`**; SAP không release |
+| 4.7 | Manager | Approve SO **khác SalesOrg** của Manager | Bị từ chối (scope VKORG) |
+| 4.8 | Manager/Admin | `Release order <SO>` trực tiếp (không pending) | Vẫn được (Manager+); số SO đúng |
+| 4.9 | Admin | `View audit log` | Thấy các dòng Success / Denied gần đây |
+| 4.10 | — | Owner khác (SAP ownership) | `Order owned by another user` |
 
 ---
 
@@ -105,15 +116,19 @@ Dùng để test tay trên Teams và làm checklist cho buổi demo.
 
 ## 8. Checklist demo (rút gọn)
 
-- [ ] Đăng nhập SAP User ID
-- [ ] Truy vấn danh sách + chi tiết 1 order
-- [ ] Xem KPI summary
-- [ ] Release 1 order Open → thành công, số SO đúng
-- [ ] Reject 1 order Open → thành công, số SO đúng
-- [ ] Forward 1 order → hiện đúng người nhận (SAP User ID)
-- [ ] Demo 1 lỗi SAP thật (reject order đã deliver) → bot hiện message lỗi đúng
+Chi tiết theo phút: [`demo-test-script.md`](./demo-test-script.md).
+
+- [ ] Seed 3 role (Employee / Manager+VKORG / Admin)
+- [ ] Employee: query + KPI card
+- [ ] Employee: release trực tiếp → `NOT_AUTHORIZED`
+- [ ] Employee: `RequestRelease` → pending
+- [ ] Manager: `GetPendingApprovals` → `ApproveOrder` → SAP released, số SO đúng
+- [ ] Manager: `RejectApproval` trên SO khác
+- [ ] Admin: `ViewAuditLog`
+- [ ] Reject + Forward 1 order (số SO / recipient SAP ID đúng)
+- [ ] (Tuỳ chọn) 1 lỗi SAP thật
 - [ ] Logout
 
 ---
 
-*Cập nhật lần cuối: Sprint 5 — sau khi hoàn tất auth SAP, fix RAP dump, error propagation (`cl_abap_behavior_saver_failed`), và hiển thị số SO.*
+*Cập nhật: Sprint 5 — RBAC Phase B + maker-checker, KPI card, auth SAP / error propagation.*
