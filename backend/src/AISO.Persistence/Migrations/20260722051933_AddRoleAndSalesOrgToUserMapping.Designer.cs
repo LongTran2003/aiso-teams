@@ -3,6 +3,7 @@ using System;
 using AISO.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace AISO.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260722051933_AddRoleAndSalesOrgToUserMapping")]
+    partial class AddRoleAndSalesOrgToUserMapping
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -70,58 +73,6 @@ namespace AISO.Persistence.Migrations
                     b.HasIndex("TeamsUserId", "Timestamp");
 
                     b.ToTable("audit_logs", (string)null);
-                });
-
-            modelBuilder.Entity("AISO.Persistence.Entities.OrderApproval", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Comment")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTimeOffset?>("DecidedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("DecidedBySapUser")
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("DecisionComment")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
-                    b.Property<DateTimeOffset>("RequestedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("RequestedBySapUser")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
-                    b.Property<string>("SalesOrg")
-                        .HasMaxLength(8)
-                        .HasColumnType("character varying(8)");
-
-                    b.Property<string>("SoNumber")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("character varying(20)");
-
-                    b.Property<string>("Status")
-                        .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("character varying(16)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SoNumber", "Status");
-
-                    b.HasIndex("Status", "SalesOrg");
-
-                    b.ToTable("order_approvals", (string)null);
                 });
 
             modelBuilder.Entity("AISO.Persistence.Entities.UserMapping", b =>

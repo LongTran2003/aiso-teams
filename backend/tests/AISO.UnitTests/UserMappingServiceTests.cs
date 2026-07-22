@@ -1,4 +1,5 @@
 using AISO.Bot.Services;
+using AISO.Domain.Users;
 using AISO.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -47,6 +48,33 @@ public class UserMappingServiceTests
         var service = new UserMappingService(ctx);
 
         Assert.Null(await service.GetSapUsernameAsync("nobody"));
+    }
+
+    [Fact]
+    public async Task GetRole_WhenUnknownUser_DefaultsToEmployee()
+    {
+        using var ctx = NewContext();
+        var service = new UserMappingService(ctx);
+
+        Assert.Equal(UserRole.Employee, await service.GetRoleAsync("nobody"));
+    }
+
+    [Fact]
+    public async Task GetRole_ReturnsAssignedRole()
+    {
+        using var ctx = NewContext();
+        var service = new UserMappingService(ctx);
+        await service.MapUserAsync("teams-1", "Long", "DEV-249");
+
+        // New mappings default to Employee.
+        Assert.Equal(UserRole.Employee, await service.GetRoleAsync("teams-1"));
+
+        // Simulate an admin assigning the Manager role.
+        var mapping = ctx.UserMappings.Single(u => u.TeamsUserId == "teams-1");
+        mapping.Role = UserRole.Manager;
+        await ctx.SaveChangesAsync();
+
+        Assert.Equal(UserRole.Manager, await service.GetRoleAsync("teams-1"));
     }
 
     [Fact]

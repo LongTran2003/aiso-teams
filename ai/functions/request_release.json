@@ -1,0 +1,19 @@
+{
+  "name": "RequestRelease",
+  "description": "Submit a sales order for release approval (maker step). Does not release the order; a Manager must ApproveOrder afterwards. Use when the user asks to request release, submit for approval, or send an order for manager approval.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "order_id": {
+        "type": "string",
+        "description": "Sales order number."
+      },
+      "comment": {
+        "type": ["string", "null"],
+        "description": "Optional note for the approving manager."
+      }
+    },
+    "required": ["order_id"],
+    "additionalProperties": false
+  }
+}

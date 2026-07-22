@@ -1,3 +1,5 @@
+using AISO.Domain.Users;
+
 namespace AISO.Persistence.Entities;
 
 /// <summary>
@@ -16,6 +18,12 @@ public class UserMapping
 
     /// <summary>SAP user ID (e.g. "PHILLY01"). Nullable until first mapping.</summary>
     public string? SapUserId { get; set; }
+
+    /// <summary>Business role for RBAC. Defaults to <see cref="UserRole.Employee"/>.</summary>
+    public UserRole Role { get; set; } = UserRole.Employee;
+
+    /// <summary>Sales organization (VKORG) this user is scoped to. Used for Manager scoping. Nullable.</summary>
+    public string? SalesOrg { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;

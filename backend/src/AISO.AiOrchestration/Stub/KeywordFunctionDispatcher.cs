@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using AISO.Domain.Users;
 
 namespace AISO.AiOrchestration.Stub;
 
@@ -16,7 +17,31 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         _registry = registry;
     }
 
-    public async Task<DispatchResult> DispatchAsync(string userMessage, string requestingSapUser, CancellationToken ct = default)
+    public async Task<DispatchResult> DispatchAsync(
+        string userMessage,
+        string requestingSapUser,
+        UserRole role,
+        CancellationToken ct = default)
+    {
+        var result = await DispatchInternalAsync(userMessage, requestingSapUser, ct);
+
+        // Role-based access control (Phase B): apply the same gate as the AI dispatcher.
+        if (result.Handled && result.FunctionName is { } fn && !RolePolicy.CanExecute(role, fn))
+        {
+            var requiredRole = RolePolicy.RequiredRole(fn);
+            return result with
+            {
+                Denied = true,
+                Result = FunctionResult.Fail(
+                    $"You do not have permission to perform this action. " +
+                    $"'{fn}' requires the {requiredRole} role, but your role is {role}.")
+            };
+        }
+
+        return result;
+    }
+
+    private async Task<DispatchResult> DispatchInternalAsync(string userMessage, string requestingSapUser, CancellationToken ct = default)
     {
         var text = userMessage.Trim().ToLowerInvariant();
 

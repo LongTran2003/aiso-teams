@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using AISO.Domain.Users;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.AiOrchestration.Logging;
@@ -21,7 +22,11 @@ public sealed class LoggingFunctionDispatcher : IFunctionDispatcher
         _logger = logger;
     }
 
-    public async Task<DispatchResult> DispatchAsync(string userMessage, string requestingSapUser, CancellationToken ct = default)
+    public async Task<DispatchResult> DispatchAsync(
+        string userMessage,
+        string requestingSapUser,
+        UserRole role,
+        CancellationToken ct = default)
     {
         var sw = Stopwatch.StartNew();
         _logger.LogInformation(
@@ -30,10 +35,16 @@ public sealed class LoggingFunctionDispatcher : IFunctionDispatcher
 
         try
         {
-            var result = await _inner.DispatchAsync(userMessage, requestingSapUser, ct);
+            var result = await _inner.DispatchAsync(userMessage, requestingSapUser, role, ct);
             sw.Stop();
 
-            if (result.Handled)
+            if (result.Denied)
+            {
+                _logger.LogWarning(
+                    "Dispatcher denied function {Function} by RBAC; duration={DurationMs}ms",
+                    result.FunctionName, sw.ElapsedMilliseconds);
+            }
+            else if (result.Handled)
             {
                 _logger.LogInformation(
                     "Dispatcher selected function {Function}; success={Success}; duration={DurationMs}ms",

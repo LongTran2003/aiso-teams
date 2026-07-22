@@ -1,3 +1,5 @@
+using AISO.Domain.Users;
+
 namespace AISO.AiOrchestration;
 
 /// <summary>
@@ -8,7 +10,11 @@ namespace AISO.AiOrchestration;
 /// </summary>
 public interface IFunctionDispatcher
 {
-    Task<DispatchResult> DispatchAsync(string userMessage, string requestingSapUser, CancellationToken ct = default);
+    Task<DispatchResult> DispatchAsync(
+        string userMessage,
+        string requestingSapUser,
+        UserRole role,
+        CancellationToken ct = default);
 }
 
 public sealed record DispatchResult
@@ -20,4 +26,7 @@ public sealed record DispatchResult
 
     /// <summary>Reason for non-handling (e.g. "intent unclear"), or null when handled.</summary>
     public string? Reason { get; init; }
+
+    /// <summary>True when the request was blocked by role-based access control.</summary>
+    public bool Denied { get; init; }
 }

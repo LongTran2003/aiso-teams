@@ -9,6 +9,7 @@ public class AppDbContext : DbContext
 
     public DbSet<UserMapping> UserMappings => Set<UserMapping>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<OrderApproval> OrderApprovals => Set<OrderApproval>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -20,6 +21,8 @@ public class AppDbContext : DbContext
             b.Property(x => x.TeamsUserId).HasMaxLength(128).IsRequired();
             b.Property(x => x.DisplayName).HasMaxLength(256).IsRequired();
             b.Property(x => x.SapUserId).HasMaxLength(64);
+            b.Property(x => x.Role).HasConversion<string>().HasMaxLength(16).IsRequired();
+            b.Property(x => x.SalesOrg).HasMaxLength(8);
             b.HasIndex(x => x.TeamsUserId).IsUnique();
         });
 
@@ -37,6 +40,22 @@ public class AppDbContext : DbContext
             b.Property(x => x.ErrorMessage).HasMaxLength(2000);
             b.HasIndex(x => x.Timestamp);
             b.HasIndex(x => new { x.TeamsUserId, x.Timestamp });
+        });
+
+        // OrderApproval (maker-checker)
+        modelBuilder.Entity<OrderApproval>(b =>
+        {
+            b.ToTable("order_approvals");
+            b.HasKey(x => x.Id);
+            b.Property(x => x.SoNumber).HasMaxLength(20).IsRequired();
+            b.Property(x => x.RequestedBySapUser).HasMaxLength(64).IsRequired();
+            b.Property(x => x.SalesOrg).HasMaxLength(8);
+            b.Property(x => x.Comment).HasMaxLength(500);
+            b.Property(x => x.Status).HasConversion<string>().HasMaxLength(16).IsRequired();
+            b.Property(x => x.DecidedBySapUser).HasMaxLength(64);
+            b.Property(x => x.DecisionComment).HasMaxLength(500);
+            b.HasIndex(x => new { x.SoNumber, x.Status });
+            b.HasIndex(x => new { x.Status, x.SalesOrg });
         });
 
         base.OnModelCreating(modelBuilder);
