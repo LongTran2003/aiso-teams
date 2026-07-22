@@ -24,7 +24,8 @@
       "url": "${chartUrl}",
       "altText": "Aging chart",
       "spacing": "Medium",
-      "horizontalAlignment": "Center"
+      "horizontalAlignment": "Center",
+      "$when": "${chartUrl != ''}"
     }
   ],
   "actions": [

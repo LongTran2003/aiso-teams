@@ -1,4 +1,5 @@
 using AISO.Bot.Cards.Builders;
+using Microsoft.Bot.Schema;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -9,6 +10,18 @@ public class KpiSummaryCardTests
     private static string BuildCardJson(object data)
     {
         var attachment = TeamsCardBuilder.BuildKpiSummaryCard(data);
+        return JsonConvert.SerializeObject(attachment.Content);
+    }
+
+    private static string BuildRevenueCardJson(object data)
+    {
+        var attachment = TeamsCardBuilder.BuildKpiRevenueCard(data);
+        return JsonConvert.SerializeObject(attachment.Content);
+    }
+
+    private static string BuildDeliveryCardJson(object data)
+    {
+        var attachment = TeamsCardBuilder.BuildKpiDeliveryCard(data);
         return JsonConvert.SerializeObject(attachment.Content);
     }
 
@@ -52,6 +65,36 @@ public class KpiSummaryCardTests
         });
 
         // The $when guard removes the Image element when there is no chart URL.
+        Assert.DoesNotContain("\"Image\"", json);
+    }
+
+    [Fact]
+    public void BuildKpiRevenueCard_OmitsChartImage_WhenChartUrlEmpty()
+    {
+        var json = BuildRevenueCardJson(new
+        {
+            period = "Current results",
+            totalRevenue = "0 USD",
+            growthRate = "+0%",
+            targetRevenue = "0 USD",
+            chartUrl = ""
+        });
+
+        Assert.DoesNotContain("\"Image\"", json);
+    }
+
+    [Fact]
+    public void BuildKpiDeliveryCard_OmitsChartImage_WhenChartUrlEmpty()
+    {
+        var json = BuildDeliveryCardJson(new
+        {
+            onTimeRate = "0%",
+            delayedCount = "0",
+            completedToday = "0",
+            deliveryProgress = 0,
+            chartUrl = ""
+        });
+
         Assert.DoesNotContain("\"Image\"", json);
     }
 }
