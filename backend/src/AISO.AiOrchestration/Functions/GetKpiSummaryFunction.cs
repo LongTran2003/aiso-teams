@@ -65,9 +65,32 @@ public sealed class GetKpiSummaryFunction : IFunction
         string? chartUrl = null;
         if (summary.RevenueTimeSeries.Count > 0)
         {
-            var labels = string.Join(",", summary.RevenueTimeSeries.Select(p => $"'{p.Label}'"));
-            var data = string.Join(",", summary.RevenueTimeSeries.Select(p => p.Value));
-            var chartConfig = "{\"type\":\"bar\",\"data\":{\"labels\":[" + labels + "],\"datasets\":[{\"label\":\"Revenue\",\"data\":[" + data + "],\"backgroundColor\":\"rgba(54,162,235,0.7)\"}]},\"options\":{\"plugins\":{\"title\":{\"display\":true,\"text\":\"Revenue Trend\"}}}}";
+            var chartObject = new
+            {
+                type = "bar",
+                data = new
+                {
+                    labels = summary.RevenueTimeSeries.Select(p => p.Label).ToArray(),
+                    datasets = new[]
+                    {
+                        new
+                        {
+                            label = "Revenue",
+                            data = summary.RevenueTimeSeries.Select(p => p.Value).ToArray(),
+                            backgroundColor = "rgba(54,162,235,0.7)"
+                        }
+                    }
+                },
+                options = new
+                {
+                    plugins = new
+                    {
+                        title = new { display = true, text = "Revenue Trend" }
+                    }
+                }
+            };
+
+            var chartConfig = JsonSerializer.Serialize(chartObject);
             // Request PNG format and set dimensions to improve Teams rendering reliability.
             chartUrl = $"https://quickchart.io/chart?c={Uri.EscapeDataString(chartConfig)}&format=png&width=600&height=400";
         }
