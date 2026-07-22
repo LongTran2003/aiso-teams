@@ -557,6 +557,31 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
+            if (result.Payload is AISO.AiOrchestration.Functions.GetKpiSummaryResponse kpiSummaryResponse)
+            {
+                var summary = kpiSummaryResponse.Summary;
+                var kpiSummaryCard = TeamsCardBuilder.BuildKpiSummaryCard(new
+                {
+                    period = string.IsNullOrWhiteSpace(summary.Period) ? "All time" : summary.Period,
+                    revenueValue = $"{summary.TotalRevenue:N0} {summary.Currency}",
+                    orderCount = summary.TotalOrders,
+                    openOrders = summary.OpenOrders,
+                    deliveredOrders = summary.DeliveredOrders,
+                    overdueOrders = summary.OverdueOrders,
+                    fulfillmentRate = $"{summary.FulfillmentRate:0.#}%",
+                    chartUrl = kpiSummaryResponse.ChartUrl ?? string.Empty
+                });
+
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    kpiSummaryCard,
+                    cancellationToken);
+
+                _logger.LogInformation("Bot replied with KPI summary card");
+                return;
+            }
+
             // Workflow action results (Release, Reject, Forward) — show a success card when applicable
             if (result.Payload is not null)
             {

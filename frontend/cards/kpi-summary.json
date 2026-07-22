@@ -11,6 +11,13 @@
       "color": "Accent"
     },
     {
+      "type": "TextBlock",
+      "text": "${period}",
+      "isSubtle": true,
+      "spacing": "None",
+      "wrap": true
+    },
+    {
       "type": "ColumnSet",
       "columns": [
         {
@@ -49,11 +56,34 @@
       ]
     },
     {
+      "type": "FactSet",
+      "spacing": "Medium",
+      "facts": [
+        {
+          "title": "Open",
+          "value": "${openOrders}"
+        },
+        {
+          "title": "Delivered",
+          "value": "${deliveredOrders}"
+        },
+        {
+          "title": "Overdue",
+          "value": "${overdueOrders}"
+        },
+        {
+          "title": "Fulfillment rate",
+          "value": "${fulfillmentRate}"
+        }
+      ]
+    },
+    {
       "type": "Image",
       "url": "${chartUrl}",
-      "altText": "KPI summary chart",
+      "altText": "Revenue trend chart",
       "spacing": "Medium",
-      "horizontalAlignment": "Center"
+      "horizontalAlignment": "Center",
+      "$when": "${chartUrl != ''}"
     }
   ]
 }
