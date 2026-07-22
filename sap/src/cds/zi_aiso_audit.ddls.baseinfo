@@ -3,9 +3,7 @@
 {
 "FROM":
 [
-"ZI_AISO_SO_OPEN_SCHED",
-"KNA1",
-"VBAK"
+"ZAISO_AUDIT"
 ],
 "ASSOCIATED":
 [],
