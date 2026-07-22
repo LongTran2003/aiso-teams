@@ -89,30 +89,27 @@ public sealed class GetSalesOrdersFunction : IFunction
             var labels = string.Join(",", statusCounts.Select(x => $"'{x.Status}'"));
             var data = string.Join(",", statusCounts.Select(x => x.Count));
 
-            // Build a proper JSON chart config and serialize it to ensure QuickChart accepts it.
-            var chartObject = new
+            var chartConfig = $$"""
             {
-                type = "doughnut",
-                data = new
-                {
-                    labels = statusCounts.Select(x => x.Status).ToArray(),
-                    datasets = new[]
-                    {
-                        new { data = statusCounts.Select(x => x.Count).ToArray() }
-                    }
-                },
-                options = new
-                {
-                    plugins = new
-                    {
-                        title = new { display = true, text = "Order Status Distribution" }
-                    }
+              type: 'doughnut',
+              data: {
+                labels: [{{labels}}],
+                datasets: [{
+                  data: [{{data}}]
+                }]
+              },
+              options: {
+                plugins: {
+                  title: { display: true, text: 'Order Status Distribution' },
+                  datalabels: { display: true, color: '#fff', font: { weight: 'bold' } }
                 }
-            };
+              }
+            }
+            """;
 
-            var chartJson = JsonSerializer.Serialize(chartObject);
-            // Request PNG format and set dimensions to improve Teams rendering reliability.
-            chartUrl = $"https://quickchart.io/chart?c={Uri.EscapeDataString(chartJson)}&format=png&width=600&height=400";
+            // Remove whitespace to shorten URL
+            chartConfig = System.Text.RegularExpressions.Regex.Replace(chartConfig, @"\s+", "");
+            chartUrl = $"https://quickchart.io/chart?c={Uri.EscapeDataString(chartConfig)}";
         }
 
         var response = new GetSalesOrdersResponse(orders, chartUrl);

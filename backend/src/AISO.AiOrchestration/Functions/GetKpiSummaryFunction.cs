@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Net.Http;
+using System.Text;
 using System.Text.Json;
 using AISO.Domain.Kpi;
 using AISO.SapIntegration;
@@ -90,9 +92,7 @@ public sealed class GetKpiSummaryFunction : IFunction
                 }
             };
 
-            var chartConfig = JsonSerializer.Serialize(chartObject);
-            // Request PNG format and set dimensions to improve Teams rendering reliability.
-            chartUrl = $"https://quickchart.io/chart?c={Uri.EscapeDataString(chartConfig)}&format=png&width=600&height=400";
+            chartUrl = await CreateQuickChartUrlAsync(chartObject, ct) ?? CreateQuickChartGetUrl(chartObject);
         }
 
         return FunctionResult.Ok(new GetKpiSummaryResponse(summary, chartUrl));
@@ -105,6 +105,51 @@ public sealed class GetKpiSummaryFunction : IFunction
     {
         var s = GetString(el, name);
         return s is not null && DateOnly.TryParse(s, CultureInfo.InvariantCulture, out var d) ? d : null;
+    }
+
+    private static readonly HttpClient s_httpClient = new();
+
+    private static async Task<string?> CreateQuickChartUrlAsync(object chartObject, CancellationToken ct)
+    {
+        try
+        {
+            var body = new
+            {
+                chart = chartObject,
+                width = 500,
+                height = 300,
+                format = "png",
+                backgroundColor = "white"
+            };
+
+            var requestJson = JsonSerializer.Serialize(body);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://quickchart.io/chart/create")
+            {
+                Content = new StringContent(requestJson, Encoding.UTF8, "application/json")
+            };
+
+            using var response = await s_httpClient.SendAsync(request, ct);
+            response.EnsureSuccessStatusCode();
+
+            var responseBody = await response.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(responseBody);
+            if (doc.RootElement.TryGetProperty("url", out var urlElement) && urlElement.ValueKind == JsonValueKind.String)
+            {
+                return urlElement.GetString();
+            }
+        }
+        catch
+        {
+            // Ignore chart generation failures; the card should still render without image.
+        }
+
+        return null;
+    }
+
+    private static string CreateQuickChartGetUrl(object chartObject)
+    {
+        var chartConfig = JsonSerializer.Serialize(chartObject);
+        return $"https://quickchart.io/chart?c={Uri.EscapeDataString(chartConfig)}&format=png&width=500&height=300";
     }
 }
 

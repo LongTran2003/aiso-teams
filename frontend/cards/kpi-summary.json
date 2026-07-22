@@ -83,6 +83,9 @@
       "altText": "Revenue trend chart",
       "spacing": "Medium",
       "horizontalAlignment": "Center",
+      "size": "Medium",
+      "width": "500px",
+      "height": "300px",
       "$when": "${chartUrl != ''}"
     }
   ]
