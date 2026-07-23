@@ -236,10 +236,130 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
     ENDLOOP.
   ENDMETHOD.
 
-  METHOD forcecancel.
+    METHOD forcecancel.
+    DATA: lv_timestamp TYPE c LENGTH 14,
+          lv_audit_id  TYPE sysuuid_c32.
+
+    LOOP AT keys INTO DATA(ls_key).
+      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+      DATA(lv_requesting_user) = ls_key-%param-requesting_teams_user.
+      DATA(lv_reason) = ls_key-%param-override_reason.
+      DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
+
+      IF lv_role <> 'ADMIN'.
+        APPEND VALUE #( %tky = ls_key-%tky
+                        %fail-cause = if_abap_behv=>cause-unauthorized )
+               TO failed-salesorder.
+
+        APPEND VALUE #( %tky = ls_key-%tky
+                        %msg = new_message(
+                          id       = '00'
+                          number   = '001'
+                          severity = if_abap_behv_message=>severity-error
+                          v1       = 'Only Admin can force cancel' ) )
+               TO reported-salesorder.
+        CONTINUE.
+      ENDIF.
+
+      IF lv_reason IS INITIAL.
+        APPEND VALUE #( %tky = ls_key-%tky
+                        %fail-cause = if_abap_behv=>cause-unspecific )
+               TO failed-salesorder.
+
+        APPEND VALUE #( %tky = ls_key-%tky
+                        %msg = new_message(
+                          id       = '00'
+                          number   = '001'
+                          severity = if_abap_behv_message=>severity-error
+                          v1       = 'Override reason is required' ) )
+               TO reported-salesorder.
+        CONTINUE.
+      ENDIF.
+
+      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+      TRY.
+          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+        CATCH cx_uuid_error.
+          CLEAR lv_audit_id.
+      ENDTRY.
+
+      APPEND VALUE #(
+        mandt      = sy-mandt
+        audit_id   = lv_audit_id
+        sap_user   = lv_requesting_user
+        action_type = 'FORCE_CANCEL'
+        so_number  = lv_so_number
+        status     = 'SUCCESS'
+        created_at = lv_timestamp
+        actor_role = lv_role
+      ) TO lcl_buffer=>gt_audit_db.
+
+      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
+    ENDLOOP.
   ENDMETHOD.
 
-  METHOD forcerelease.
+    METHOD forcerelease.
+    DATA: lv_timestamp TYPE c LENGTH 14,
+          lv_audit_id  TYPE sysuuid_c32.
+
+    LOOP AT keys INTO DATA(ls_key).
+      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+      DATA(lv_requesting_user) = ls_key-%param-requesting_teams_user.
+      DATA(lv_reason) = ls_key-%param-override_reason.
+      DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
+
+      IF lv_role <> 'ADMIN'.
+        APPEND VALUE #( %tky = ls_key-%tky
+                        %fail-cause = if_abap_behv=>cause-unauthorized )
+               TO failed-salesorder.
+
+        APPEND VALUE #( %tky = ls_key-%tky
+                        %msg = new_message(
+                          id       = '00'
+                          number   = '001'
+                          severity = if_abap_behv_message=>severity-error
+                          v1       = 'Only Admin can force release' ) )
+               TO reported-salesorder.
+        CONTINUE.
+      ENDIF.
+
+      IF lv_reason IS INITIAL.
+        APPEND VALUE #( %tky = ls_key-%tky
+                        %fail-cause = if_abap_behv=>cause-unspecific )
+               TO failed-salesorder.
+
+        APPEND VALUE #( %tky = ls_key-%tky
+                        %msg = new_message(
+                          id       = '00'
+                          number   = '001'
+                          severity = if_abap_behv_message=>severity-error
+                          v1       = 'Override reason is required' ) )
+               TO reported-salesorder.
+        CONTINUE.
+      ENDIF.
+
+      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+      TRY.
+          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+        CATCH cx_uuid_error.
+          CLEAR lv_audit_id.
+      ENDTRY.
+
+      APPEND VALUE #(
+        mandt      = sy-mandt
+        audit_id   = lv_audit_id
+        sap_user   = lv_requesting_user
+        action_type = 'FORCE_RELEASE'
+        so_number  = lv_so_number
+        status     = 'SUCCESS'
+        created_at = lv_timestamp
+        actor_role = lv_role
+      ) TO lcl_buffer=>gt_audit_db.
+
+      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
+    ENDLOOP.
   ENDMETHOD.
 
   METHOD get_user_role.
@@ -469,30 +589,63 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD read.
-    DATA(lt_keys) = keys.
-    SELECT * FROM vbak
-      FOR ALL ENTRIES IN @lt_keys
-      WHERE vbeln = @lt_keys-SoNumber
-      INTO TABLE @DATA(lt_vbak).
+  DATA(lt_keys) = keys.
 
-    LOOP AT lt_vbak INTO DATA(ls_vbak).
-      APPEND VALUE #(
-        %key-SoNumber = ls_vbak-vbeln
-        SoNumber      = ls_vbak-vbeln
-        DocType       = ls_vbak-auart
-        Customer      = ls_vbak-kunnr
-        SalesOrg      = ls_vbak-vkorg
-        DistChannel   = ls_vbak-vtweg
-        Division      = ls_vbak-spart
-        Currency      = ls_vbak-waerk
-        NetValue      = ls_vbak-netwr
-        DocDate       = ls_vbak-audat
-        CreatedBy     = ls_vbak-ernam
-        CreatedDate   = ls_vbak-erdat
-        OverallStatus = ls_vbak-gbstk
-      ) TO result.
+  SELECT * FROM vbak
+    FOR ALL ENTRIES IN @lt_keys
+    WHERE vbeln = @lt_keys-SoNumber
+    INTO TABLE @DATA(lt_vbak).
+
+  IF lt_vbak IS NOT INITIAL.
+    SELECT vbeln, cmgst, fkstk FROM vbuk
+      FOR ALL ENTRIES IN @lt_vbak
+      WHERE vbeln = @lt_vbak-vbeln
+      INTO TABLE @DATA(lt_vbuk).
+
+    SELECT vbeln, abgru FROM vbap
+      FOR ALL ENTRIES IN @lt_vbak
+      WHERE vbeln = @lt_vbak-vbeln
+      INTO TABLE @DATA(lt_vbap).
+  ENDIF.
+
+  LOOP AT lt_vbak INTO DATA(ls_vbak).
+    READ TABLE lt_vbuk INTO DATA(ls_vbuk) WITH KEY vbeln = ls_vbak-vbeln.
+    IF sy-subrc <> 0.
+      CLEAR ls_vbuk.
+    ENDIF.
+
+    DATA(lv_all_rejected) = abap_true.
+    DATA(lv_has_item) = abap_false.
+    LOOP AT lt_vbap INTO DATA(ls_vbap) WHERE vbeln = ls_vbak-vbeln.
+      lv_has_item = abap_true.
+      IF ls_vbap-abgru IS INITIAL.
+        lv_all_rejected = abap_false.
+        EXIT.
+      ENDIF.
     ENDLOOP.
-  ENDMETHOD.
+
+    APPEND VALUE #(
+      %key-SoNumber = ls_vbak-vbeln
+      SoNumber      = ls_vbak-vbeln
+      DocType       = ls_vbak-auart
+      Customer      = ls_vbak-kunnr
+      SalesOrg      = ls_vbak-vkorg
+      DistChannel   = ls_vbak-vtweg
+      Division      = ls_vbak-spart
+      Currency      = ls_vbak-waerk
+      NetValue      = ls_vbak-netwr
+      DocDate       = ls_vbak-audat
+      CreatedBy     = ls_vbak-ernam
+      CreatedDate   = ls_vbak-erdat
+      OverallStatus = ls_vbak-gbstk
+      CreditStatus  = ls_vbuk-cmgst
+      DeliveryBlock = ls_vbak-lifsk
+      BillingStatus = ls_vbuk-fkstk
+      IsCancelled   = COND #( WHEN lv_has_item = abap_true AND lv_all_rejected = abap_true
+                               THEN 'X' ELSE '' )
+    ) TO result.
+  ENDLOOP.
+ENDMETHOD.
 
   METHOD lock.
   ENDMETHOD.
