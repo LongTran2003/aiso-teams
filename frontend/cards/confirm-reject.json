@@ -10,7 +10,7 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "❗ Confirm action",
+          "text": "Confirm action",
           "weight": "Bolder",
           "size": "Medium",
           "color": "Attention"

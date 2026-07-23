@@ -5,7 +5,7 @@
   "body": [
     {
       "type": "TextBlock",
-      "text": "📦 SAP SALES ORDER DETAILS: ${salesOrderNumber}",
+      "text": "SAP SALES ORDER DETAILS: ${salesOrderNumber}",
       "weight": "Bolder",
       "size": "Large",
       "color": "Accent",
@@ -48,7 +48,7 @@
   "actions": [
     {
       "type": "Action.Submit",
-      "title": "✅ Approve (Release)",
+      "title": "Approve (Release)",
       "data": {
         "msteams": {
           "type": "messageBack",
@@ -61,7 +61,7 @@
     },
     {
       "type": "Action.Submit",
-      "title": "❌ Reject",
+      "title": "Reject",
       "data": {
         "msteams": {
           "type": "messageBack",
@@ -74,7 +74,7 @@
     },
     {
       "type": "Action.Submit",
-      "title": "🔁 Forward",
+      "title": "Forward",
       "data": {
         "msteams": {
           "type": "messageBack",

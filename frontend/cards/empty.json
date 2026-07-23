@@ -10,7 +10,7 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "⚠️ No data found",
+          "text": "No data found",
           "weight": "Bolder",
           "size": "Medium",
           "color": "Attention"
