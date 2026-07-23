@@ -8,7 +8,7 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "⏳ Loading data...",
+          "text": "Loading data...",
           "weight": "Bolder",
           "size": "Medium",
           "color": "Accent"

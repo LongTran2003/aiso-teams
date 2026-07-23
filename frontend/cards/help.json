@@ -5,7 +5,7 @@
   "body": [
     {
       "type": "TextBlock",
-      "text": "📖 SUPPORTED COMMAND LIST",
+      "text": "SUPPORTED COMMAND LIST",
       "weight": "Bolder",
       "size": "Medium",
       "color": "Accent"
@@ -21,7 +21,7 @@
       "actions": [
         {
           "type": "Action.Submit",
-          "title": "🔍 Find Recent Orders",
+          "title": "Find Recent Orders",
           "data": {
             "msteams": {
               "type": "messageBack",
@@ -32,7 +32,7 @@
         },
         {
           "type": "Action.Submit",
-          "title": "📊 View Revenue KPI Dashboard",
+          "title": "View Revenue KPI Dashboard",
           "data": {
             "msteams": {
               "type": "messageBack",
@@ -43,7 +43,7 @@
         },
         {
           "type": "Action.Submit",
-          "title": "📑 Register Substitute (Substitution)",
+          "title": "Register Substitute (Substitution)",
           "data": {
             "msteams": {
               "type": "messageBack",

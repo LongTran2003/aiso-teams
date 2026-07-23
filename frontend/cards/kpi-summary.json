@@ -5,7 +5,7 @@
   "body": [
     {
       "type": "TextBlock",
-      "text": "📊 KPI Summary",
+      "text": "KPI Summary",
       "weight": "Bolder",
       "size": "Medium",
       "color": "Accent"
@@ -86,7 +86,11 @@
       "size": "Medium",
       "width": "500px",
       "height": "300px",
-      "$when": "${chartUrl != ''}"
+      "$when": "${chartUrl != ''}",
+      "selectAction": {
+      "type": "Action.OpenUrl",
+      "url": "${chartUrl}"
+      }
     }
   ]
 }
