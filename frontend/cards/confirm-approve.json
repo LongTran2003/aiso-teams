@@ -1,0 +1,60 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Good",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Confirm approve",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Good"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Approve the pending release request and release sales order ${salesOrderNumber} in SAP?",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "comment",
+      "placeholder": "Approval comment (optional)...",
+      "isMultiline": true
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Confirm approve",
+      "style": "positive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Confirm approve ${salesOrderNumber}",
+          "text": "approve order ${salesOrderNumber}"
+        },
+        "action": "approve_so_confirm",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}

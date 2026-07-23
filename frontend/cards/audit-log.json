@@ -1,0 +1,47 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Audit log",
+      "size": "Large",
+      "weight": "Bolder",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "${count} recent entries",
+      "size": "Small",
+      "isSubtle": true,
+      "spacing": "None",
+      "wrap": true
+    },
+    {
+      "type": "Container",
+      "separator": true,
+      "$data": "${items}",
+      "items": [
+        {
+          "type": "FactSet",
+          "facts": [
+            { "title": "When", "value": "${timestamp}" },
+            { "title": "Action", "value": "${action}" },
+            { "title": "Status", "value": "${status}" },
+            { "title": "User", "value": "${teamsUserId}" },
+            { "title": "Duration", "value": "${durationMs}" }
+          ]
+        },
+        {
+          "type": "TextBlock",
+          "text": "${error}",
+          "size": "Small",
+          "color": "Attention",
+          "wrap": true,
+          "$when": "${error != ''}"
+        }
+      ]
+    }
+  ]
+}

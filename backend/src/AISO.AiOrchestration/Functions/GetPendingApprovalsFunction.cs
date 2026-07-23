@@ -52,26 +52,32 @@ public sealed class GetPendingApprovalsFunction : IFunction
 
         if (pending.Count == 0)
         {
-            return FunctionResult.Ok(new
-            {
-                count = 0,
-                message = "No pending release approvals.",
-                items = Array.Empty<object>()
-            });
+            return FunctionResult.Ok(new GetPendingApprovalsResponse(
+                0,
+                "No pending release approvals.",
+                Array.Empty<PendingApprovalItem>()));
         }
 
-        return FunctionResult.Ok(new
-        {
-            count = pending.Count,
-            message = $"Found {pending.Count} pending release request(s).",
-            items = pending.Select(a => new
-            {
-                order_id = a.SoNumber,
-                requested_by = a.RequestedBySapUser,
-                sales_org = a.SalesOrg,
-                comment = a.Comment,
-                requested_at = a.RequestedAt.ToString("u")
-            }).ToList()
-        });
+        return FunctionResult.Ok(new GetPendingApprovalsResponse(
+            pending.Count,
+            $"Found {pending.Count} pending release request(s).",
+            pending.Select(a => new PendingApprovalItem(
+                a.SoNumber,
+                a.RequestedBySapUser,
+                a.SalesOrg ?? string.Empty,
+                a.Comment ?? string.Empty,
+                a.RequestedAt.ToString("u"))).ToList()));
     }
 }
+
+public sealed record PendingApprovalItem(
+    string OrderId,
+    string RequestedBy,
+    string SalesOrg,
+    string Comment,
+    string RequestedAt);
+
+public sealed record GetPendingApprovalsResponse(
+    int Count,
+    string Message,
+    IReadOnlyList<PendingApprovalItem> Items);

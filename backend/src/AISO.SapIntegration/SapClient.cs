@@ -558,8 +558,8 @@ public class SapClient : ISapClient
 
     public async Task<IReadOnlyList<OverdueOrder>> GetOverdueOrdersAsync(OverdueOrdersQuery query, CancellationToken ct = default)
     {
-        // Entity: ZI_AISO_KPI_SO_AGING (already exists in SAP team's code)
-        var builder = new ODataQueryBuilder("ZI_AISO_KPI_SO_AGING")
+        // Entity set alias from ZSD_AISO_SALES_ORDER service definition.
+        var builder = new ODataQueryBuilder("KpiSoAging")
             .AddCustomParam("sap-client", "324")
             .Top(query.Top);
 
@@ -579,6 +579,13 @@ public class SapClient : ISapClient
         try
         {
             var response = await _httpClient.GetAsync(url, ct);
+
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("KpiSoAging not found (404); returning empty overdue list");
+                return Array.Empty<OverdueOrder>();
+            }
+
             response.EnsureSuccessStatusCode();
 
             var rawJson = await response.Content.ReadAsStringAsync(ct);

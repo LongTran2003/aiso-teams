@@ -1,0 +1,103 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "Pending approvals",
+      "size": "Large",
+      "weight": "Bolder",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "${count} release request(s) waiting for approval",
+      "size": "Small",
+      "isSubtle": true,
+      "spacing": "None",
+      "wrap": true
+    },
+    {
+      "type": "Container",
+      "separator": true,
+      "$data": "${items}",
+      "items": [
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${orderId}",
+                  "weight": "Bolder",
+                  "wrap": true
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "Requested by ${requestedBy} · ${salesOrg}",
+                  "size": "Small",
+                  "isSubtle": true,
+                  "spacing": "None",
+                  "wrap": true
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "${comment}",
+                  "size": "Small",
+                  "wrap": true,
+                  "spacing": "None",
+                  "$when": "${comment != ''}"
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "${requestedAt}",
+                  "size": "Small",
+                  "isSubtle": true,
+                  "spacing": "None",
+                  "wrap": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.Submit",
+              "title": "Approve",
+              "style": "positive",
+              "data": {
+                "msteams": {
+                  "type": "messageBack",
+                  "displayText": "Approve order ${orderId}",
+                  "text": "approve order ${orderId}"
+                },
+                "action": "approve_so",
+                "salesOrderId": "${orderId}"
+              }
+            },
+            {
+              "type": "Action.Submit",
+              "title": "Reject approval",
+              "data": {
+                "msteams": {
+                  "type": "messageBack",
+                  "displayText": "Reject approval ${orderId}",
+                  "text": "reject approval ${orderId}"
+                },
+                "action": "reject_approval",
+                "salesOrderId": "${orderId}"
+              }
+            }
+          ],
+          "spacing": "Small"
+        }
+      ]
+    }
+  ]
+}

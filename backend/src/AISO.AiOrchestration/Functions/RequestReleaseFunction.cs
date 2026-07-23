@@ -89,7 +89,7 @@ public sealed class RequestReleaseFunction : IFunction
                 action = "ReleaseRequested",
                 sales_org = request.SalesOrg,
                 comment,
-                message = $"Sales order {request.SoNumber} was submitted for release approval. A Manager must approve it."
+                message = $"Sales order {request.SoNumber} was submitted for release approval. Waiting for a Manager to approve — the order is not released yet."
             });
         }
         catch (InvalidOperationException ex)
