@@ -8,7 +8,7 @@ define root view entity ZI_AISO_SO_HEADER
   association [0..*] to ZI_AISO_SO_ITEM as _Items
     on $projection.SoNumber = _Items.SoNumber
 {
-  @ObjectModel.foreignKey.association: null 
+  @ObjectModel.foreignKey.association: null
   key vbak.vbeln                          as SoNumber,
       vbak.auart                          as DocType,
       vbak.kunnr                          as Customer,
@@ -22,6 +22,11 @@ define root view entity ZI_AISO_SO_HEADER
       vbak.ernam                          as CreatedBy,
       vbak.erdat                          as CreatedDate,
       vbak.gbstk                          as OverallStatus,
+
+      cast( '' as abap.char( 1 ) )        as CreditStatus,
+      cast( '' as abap.char( 2 ) )        as DeliveryBlock,
+      cast( '' as abap.char( 1 ) )        as BillingStatus,
+      cast( '' as abap.char( 1 ) )        as IsCancelled,
 
       _Items
 }
