@@ -5,55 +5,166 @@
   "body": [
     {
       "type": "TextBlock",
-      "text": "SUPPORTED COMMAND LIST",
+      "text": "SUPPORTED COMMANDS BY ROLE",
       "weight": "Bolder",
       "size": "Medium",
       "color": "Accent"
     },
     {
       "type": "TextBlock",
-      "text": "You can type your questions directly in Vietnamese/English or click the shortcuts below to request AISO Bot to process the SAP system:",
+      "text": "You can type your questions directly in Vietnamese/English or use the shortcuts below to request AISO Bot to process the SAP system:",
       "wrap": true,
       "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Commands for Employee",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "color": "Good",
+      "$when": "${role == 'Employee'}"
     },
     {
       "type": "ActionSet",
       "actions": [
         {
           "type": "Action.Submit",
-          "title": "Find Recent Orders",
+          "title": "Recent Orders",
           "data": {
             "msteams": {
               "type": "messageBack",
-              "displayText": "Find Recent Orders",
+              "displayText": "Recent Orders",
               "text": "recent orders"
             }
-          }
+          },
+          "$when": "${role == 'Employee'}"
         },
         {
           "type": "Action.Submit",
-          "title": "View Revenue KPI Dashboard",
+          "title": "Revenue KPI",
           "data": {
             "msteams": {
               "type": "messageBack",
-              "displayText": "View Revenue KPI Dashboard",
+              "displayText": "Revenue KPI",
               "text": "show revenue kpi"
             }
-          }
+          },
+          "$when": "${role == 'Employee' || role == 'Manager' || role == 'Admin'}"
         },
         {
           "type": "Action.Submit",
-          "title": "Register Substitute (Substitution)",
+          "title": "Request Release",
           "data": {
             "msteams": {
               "type": "messageBack",
-              "displayText": "Register Substitute (Substitution)",
-              "text": "setup substitution"
+              "displayText": "Request Release",
+              "text": "request release"
             }
-          }
+          },
+          "$when": "${role == 'Employee'}"
         }
       ],
-      "spacing": "Large"
+      "spacing": "Small"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Commands for Manager",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "color": "Attention",
+      "$when": "${role == 'Manager'}"
+    },
+    {
+      "type": "ActionSet",
+      "actions": [
+        {
+          "type": "Action.Submit",
+          "title": "Pending Approvals",
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "Pending Approvals",
+              "text": "show pending approvals"
+            }
+          },
+          "$when": "${role == 'Manager' || role == 'Admin'}"
+        },
+        {
+          "type": "Action.Submit",
+          "title": "Approve Order",
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "Approve Order",
+              "text": "approve order"
+            }
+          },
+          "$when": "${role == 'Manager' || role == 'Admin'}"
+        },
+        {
+          "type": "Action.Submit",
+          "title": "Reject Approval",
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "Reject Approval",
+              "text": "reject approval"
+            }
+          },
+          "$when": "${role == 'Manager' || role == 'Admin'}"
+        }
+      ],
+      "spacing": "Small"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Commands for Admin",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "color": "Accent",
+      "$when": "${role == 'Admin'}"
+    },
+    {
+      "type": "ActionSet",
+      "actions": [
+        {
+          "type": "Action.Submit",
+          "title": "View Audit Log",
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "View Audit Log",
+              "text": "view audit log"
+            }
+          },
+          "$when": "${role == 'Admin'}"
+        },
+        {
+          "type": "Action.Submit",
+          "title": "Manage Approval Flow",
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "Manage Approval Flow",
+              "text": "show pending approvals"
+            }
+          },
+          "$when": "${role == 'Admin'}"
+        },
+        {
+          "type": "Action.Submit",
+          "title": "Revenue KPI",
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "Revenue KPI",
+              "text": "show revenue kpi"
+            }
+          },
+          "$when": "${role == 'Employee' || role == 'Manager' || role == 'Admin'}"
+        }
+      ],
+      "spacing": "Small"
     }
   ]
 }

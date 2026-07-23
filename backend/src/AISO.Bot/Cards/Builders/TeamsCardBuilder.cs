@@ -9,8 +9,8 @@ internal static class TeamsCardBuilder
     public static Attachment BuildWelcomeCard(string username) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("welcome.json", new { username });
 
-    public static Attachment BuildHelpCard() =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("help.json");
+    public static Attachment BuildHelpCard(string? role = null) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("help.json", new { role = role ?? "Employee" });
 
     public static Attachment BuildEmptyCard() =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("empty.json");
