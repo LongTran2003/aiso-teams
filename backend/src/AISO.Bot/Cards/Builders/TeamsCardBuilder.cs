@@ -24,11 +24,34 @@ internal static class TeamsCardBuilder
     public static Attachment BuildErrorCard(string errorCode, string errorMessage) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("error.json", new { errorCode, errorMessage });
 
+    public static Attachment BuildNotAuthorizedCard(string errorMessage, string currentRole, string requiredRole) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "not-authorized.json",
+            new { errorMessage, currentRole, requiredRole });
+
     public static Attachment BuildConfirmRejectCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-reject.json", new { salesOrderNumber });
 
     public static Attachment BuildConfirmReleaseCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-release.json", new { salesOrderNumber });
+
+    public static Attachment BuildConfirmRequestReleaseCard(string salesOrderNumber) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-request-release.json", new { salesOrderNumber });
+
+    public static Attachment BuildConfirmApproveCard(string salesOrderNumber) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-approve.json", new { salesOrderNumber });
+
+    public static Attachment BuildConfirmRejectApprovalCard(string salesOrderNumber) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-reject-approval.json", new { salesOrderNumber });
+
+    public static Attachment BuildPendingApprovalsCard(object data) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("pending-approvals.json", data);
+
+    public static Attachment BuildAuditLogCard(object data) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("audit-log.json", data);
+
+    public static Attachment BuildOverdueOrdersCard(object data) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("overdue-orders.json", data);
 
     public static Attachment BuildConfirmForwardCard(string salesOrderNumber, IEnumerable<(string Title, string Value)>? choices = null, string? senderName = null)
     {

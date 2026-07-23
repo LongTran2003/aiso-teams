@@ -1,6 +1,6 @@
 {
   "name": "GetSalesOrders",
-  "description": "Retrieve sales orders list from SAP based on optional filters. All params optional.",
+  "description": "Retrieve sales orders list from SAP based on optional filters. All params optional. Do NOT use for pending approvals / approval inbox — use GetPendingApprovals instead.",
   "parameters": {
     "type": "object",
     "properties": {

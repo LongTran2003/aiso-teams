@@ -1,6 +1,6 @@
 {
   "name": "GetPendingApprovals",
-  "description": "List sales orders waiting for release approval. Manager sees their sales organization; Admin sees all. Use when the user asks for pending approvals, orders awaiting approval, or approval inbox.",
+  "description": "List PENDING release-approval requests in the manager inbox (maker-checker). Use ONLY when the user asks for pending approvals, approval inbox, orders awaiting approval, or waiting for manager approval. Do NOT use GetSalesOrders for these phrases.",
   "parameters": {
     "type": "object",
     "properties": {},

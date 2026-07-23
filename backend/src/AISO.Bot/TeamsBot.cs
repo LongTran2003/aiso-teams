@@ -173,8 +173,30 @@ public class TeamsBot : TeamsActivityHandler
                     if (string.Equals(action, "release_so", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        var roleForConfirm = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        var confirmCard = roleForConfirm == UserRole.Employee
+                            ? TeamsCardBuilder.BuildConfirmRequestReleaseCard(salesOrderId)
+                            : TeamsCardBuilder.BuildConfirmReleaseCard(salesOrderId);
                         await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmReleaseCard(salesOrderId)),
+                            MessageFactory.Attachment(confirmCard),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "approve_so", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmApproveCard(salesOrderId)),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "reject_approval", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmRejectApprovalCard(salesOrderId)),
                             cancellationToken);
                         return;
                     }
@@ -318,6 +340,221 @@ public class TeamsBot : TeamsActivityHandler
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
                                 cancellationToken: cancellationToken);
+                        }
+                        return;
+                    }
+
+                    if (string.Equals(action, "request_release_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        var comment = valueObj.TryGetValue("comment", StringComparison.OrdinalIgnoreCase, out var commentToken)
+                            ? commentToken.ToString()
+                            : null;
+
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
+                        {
+                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            return;
+                        }
+
+                        try
+                        {
+                            var order = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
+                            if (order is null)
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("NOT_FOUND", $"Sales order {salesOrderId} was not found.")),
+                                    cancellationToken);
+                                return;
+                            }
+
+                            var request = await _approvals.RequestReleaseAsync(
+                                order.SoNumber,
+                                linkedSapUsername,
+                                order.SalesOrg,
+                                comment,
+                                cancellationToken);
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(
+                                    TeamsCardBuilder.BuildSuccessCard(request.SoNumber, "ReleaseRequested")),
+                                cancellationToken);
+                        }
+                        catch (InvalidOperationException invEx)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", invEx.Message)),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Unexpected error requesting release for {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken);
+                        }
+                        return;
+                    }
+
+                    if (string.Equals(action, "approve_so_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        var comment = valueObj.TryGetValue("comment", StringComparison.OrdinalIgnoreCase, out var commentToken)
+                            ? commentToken.ToString()
+                            : null;
+
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
+                        {
+                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            return;
+                        }
+
+                        var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        if (role < UserRole.Manager)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
+                                    "Only Manager or Admin can approve release requests.",
+                                    role.ToString(),
+                                    UserRole.Manager.ToString())),
+                                cancellationToken);
+                            return;
+                        }
+
+                        try
+                        {
+                            var pending = await _approvals.GetPendingBySoNumberAsync(salesOrderId, cancellationToken);
+                            if (pending is null)
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "VALIDATION",
+                                        $"No pending release request found for sales order {salesOrderId}.")),
+                                    cancellationToken);
+                                return;
+                            }
+
+                            var managerSalesOrg = await _userMappingService.GetSalesOrgAsync(teamsUserId, cancellationToken);
+                            var isAdmin = role == UserRole.Admin;
+                            if (!isAdmin
+                                && !string.IsNullOrWhiteSpace(managerSalesOrg)
+                                && !string.IsNullOrWhiteSpace(pending.SalesOrg)
+                                && !string.Equals(pending.SalesOrg, managerSalesOrg, StringComparison.OrdinalIgnoreCase))
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
+                                        $"Order {pending.SoNumber} belongs to sales org {pending.SalesOrg}; your scope is {managerSalesOrg}.",
+                                        role.ToString(),
+                                        $"Manager ({pending.SalesOrg})")),
+                                    cancellationToken);
+                                return;
+                            }
+
+                            var updated = await _sap.ReleaseOrderAsync(pending.SoNumber, linkedSapUsername, cancellationToken);
+                            await _approvals.ApproveAsync(
+                                pending.SoNumber,
+                                linkedSapUsername,
+                                managerSalesOrg,
+                                isAdmin,
+                                comment,
+                                cancellationToken);
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updated.SoNumber, "Approved")),
+                                cancellationToken);
+                        }
+                        catch (UnauthorizedAccessException authEx)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
+                                    authEx.Message, role.ToString(), UserRole.Manager.ToString())),
+                                cancellationToken);
+                        }
+                        catch (InvalidOperationException invEx)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", invEx.Message)),
+                                cancellationToken);
+                        }
+                        catch (SapODataException sapEx)
+                        {
+                            _logger.LogError(sapEx, "SAP error approving order {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Unexpected error approving order {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken);
+                        }
+                        return;
+                    }
+
+                    if (string.Equals(action, "reject_approval_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        var comment = valueObj.TryGetValue("comment", StringComparison.OrdinalIgnoreCase, out var commentToken)
+                            ? commentToken.ToString()
+                            : null;
+
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
+                        {
+                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            return;
+                        }
+
+                        var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        if (role < UserRole.Manager)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
+                                    "Only Manager or Admin can reject approval requests.",
+                                    role.ToString(),
+                                    UserRole.Manager.ToString())),
+                                cancellationToken);
+                            return;
+                        }
+
+                        try
+                        {
+                            var managerSalesOrg = await _userMappingService.GetSalesOrgAsync(teamsUserId, cancellationToken);
+                            var approval = await _approvals.RejectAsync(
+                                salesOrderId,
+                                linkedSapUsername,
+                                managerSalesOrg,
+                                isAdmin: role == UserRole.Admin,
+                                comment,
+                                cancellationToken);
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(approval.SoNumber, "ApprovalRejected")),
+                                cancellationToken);
+                        }
+                        catch (UnauthorizedAccessException authEx)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
+                                    authEx.Message, role.ToString(), UserRole.Manager.ToString())),
+                                cancellationToken);
+                        }
+                        catch (InvalidOperationException invEx)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", invEx.Message)),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Unexpected error rejecting approval for {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken);
                         }
                         return;
                     }
@@ -553,12 +790,17 @@ public class TeamsBot : TeamsActivityHandler
 
             if (dispatch.Denied)
             {
+                var required = dispatch.FunctionName is not null
+                    ? RolePolicy.RequiredRole(dispatch.FunctionName).ToString()
+                    : UserRole.Manager.ToString();
+
                 await ReplaceLoadingActivityAsync(
                     turnContext,
                     loadingActivityId,
-                    TeamsCardBuilder.BuildErrorCard(
-                        "NOT_AUTHORIZED",
-                        dispatch.Result?.ErrorMessage ?? "You are not authorized to perform this action."),
+                    TeamsCardBuilder.BuildNotAuthorizedCard(
+                        dispatch.Result?.ErrorMessage ?? "You are not authorized to perform this action.",
+                        role.ToString(),
+                        required),
                     cancellationToken);
 
                 _logger.LogWarning(
@@ -675,6 +917,115 @@ public class TeamsBot : TeamsActivityHandler
                     cancellationToken);
 
                 _logger.LogInformation("Bot replied with KPI summary card");
+                return;
+            }
+
+            if (result.Payload is AISO.AiOrchestration.Functions.GetPendingApprovalsResponse pendingResponse)
+            {
+                if (pendingResponse.Count == 0)
+                {
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        TeamsCardBuilder.BuildEmptyCard(),
+                        cancellationToken);
+                    return;
+                }
+
+                var pendingCard = TeamsCardBuilder.BuildPendingApprovalsCard(new
+                {
+                    count = pendingResponse.Count,
+                    items = pendingResponse.Items.Select(i => new
+                    {
+                        orderId = i.OrderId,
+                        requestedBy = i.RequestedBy,
+                        salesOrg = string.IsNullOrWhiteSpace(i.SalesOrg) ? "-" : i.SalesOrg,
+                        comment = i.Comment ?? string.Empty,
+                        requestedAt = i.RequestedAt
+                    }).ToList()
+                });
+
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    pendingCard,
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with pending approvals card ({Count})", pendingResponse.Count);
+                return;
+            }
+
+            if (result.Payload is AISO.AiOrchestration.Functions.ViewAuditLogResponse auditResponse)
+            {
+                if (auditResponse.Count == 0)
+                {
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        TeamsCardBuilder.BuildEmptyCard(),
+                        cancellationToken);
+                    return;
+                }
+
+                var auditCard = TeamsCardBuilder.BuildAuditLogCard(new
+                {
+                    count = auditResponse.Count,
+                    items = auditResponse.Items.Select(i => new
+                    {
+                        timestamp = i.Timestamp,
+                        action = i.Action,
+                        status = i.Status,
+                        teamsUserId = i.TeamsUserId,
+                        durationMs = i.DurationMs,
+                        error = i.Error ?? string.Empty
+                    }).ToList()
+                });
+
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    auditCard,
+                    cancellationToken);
+
+                _logger.LogInformation("Bot replied with audit log card ({Count})", auditResponse.Count);
+                return;
+            }
+
+            if (result.Payload is AISO.AiOrchestration.Functions.GetOverdueOrdersResponse overdueResponse)
+            {
+                if (overdueResponse.Orders.Count == 0)
+                {
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        TeamsCardBuilder.BuildEmptyCard(),
+                        cancellationToken);
+                    return;
+                }
+
+                var overdueCard = TeamsCardBuilder.BuildOverdueOrdersCard(new
+                {
+                    count = overdueResponse.Orders.Count,
+                    orders = overdueResponse.Orders.Select(o => new
+                    {
+                        soNumber = o.SoNumber,
+                        customerName = o.CustomerName,
+                        daysPastDue = o.DaysPastDue,
+                        formattedValue = $"{o.NetValue:N0} {o.Currency}",
+                        scheduledDeliveryDate = o.ScheduledDeliveryDate.ToString("dd MMM yyyy"),
+                        salesOrg = o.SalesOrg
+                    }).ToList()
+                });
+
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    overdueCard,
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with overdue orders card ({Count})", overdueResponse.Orders.Count);
                 return;
             }
 

@@ -47,20 +47,30 @@ public sealed class ViewAuditLogFunction : IFunction
             "ViewAuditLog: user={User} returned {Count} entries",
             requestingSapUser, entries.Count);
 
-        return FunctionResult.Ok(new
-        {
-            count = entries.Count,
-            message = $"Showing {entries.Count} recent audit log entr{(entries.Count == 1 ? "y" : "ies")}.",
-            items = entries.Select(e => new
-            {
-                id = e.Id,
-                timestamp = e.Timestamp.ToString("u"),
-                teams_user_id = e.TeamsUserId,
-                action = e.Action,
-                status = e.ResultStatus,
-                duration_ms = e.DurationMs,
-                error = e.ErrorMessage
-            }).ToList()
-        });
+        return FunctionResult.Ok(new ViewAuditLogResponse(
+            entries.Count,
+            $"Showing {entries.Count} recent audit log entries.",
+            entries.Select(e => new AuditLogItem(
+                e.Id,
+                e.Timestamp.ToString("u"),
+                e.TeamsUserId,
+                e.Action,
+                e.ResultStatus,
+                e.DurationMs?.ToString() ?? "-",
+                e.ErrorMessage ?? string.Empty)).ToList()));
     }
 }
+
+public sealed record AuditLogItem(
+    long Id,
+    string Timestamp,
+    string TeamsUserId,
+    string Action,
+    string Status,
+    string DurationMs,
+    string Error);
+
+public sealed record ViewAuditLogResponse(
+    int Count,
+    string Message,
+    IReadOnlyList<AuditLogItem> Items);

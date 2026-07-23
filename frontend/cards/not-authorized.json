@@ -1,0 +1,36 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Attention",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Not authorized",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Attention",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "${errorMessage}",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Your role", "value": "${currentRole}" },
+        { "title": "Required", "value": "${requiredRole}" }
+      ],
+      "spacing": "Medium"
+    }
+  ]
+}

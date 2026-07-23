@@ -1,0 +1,60 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Request release approval",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Submit sales order ${salesOrderNumber} for Manager approval? This does not release the order yet.",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "comment",
+      "placeholder": "Note for the manager (optional)...",
+      "isMultiline": true
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Submit for approval",
+      "style": "positive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Request release ${salesOrderNumber}",
+          "text": "request release ${salesOrderNumber}"
+        },
+        "action": "request_release_confirm",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}
