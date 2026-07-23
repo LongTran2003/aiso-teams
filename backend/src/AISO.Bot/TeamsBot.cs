@@ -708,8 +708,16 @@ public class TeamsBot : TeamsActivityHandler
 
             if (string.Equals(normalizedMessage, "help", StringComparison.OrdinalIgnoreCase))
             {
+                var currentRole = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                var roleName = currentRole switch
+                {
+                    UserRole.Admin => "Admin",
+                    UserRole.Manager => "Manager",
+                    _ => "Employee"
+                };
+
                 await turnContext.SendActivityAsync(
-                    MessageFactory.Attachment(TeamsCardBuilder.BuildHelpCard()),
+                    MessageFactory.Attachment(TeamsCardBuilder.BuildHelpCard(roleName)),
                     cancellationToken);
                 return;
             }
