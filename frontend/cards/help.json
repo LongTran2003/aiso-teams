@@ -5,7 +5,7 @@
   "body": [
     {
       "type": "TextBlock",
-      "text": "SUPPORTED COMMANDS BY ROLE",
+      "text": "SUPPORTED COMMANDS",
       "weight": "Bolder",
       "size": "Medium",
       "color": "Accent"
@@ -26,6 +26,7 @@
     },
     {
       "type": "ActionSet",
+      "$when": "${role == 'Employee'}",
       "actions": [
         {
           "type": "Action.Submit",
@@ -36,8 +37,7 @@
               "displayText": "Recent Orders",
               "text": "recent orders"
             }
-          },
-          "$when": "${role == 'Employee'}"
+          }
         },
         {
           "type": "Action.Submit",
@@ -48,8 +48,7 @@
               "displayText": "Revenue KPI",
               "text": "show revenue kpi"
             }
-          },
-          "$when": "${role == 'Employee' || role == 'Manager' || role == 'Admin'}"
+          }
         },
         {
           "type": "Action.Submit",
@@ -60,8 +59,7 @@
               "displayText": "Request Release",
               "text": "request release"
             }
-          },
-          "$when": "${role == 'Employee'}"
+          }
         }
       ],
       "spacing": "Small"
@@ -76,6 +74,7 @@
     },
     {
       "type": "ActionSet",
+      "$when": "${role == 'Manager'}",
       "actions": [
         {
           "type": "Action.Submit",
@@ -86,8 +85,7 @@
               "displayText": "Pending Approvals",
               "text": "show pending approvals"
             }
-          },
-          "$when": "${role == 'Manager' || role == 'Admin'}"
+          }
         },
         {
           "type": "Action.Submit",
@@ -98,8 +96,7 @@
               "displayText": "Approve Order",
               "text": "approve order"
             }
-          },
-          "$when": "${role == 'Manager' || role == 'Admin'}"
+          }
         },
         {
           "type": "Action.Submit",
@@ -110,8 +107,7 @@
               "displayText": "Reject Approval",
               "text": "reject approval"
             }
-          },
-          "$when": "${role == 'Manager' || role == 'Admin'}"
+          }
         }
       ],
       "spacing": "Small"
@@ -126,6 +122,7 @@
     },
     {
       "type": "ActionSet",
+      "$when": "${role == 'Admin'}",
       "actions": [
         {
           "type": "Action.Submit",
@@ -136,8 +133,7 @@
               "displayText": "View Audit Log",
               "text": "view audit log"
             }
-          },
-          "$when": "${role == 'Admin'}"
+          }
         },
         {
           "type": "Action.Submit",
@@ -148,8 +144,7 @@
               "displayText": "Manage Approval Flow",
               "text": "show pending approvals"
             }
-          },
-          "$when": "${role == 'Admin'}"
+          }
         },
         {
           "type": "Action.Submit",
@@ -160,8 +155,7 @@
               "displayText": "Revenue KPI",
               "text": "show revenue kpi"
             }
-          },
-          "$when": "${role == 'Employee' || role == 'Manager' || role == 'Admin'}"
+          }
         }
       ],
       "spacing": "Small"
