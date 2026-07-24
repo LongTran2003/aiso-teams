@@ -104,6 +104,20 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
         var argsJson = JsonSerializer.Serialize(toolCall.Arguments);
         using var argsDoc = JsonDocument.Parse(argsJson);
 
+        // Maker-checker: AI often maps "request release" → ReleaseOrder.
+        // Employees cannot release; rewrite to RequestRelease before the role gate.
+        if (role == UserRole.Employee
+            && string.Equals(function.Name, "ReleaseOrder", StringComparison.OrdinalIgnoreCase))
+        {
+            var requestRelease = _registry.GetByName("RequestRelease");
+            if (requestRelease is not null)
+            {
+                _logger.LogInformation(
+                    "Remapping ReleaseOrder → RequestRelease for Employee (maker-checker)");
+                function = requestRelease;
+            }
+        }
+
         // Role-based access control (Phase B): block the action before any side effect.
         if (!RolePolicy.CanExecute(role, function.Name))
         {
