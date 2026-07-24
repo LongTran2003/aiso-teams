@@ -203,6 +203,38 @@ public class TeamsBot : TeamsActivityHandler
                         return;
                     }
 
+                    if (string.Equals(action, "filter_pending_approvals", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        if (role is not (UserRole.Manager or UserRole.Admin))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
+                                    "Only managers and administrators can view pending approvals.",
+                                    role.ToString(),
+                                    "Manager")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var salesOrgScope = role == UserRole.Admin
+                            ? null
+                            : await _userMappingService.GetSalesOrgAsync(teamsUserId, cancellationToken);
+                        var pending = await _approvals.GetPendingAsync(salesOrgScope, cancellationToken);
+                        var search = valueObj.Value<string>("search");
+                        var requester = valueObj.Value<string>("requester");
+                        var salesOrg = valueObj.Value<string>("salesOrg");
+
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildPendingApprovalsCard(
+                                pending,
+                                search,
+                                requester,
+                                salesOrg)),
+                            cancellationToken);
+                        return;
+                    }
+
                     if (string.Equals(action, "reject_so", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
@@ -945,6 +977,22 @@ public class TeamsBot : TeamsActivityHandler
                 var pendingCard = TeamsCardBuilder.BuildPendingApprovalsCard(new
                 {
                     count = pendingResponse.Count,
+                    search = string.Empty,
+                    selectedRequester = string.Empty,
+                    selectedSalesOrg = string.Empty,
+                    requesterChoices = pendingResponse.Items
+                        .Select(i => i.RequestedBy)
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(value => value)
+                        .Select(value => new { title = value, value })
+                        .ToList(),
+                    salesOrgChoices = pendingResponse.Items
+                        .Select(i => i.SalesOrg)
+                        .Where(value => !string.IsNullOrWhiteSpace(value))
+                        .Distinct(StringComparer.OrdinalIgnoreCase)
+                        .OrderBy(value => value)
+                        .Select(value => new { title = value, value })
+                        .ToList(),
                     items = pendingResponse.Items.Select(i => new
                     {
                         orderId = i.OrderId,

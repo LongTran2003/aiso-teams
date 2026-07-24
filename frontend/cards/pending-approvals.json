@@ -21,6 +21,85 @@
     {
       "type": "Container",
       "separator": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Filter approvals",
+          "weight": "Bolder",
+          "wrap": true
+        },
+        {
+          "type": "Input.Text",
+          "id": "search",
+          "label": "Order, requester, or comment",
+          "placeholder": "Enter a keyword",
+          "value": "${search}"
+        },
+        {
+          "type": "Input.ChoiceSet",
+          "id": "requester",
+          "label": "Requested by",
+          "style": "compact",
+          "value": "${selectedRequester}",
+          "choices": [
+            {
+              "title": "All requesters",
+              "value": ""
+            },
+            {
+              "$data": "${requesterChoices}",
+              "title": "${title}",
+              "value": "${value}"
+            }
+          ]
+        },
+        {
+          "type": "Input.ChoiceSet",
+          "id": "salesOrg",
+          "label": "Sales organization",
+          "style": "compact",
+          "value": "${selectedSalesOrg}",
+          "choices": [
+            {
+              "title": "All sales organizations",
+              "value": ""
+            },
+            {
+              "$data": "${salesOrgChoices}",
+              "title": "${title}",
+              "value": "${value}"
+            }
+          ]
+        },
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.Submit",
+              "title": "Apply filters",
+              "data": {
+                "msteams": {
+                  "type": "messageBack",
+                  "displayText": "Filter pending approvals",
+                  "text": "filter pending approvals"
+                },
+                "action": "filter_pending_approvals"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "No approvals match the selected filters.",
+      "isSubtle": true,
+      "wrap": true,
+      "$when": "${count == 0}"
+    },
+    {
+      "type": "Container",
+      "separator": true,
       "$data": "${items}",
       "items": [
         {

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AISO.Domain.Approvals;
 using AISO.Domain.SalesOrders;
 using Microsoft.Bot.Schema;
 
@@ -46,6 +47,61 @@ internal static class TeamsCardBuilder
 
     public static Attachment BuildPendingApprovalsCard(object data) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("pending-approvals.json", data);
+
+    public static Attachment BuildPendingApprovalsCard(
+        IReadOnlyList<OrderApprovalRequest> approvals,
+        string? search = null,
+        string? requester = null,
+        string? salesOrg = null)
+    {
+        var normalizedSearch = search?.Trim() ?? string.Empty;
+        var normalizedRequester = requester?.Trim() ?? string.Empty;
+        var normalizedSalesOrg = salesOrg?.Trim() ?? string.Empty;
+
+        var filtered = approvals
+            .Where(approval =>
+                (string.IsNullOrEmpty(normalizedSearch) ||
+                 approval.SoNumber.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                 approval.RequestedBySapUser.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
+                 (approval.Comment?.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+                (string.IsNullOrEmpty(normalizedRequester) ||
+                 string.Equals(approval.RequestedBySapUser, normalizedRequester, StringComparison.OrdinalIgnoreCase)) &&
+                (string.IsNullOrEmpty(normalizedSalesOrg) ||
+                 string.Equals(approval.SalesOrg, normalizedSalesOrg, StringComparison.OrdinalIgnoreCase)))
+            .ToList();
+
+        var data = new
+        {
+            count = filtered.Count,
+            search = normalizedSearch,
+            selectedRequester = normalizedRequester,
+            selectedSalesOrg = normalizedSalesOrg,
+            requesterChoices = approvals
+                .Select(approval => approval.RequestedBySapUser)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(value => value)
+                .Select(value => new { title = value, value })
+                .ToList(),
+            salesOrgChoices = approvals
+                .Select(approval => approval.SalesOrg)
+                .Where(value => !string.IsNullOrWhiteSpace(value))
+                .Select(value => value!)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(value => value)
+                .Select(value => new { title = value, value })
+                .ToList(),
+            items = filtered.Select(approval => new
+            {
+                orderId = approval.SoNumber,
+                requestedBy = approval.RequestedBySapUser,
+                salesOrg = string.IsNullOrWhiteSpace(approval.SalesOrg) ? "-" : approval.SalesOrg,
+                comment = approval.Comment ?? string.Empty,
+                requestedAt = approval.RequestedAt.ToString("u")
+            }).ToList()
+        };
+
+        return BuildPendingApprovalsCard(data);
+    }
 
     public static Attachment BuildAuditLogCard(object data) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("audit-log.json", data);
