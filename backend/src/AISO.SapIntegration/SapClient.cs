@@ -58,6 +58,11 @@ public class SapClient : ISapClient
             builder.FilterRaw($"DocDate le {query.ToDate.Value:yyyy-MM-dd}");
         }
 
+        if (query.Status.HasValue)
+        {
+            ApplyStatusFilter(builder, query.Status.Value);
+        }
+
         // Note: The SalesOrder view in this SAP OData V4 service is flat and does not support Expand("ITEMS")
 
         var url = builder.Build();
@@ -637,15 +642,55 @@ public class SapClient : ISapClient
             OrderDate = DateOnly.TryParse(dto.DocDate, out var date) ? date : DateOnly.MinValue,
             NetValue = dto.NetValue ?? 0,
             Currency = string.IsNullOrEmpty(dto.Currency) ? "USD" : dto.Currency,
-            Status = MapStatus(dto.OverallStatus),
+            Status = MapStatus(dto),
             SalesOrg = dto.SalesOrg ?? "UNKNOWN",
             Items = Array.Empty<SalesOrderItem>()
         };
     }
 
-    private SalesOrderStatus MapStatus(string? sapStatus)
+    /// <summary>
+    /// Maps domain status to OData filters on SAP SalesOrder fields.
+    /// OverallStatus (GBSTK): A=Open, B=Partially delivered, C=Complete/Delivered.
+    /// </summary>
+    internal static void ApplyStatusFilter(ODataQueryBuilder builder, SalesOrderStatus status)
     {
-        return sapStatus switch
+        switch (status)
+        {
+            case SalesOrderStatus.Open:
+                builder.Filter("OverallStatus", "eq", "A");
+                break;
+            case SalesOrderStatus.PartiallyDelivered:
+                builder.Filter("OverallStatus", "eq", "B");
+                break;
+            case SalesOrderStatus.Delivered:
+                builder.Filter("OverallStatus", "eq", "C");
+                break;
+            case SalesOrderStatus.Blocked:
+                // Delivery block present (LIFSK); requires SAP field to be populated in the CDS/OData projection.
+                builder.FilterRaw("DeliveryBlock ne ''");
+                break;
+            case SalesOrderStatus.Cancelled:
+                builder.Filter("IsCancelled", "eq", "X");
+                break;
+            case SalesOrderStatus.Invoiced:
+                // Fully billed (FKSTK = C) when exposed by SAP.
+                builder.Filter("BillingStatus", "eq", "C");
+                break;
+        }
+    }
+
+    private SalesOrderStatus MapStatus(SapSalesOrderDto dto)
+    {
+        if (string.Equals(dto.IsCancelled, "X", StringComparison.OrdinalIgnoreCase))
+            return SalesOrderStatus.Cancelled;
+
+        if (!string.IsNullOrWhiteSpace(dto.DeliveryBlock))
+            return SalesOrderStatus.Blocked;
+
+        if (string.Equals(dto.BillingStatus, "C", StringComparison.OrdinalIgnoreCase))
+            return SalesOrderStatus.Invoiced;
+
+        return dto.OverallStatus switch
         {
             "A" => SalesOrderStatus.Open,
             "B" => SalesOrderStatus.PartiallyDelivered,
