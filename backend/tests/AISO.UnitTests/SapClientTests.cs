@@ -99,6 +99,79 @@ public class SapClientTests
         Assert.Equal("EUR", result.Currency);
     }
 
+    [Fact]
+    public async Task GetSalesOrders_WhenStatusOpen_FiltersOverallStatusA()
+    {
+        var body = "{\"value\":[]}";
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        await client.GetSalesOrdersAsync(new SalesOrdersQuery
+        {
+            Status = SalesOrderStatus.Open,
+            Top = 10
+        });
+
+        Assert.NotNull(handler.LastRequestUri);
+        var decoded = Uri.UnescapeDataString(handler.LastRequestUri!);
+        Assert.Contains("OverallStatus eq 'A'", decoded);
+    }
+
+    [Fact]
+    public async Task GetSalesOrders_WhenStatusDelivered_FiltersOverallStatusC()
+    {
+        var body = "{\"value\":[]}";
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        await client.GetSalesOrdersAsync(new SalesOrdersQuery
+        {
+            Status = SalesOrderStatus.Delivered
+        });
+
+        var decoded = Uri.UnescapeDataString(handler.LastRequestUri!);
+        Assert.Contains("OverallStatus eq 'C'", decoded);
+    }
+
+    [Fact]
+    public async Task GetSalesOrders_WhenStatusCancelled_FiltersIsCancelled()
+    {
+        var body = "{\"value\":[]}";
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        await client.GetSalesOrdersAsync(new SalesOrdersQuery
+        {
+            Status = SalesOrderStatus.Cancelled
+        });
+
+        var decoded = Uri.UnescapeDataString(handler.LastRequestUri!);
+        Assert.Contains("IsCancelled eq 'X'", decoded);
+    }
+
+    [Fact]
+    public async Task GetSalesOrderById_MapsCancelledWhenIsCancelledX()
+    {
+        var body = "{\"SoNumber\":\"9\",\"Customer\":\"1000\",\"OverallStatus\":\"A\",\"IsCancelled\":\"X\"}";
+        var client = CreateClient(HttpStatusCode.OK, body, out _);
+
+        var result = await client.GetSalesOrderByIdAsync("9");
+
+        Assert.Equal(SalesOrderStatus.Cancelled, result!.Status);
+    }
+
+    [Theory]
+    [InlineData(SalesOrderStatus.Open, "OverallStatus eq 'A'")]
+    [InlineData(SalesOrderStatus.PartiallyDelivered, "OverallStatus eq 'B'")]
+    [InlineData(SalesOrderStatus.Delivered, "OverallStatus eq 'C'")]
+    [InlineData(SalesOrderStatus.Blocked, "DeliveryBlock ne ''")]
+    [InlineData(SalesOrderStatus.Invoiced, "BillingStatus eq 'C'")]
+    [InlineData(SalesOrderStatus.Cancelled, "IsCancelled eq 'X'")]
+    public void ApplyStatusFilter_MapsDomainStatusToSapFilter(SalesOrderStatus status, string expectedFragment)
+    {
+        var builder = new ODataQueryBuilder("SalesOrder");
+        SapClient.ApplyStatusFilter(builder, status);
+
+        Assert.Contains(Uri.EscapeDataString(expectedFragment), builder.Build());
+    }
+
     private sealed class StubTokenManager : ISapTokenManager
     {
         public Task<SapAuthContext> GetAuthContextAsync(CancellationToken cancellationToken = default)
@@ -119,8 +192,11 @@ public class SapClientTests
             _body = body;
         }
 
+        public string? LastRequestUri { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            LastRequestUri = request.RequestUri?.ToString();
             var response = new HttpResponseMessage(_status)
             {
                 Content = new StringContent(_body, Encoding.UTF8, "application/json")

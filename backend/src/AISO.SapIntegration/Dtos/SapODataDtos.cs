@@ -25,6 +25,10 @@ internal class SapSalesOrderDto
     public string? CreatedBy { get; set; }
     public string? CreatedDate { get; set; }
     public string? OverallStatus { get; set; }
+    public string? CreditStatus { get; set; }
+    public string? DeliveryBlock { get; set; }
+    public string? BillingStatus { get; set; }
+    public string? IsCancelled { get; set; }
 }
 
 // KPI DTOs — field names must match SAP CDS view element names (PascalCase via OData)
