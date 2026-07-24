@@ -158,8 +158,31 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
-        // Pattern: Approve Order
-        if ((text.Contains("phê duyệt") || text.Contains("approve") || text.Contains("release")) && (text.Contains("đơn") || text.Contains("order")))
+        // Pattern: Request release (maker) — must run before ReleaseOrder.
+        // "request release for order …" must NOT map to Manager ReleaseOrder.
+        if (IsRequestReleaseIntent(text) && (text.Contains("đơn") || text.Contains("order") || OrderIdPattern().IsMatch(text)))
+        {
+            var fn = _registry.GetByName("RequestRelease");
+            if (fn is not null)
+            {
+                var orderMatch = OrderIdPattern().Match(text);
+                var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
+
+                var commentMatch = Regex.Match(text, @"comment:\s*(.+)");
+                var commentStr = commentMatch.Success ? commentMatch.Groups[1].Value.Trim() : null;
+
+                var paramsObj = new { order_id = orderId, comment = commentStr };
+                var paramsJson = JsonSerializer.Serialize(paramsObj);
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
+            }
+        }
+
+        // Pattern: Approve / release order (checker / direct SAP release)
+        if ((text.Contains("phê duyệt") || text.Contains("approve") || text.Contains("release"))
+            && (text.Contains("đơn") || text.Contains("order"))
+            && !IsRequestReleaseIntent(text))
         {
             var fn = _registry.GetByName("ReleaseOrder");
             if (fn is not null)
@@ -226,6 +249,16 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
 
         return new DispatchResult { Handled = false, Reason = "intent unclear" };
     }
+
+    private static bool IsRequestReleaseIntent(string text) =>
+        text.Contains("request release")
+        || text.Contains("yêu cầu duyệt")
+        || text.Contains("yêu cầu release")
+        || text.Contains("yêu cầu giải phóng")
+        || text.Contains("xin duyệt")
+        || text.Contains("submit for approval")
+        || text.Contains("send for approval")
+        || (text.Contains("request") && text.Contains("release"));
 
     [GeneratedRegex(@"(\d{4,10})")]
     private static partial Regex OrderIdPattern();
