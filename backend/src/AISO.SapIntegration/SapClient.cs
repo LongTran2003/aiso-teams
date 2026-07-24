@@ -633,7 +633,7 @@ public class SapClient : ISapClient
         {
             SoNumber = FormatSoNumber(dto.SoNumber),
             CustomerId = dto.Customer ?? string.Empty,
-            CustomerName = string.IsNullOrWhiteSpace(dto.CustomerName) ? "NA" : dto.CustomerName,
+            CustomerName = string.IsNullOrWhiteSpace(dto.CustomerName) ? "N/A" : dto.CustomerName,
             CustomerReference = dto.CustomerReference,
             RequestedDeliveryDate = DateOnly.TryParse(dto.RequestedDeliveryDate, out var requestedDate)
                 ? requestedDate
