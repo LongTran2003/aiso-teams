@@ -52,9 +52,14 @@ public sealed class GetPendingApprovalsFunction : IFunction
 
         if (pending.Count == 0)
         {
+            var emptyMessage = string.IsNullOrWhiteSpace(salesOrg)
+                ? "No pending release approvals."
+                : $"No pending release approvals in sales org {salesOrg}. " +
+                  "If an employee just requested release, confirm the order's VKORG matches your Manager SalesOrg.";
+
             return FunctionResult.Ok(new GetPendingApprovalsResponse(
                 0,
-                "No pending release approvals.",
+                emptyMessage,
                 Array.Empty<PendingApprovalItem>()));
         }
 

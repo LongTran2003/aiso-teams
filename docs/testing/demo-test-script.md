@@ -22,24 +22,28 @@ Liên quan: [#157](https://github.com/LongTran2003/aiso-teams/issues/157) · [#1
 
 | Role | Teams user (người demo) | `SapUserId` (ví dụ) | `Role` | `SalesOrg` |
 |---|---|---|---|---|
-| **Employee** | Người A (maker) | `DEV-249` | `Employee` | `UE00` (tuỳ chọn) |
-| **Manager** | Người B (checker) | `DEV-300` (hoặc user khác) | `Manager` | **`UE00`** (khớp order) |
+| **Employee** | Vu Ngoc Tien | `DEV-024` | `Employee` | khớp VKORG order (vd `TV01`) |
+| **Manager** | Tran Long | `DEV-249` | `Manager` | **cùng VKORG order** (vd `TV01`) |
 | **Admin** | Người C / cùng máy khác | `DEV-xxx` | `Admin` | `null` |
 
 > Sau login lần đầu, cập nhật cột `Role` / `SalesOrg` trong DB (Phase B chưa có UI gán role).
+> **Quan trọng:** `SalesOrg` Manager phải khớp `order_approvals.SalesOrg` (lấy từ SAP VKORG của SO). Sai org → `Show pending approvals` ra empty dù đã RequestRelease. Không giả định `UE00` — check SO thật (vd hiện tại thường `TV01`).
 
 SQL gợi ý:
 
 ```sql
-UPDATE user_mappings
-SET "Role" = 'Employee', "SalesOrg" = 'UE00', "UpdatedAt" = NOW()
+-- Kiểm tra VKORG đang pending
+SELECT "SoNumber", "SalesOrg", "Status" FROM public.order_approvals WHERE "Status" = 'Pending';
+
+UPDATE public.user_mappings
+SET "Role" = 'Employee', "SalesOrg" = 'TV01', "UpdatedAt" = NOW()
+WHERE "SapUserId" = 'DEV-024';
+
+UPDATE public.user_mappings
+SET "Role" = 'Manager', "SalesOrg" = 'TV01', "UpdatedAt" = NOW()
 WHERE "SapUserId" = 'DEV-249';
 
-UPDATE user_mappings
-SET "Role" = 'Manager', "SalesOrg" = 'UE00', "UpdatedAt" = NOW()
-WHERE "SapUserId" = 'DEV-300';
-
-UPDATE user_mappings
+UPDATE public.user_mappings
 SET "Role" = 'Admin', "SalesOrg" = NULL, "UpdatedAt" = NOW()
 WHERE "SapUserId" = 'DEV-xxx';
 ```
@@ -160,8 +164,8 @@ Nói: *Phase B = BE enforce roles (demo hôm nay). Phase A tiếp theo = princip
 |---|---|
 | Employee vẫn release được | Migration/role chưa seed → cột `Role` vẫn `Employee`? Deploy đúng bản? |
 | `NOT_AUTHORIZED` sai role | `user_mappings.Role` đúng chưa? Logout/login lại |
-| Approve: no pending | Employee đã `RequestRelease` chưa? Đúng số SO? |
-| Approve: sai sales org | Manager `SalesOrg` khớp order / `UE00` |
+| Approve: no pending | Employee đã `RequestRelease` chưa? Đúng số SO? Manager `SalesOrg` khớp `order_approvals.SalesOrg` (vd `TV01`) chưa? |
+| Approve: sai sales org | Manager `SalesOrg` khớp order (`TV01`/`ND01`/`FG01`) |
 | KPI chỉ text success | Bản fix KPI card (#156) đã deploy? |
 | Overdue 404 | Known (#154) — **không demo** lệnh này |
 | Filter by status | Known (#153) — tránh demo “show Open only” nếu chưa fix |
