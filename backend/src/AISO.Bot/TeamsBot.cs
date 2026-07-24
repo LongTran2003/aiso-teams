@@ -134,9 +134,11 @@ public class TeamsBot : TeamsActivityHandler
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
                                 {
                                     salesOrderNumber = order.SoNumber,
-                                    customerName = order.CustomerName,
-                                    customerId = order.CustomerId,
+                                    customerDisplay = $"{DisplayOrNa(order.CustomerName)} ({DisplayOrNa(order.CustomerId)})",
+                                    customerReference = DisplayOrNa(order.CustomerReference),
+                                    salesOrgDivision = $"{DisplayOrNa(order.SalesOrg)} / {DisplayOrNa(order.Division)}",
                                     documentDate = order.OrderDate.ToString("dd MMM yyyy"),
+                                    requestedDeliveryDate = order.RequestedDeliveryDate?.ToString("dd MMM yyyy") ?? "NA",
                                     netAmount = $"{order.NetValue:N0}",
                                     currency = order.Currency,
                                     approvalStatus = order.Status.ToString(),
@@ -1192,9 +1194,11 @@ public class TeamsBot : TeamsActivityHandler
             MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
             {
                 salesOrderNumber = order.SoNumber,
-                customerName = order.CustomerName,
-                customerId = order.CustomerId,
+                customerDisplay = $"{DisplayOrNa(order.CustomerName)} ({DisplayOrNa(order.CustomerId)})",
+                customerReference = DisplayOrNa(order.CustomerReference),
+                salesOrgDivision = $"{DisplayOrNa(order.SalesOrg)} / {DisplayOrNa(order.Division)}",
                 documentDate = order.OrderDate.ToString("dd MMM yyyy"),
+                requestedDeliveryDate = order.RequestedDeliveryDate?.ToString("dd MMM yyyy") ?? "NA",
                 netAmount = $"{order.NetValue:N0}",
                 currency = order.Currency,
                 approvalStatus = order.Status.ToString(),
@@ -1212,4 +1216,7 @@ public class TeamsBot : TeamsActivityHandler
             cancellationToken);
         return true;
     }
+
+    private static string DisplayOrNa(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "NA" : value;
 }

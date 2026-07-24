@@ -628,7 +628,12 @@ public class SapClient : ISapClient
         {
             SoNumber = FormatSoNumber(dto.SoNumber),
             CustomerId = dto.Customer ?? string.Empty,
-            CustomerName = dto.Customer ?? "Unknown Customer",
+            CustomerName = string.IsNullOrWhiteSpace(dto.CustomerName) ? "NA" : dto.CustomerName,
+            CustomerReference = dto.CustomerReference,
+            RequestedDeliveryDate = DateOnly.TryParse(dto.RequestedDeliveryDate, out var requestedDate)
+                ? requestedDate
+                : null,
+            Division = dto.Division,
             OrderDate = DateOnly.TryParse(dto.DocDate, out var date) ? date : DateOnly.MinValue,
             NetValue = dto.NetValue ?? 0,
             Currency = string.IsNullOrEmpty(dto.Currency) ? "USD" : dto.Currency,

@@ -14,6 +14,15 @@ public sealed record SalesOrder
     /// <summary>Customer display name (KNA1.NAME1).</summary>
     public required string CustomerName { get; init; }
 
+    /// <summary>Customer purchase order/reference number.</summary>
+    public string? CustomerReference { get; init; }
+
+    /// <summary>Requested delivery date at order header level.</summary>
+    public DateOnly? RequestedDeliveryDate { get; init; }
+
+    /// <summary>Sales division code (VBAK.SPART).</summary>
+    public string? Division { get; init; }
+
     /// <summary>Order entry date (VBAK.AUDAT).</summary>
     public required DateOnly OrderDate { get; init; }
 
