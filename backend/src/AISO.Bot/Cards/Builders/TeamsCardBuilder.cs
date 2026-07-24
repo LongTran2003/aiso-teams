@@ -173,7 +173,7 @@ internal static class TeamsCardBuilder
             orders = orders.Select(o => new
             {
                 soNumber = o.SoNumber,
-                customerName = o.CustomerName,
+                customerName = string.IsNullOrWhiteSpace(o.CustomerName) ? "N/A" : o.CustomerName,
                 orderDate = o.OrderDate.ToString("dd MMM yyyy"),
                 formattedValue = $"{o.NetValue:N0} {o.Currency}",
                 status = o.Status.ToString(),

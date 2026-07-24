@@ -88,7 +88,7 @@ public class SapClientTests
     [Fact]
     public async Task GetSalesOrderById_MapsStatusAndPadsNumber()
     {
-        var body = "{\"SoNumber\":\"9\",\"Customer\":\"1000\",\"OverallStatus\":\"C\",\"Currency\":\"EUR\"}";
+        var body = "{\"SoNumber\":\"9\",\"Customer\":\"1000\",\"CustomerName\":\"Philly Bikes\",\"OverallStatus\":\"C\",\"Currency\":\"EUR\"}";
         var client = CreateClient(HttpStatusCode.OK, body, out _);
 
         var result = await client.GetSalesOrderByIdAsync("9");
@@ -97,6 +97,18 @@ public class SapClientTests
         Assert.Equal("0000000009", result!.SoNumber);
         Assert.Equal(SalesOrderStatus.Delivered, result.Status);
         Assert.Equal("EUR", result.Currency);
+        Assert.Equal("Philly Bikes", result.CustomerName);
+    }
+
+    [Fact]
+    public async Task GetSalesOrderById_WhenCustomerNameMissing_UsesNotAvailableLabel()
+    {
+        var body = "{\"SoNumber\":\"9\",\"Customer\":\"1000\",\"OverallStatus\":\"A\"}";
+        var client = CreateClient(HttpStatusCode.OK, body, out _);
+
+        var result = await client.GetSalesOrderByIdAsync("9");
+
+        Assert.Equal("N/A", result!.CustomerName);
     }
 
     [Fact]

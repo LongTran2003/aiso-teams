@@ -8,6 +8,7 @@ define root view entity ZC_AISO_SO_WITH_ITEMS
   key SoNumber,
       DocType,
       Customer,
+      CustomerName,
       SalesOrg,
       DistChannel,
       Division,

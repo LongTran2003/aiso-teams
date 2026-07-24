@@ -138,7 +138,7 @@ public class TeamsBot : TeamsActivityHandler
                                     customerReference = DisplayOrNa(order.CustomerReference),
                                     salesOrgDivision = $"{DisplayOrNa(order.SalesOrg)} / {DisplayOrNa(order.Division)}",
                                     documentDate = order.OrderDate.ToString("dd MMM yyyy"),
-                                    requestedDeliveryDate = order.RequestedDeliveryDate?.ToString("dd MMM yyyy") ?? "NA",
+                                    requestedDeliveryDate = order.RequestedDeliveryDate?.ToString("dd MMM yyyy") ?? "N/A",
                                     netAmount = $"{order.NetValue:N0}",
                                     currency = order.Currency,
                                     approvalStatus = order.Status.ToString(),
@@ -1198,7 +1198,7 @@ public class TeamsBot : TeamsActivityHandler
                 customerReference = DisplayOrNa(order.CustomerReference),
                 salesOrgDivision = $"{DisplayOrNa(order.SalesOrg)} / {DisplayOrNa(order.Division)}",
                 documentDate = order.OrderDate.ToString("dd MMM yyyy"),
-                requestedDeliveryDate = order.RequestedDeliveryDate?.ToString("dd MMM yyyy") ?? "NA",
+                requestedDeliveryDate = order.RequestedDeliveryDate?.ToString("dd MMM yyyy") ?? "N/A",
                 netAmount = $"{order.NetValue:N0}",
                 currency = order.Currency,
                 approvalStatus = order.Status.ToString(),
@@ -1218,5 +1218,5 @@ public class TeamsBot : TeamsActivityHandler
     }
 
     private static string DisplayOrNa(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? "NA" : value;
+        string.IsNullOrWhiteSpace(value) ? "N/A" : value;
 }
