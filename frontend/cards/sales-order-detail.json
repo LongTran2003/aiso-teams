@@ -14,9 +14,9 @@
     {
       "type": "FactSet",
       "facts": [
-        { "title": "Customer:", "value": "${customerName} (${customerId})" },
+        { "title": "Customer:", "value": "${customerDisplay}" },
         { "title": "Cust. Reference (PO):", "value": "${customerReference}" },
-        { "title": "Sales Org / Division:", "value": "${salesOrg} / ${division}" },
+        { "title": "Sales Org / Division:", "value": "${salesOrgDivision}" },
         { "title": "Document Date:", "value": "${documentDate}" },
         { "title": "Req. Delivery Date:", "value": "${requestedDeliveryDate}" },
         { "title": "Net Value:", "value": "${netAmount} ${currency}" },

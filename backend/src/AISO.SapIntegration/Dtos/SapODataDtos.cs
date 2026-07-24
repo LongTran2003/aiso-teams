@@ -13,12 +13,15 @@ internal class SapSalesOrderDto
     public string? SoNumber { get; set; }
     public string? DocType { get; set; }
     public string? Customer { get; set; }
+    public string? CustomerName { get; set; }
+    public string? CustomerReference { get; set; }
     public string? SalesOrg { get; set; }
     public string? DistChannel { get; set; }
     public string? Division { get; set; }
     public string? Currency { get; set; }
     public decimal? NetValue { get; set; }
     public string? DocDate { get; set; }
+    public string? RequestedDeliveryDate { get; set; }
     public string? CreatedBy { get; set; }
     public string? CreatedDate { get; set; }
     public string? OverallStatus { get; set; }
