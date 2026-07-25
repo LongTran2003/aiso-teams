@@ -26,12 +26,12 @@ TYPES: BEGIN OF ty_delivery,
        END OF ty_delivery.
 
 TYPES: BEGIN OF ty_so_aging,
-         sonumber      TYPE vbak-vbeln,
-         salesorg      TYPE vbak-vkorg,
-         customer      TYPE vbak-kunnr,
-         createddate   TYPE vbak-erdat,
-         overallstatus TYPE vbak-gbstk,
-         agingdays     TYPE i,
+         sonumber              TYPE vbak-vbeln,
+         salesorg              TYPE vbak-vkorg,
+         customer              TYPE vbak-kunnr,
+         scheduleddeliverydate TYPE sy-datum,
+         overallstatus         TYPE vbak-gbstk,
+         dayspastdue           TYPE i,
        END OF ty_so_aging.
 
 TYPES: BEGIN OF ty_ar_aging,
@@ -102,13 +102,13 @@ FORM get_so_aging.
   SELECT sonumber,
          salesorg,
          customer,
-         createddate,
+         scheduleddeliverydate,
          overallstatus,
-         agingdays
+         dayspastdue
     FROM zi_aiso_kpi_so_aging
-    WHERE salesorg    IN @so_vkorg
-      AND createddate IN @so_date
-    ORDER BY agingdays DESCENDING
+    WHERE salesorg              IN @so_vkorg
+      AND scheduleddeliverydate IN @so_date
+    ORDER BY dayspastdue DESCENDING
     INTO TABLE @lt_so_aging
     UP TO @p_top ROWS.
 ENDFORM.
@@ -277,14 +277,14 @@ FORM display_so_aging.
       lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'CUSTOMER' ) ).
       lo_col->set_long_text( 'Customer' ).
 
-      lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'CREATEDDATE' ) ).
-      lo_col->set_long_text( 'Created Date' ).
+      lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'SCHEDULEDDELIVERYDATE' ) ).
+      lo_col->set_long_text( 'Scheduled Delivery Date' ).
 
       lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'OVERALLSTATUS' ) ).
       lo_col->set_long_text( 'Overall Status' ).
 
-      lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'AGINGDAYS' ) ).
-      lo_col->set_long_text( 'Aging Days' ).
+      lo_col = CAST cl_salv_column_table( lo_cols->get_column( 'DAYSPASTDUE' ) ).
+      lo_col->set_long_text( 'Days Past Due' ).
     CATCH cx_salv_not_found.
   ENDTRY.
 
