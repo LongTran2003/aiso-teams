@@ -3,10 +3,13 @@
 {
 "FROM":
 [
+"MAKT",
 "VBAP"
 ],
 "ASSOCIATED":
-[],
+[
+"MAKT"
+],
 "BASE":
 [],
 "ANNO_REF":
