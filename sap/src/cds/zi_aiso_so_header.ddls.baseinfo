@@ -3,6 +3,7 @@
 {
 "FROM":
 [
+"KNA1",
 "VBAK"
 ],
 "ASSOCIATED":

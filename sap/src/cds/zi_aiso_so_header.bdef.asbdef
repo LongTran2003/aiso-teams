@@ -16,7 +16,7 @@ lock master
   action reassignOwner parameter zaiso_a_reassign result [1] $self;
   action forceCancel parameter zaiso_a_override result [1] $self;
   action forceRelease parameter zaiso_a_override result [1] $self;
-  field ( readonly ) SoNumber, OverallStatus, Customer, SalesOrg, DistChannel,
+  field ( readonly ) SoNumber, OverallStatus, Customer,CustomerName, CustomerReference, RequestedDeliveryDate, SalesOrg, DistChannel,
                       Division, Currency, NetValue, DocDate, CreatedBy, CreatedDate,
                       CreditStatus, DeliveryBlock, BillingStatus, IsCancelled;
 }
