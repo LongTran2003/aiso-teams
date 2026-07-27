@@ -10,23 +10,33 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "Confirm approve",
+          "text": "Approve & release",
           "weight": "Bolder",
           "size": "Medium",
-          "color": "Good"
+          "color": "Good",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Sales order ${salesOrderNumber}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
         }
       ]
     },
     {
       "type": "TextBlock",
-      "text": "Approve the pending release request and release sales order ${salesOrderNumber} in SAP?",
+      "text": "Approve the pending release request and release this sales order in SAP?",
       "wrap": true,
       "spacing": "Medium"
     },
     {
       "type": "Input.Text",
       "id": "comment",
-      "placeholder": "Approval comment (optional)...",
+      "label": "Approval comment",
+      "placeholder": "Optional note…",
       "isMultiline": true
     }
   ],

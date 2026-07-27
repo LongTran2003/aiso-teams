@@ -1,6 +1,7 @@
 using System.Text.Json;
 using AISO.Domain.Approvals;
 using AISO.Domain.SalesOrders;
+using AISO.Domain.Users;
 using Microsoft.Bot.Schema;
 
 namespace AISO.Bot.Cards.Builders;
@@ -19,8 +20,21 @@ internal static class TeamsCardBuilder
     public static Attachment BuildLoadingCard() =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("loading.json");
 
-    public static Attachment BuildSuccessCard(string salesOrderNumber, string status) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("success.json", new { salesOrderNumber, status });
+    public static Attachment BuildSuccessCard(string salesOrderNumber, string status)
+    {
+        var (headline, message, statusLabel, showPendingLink) = DescribeSuccess(status);
+        return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "success.json",
+            new
+            {
+                salesOrderNumber,
+                status,
+                headline,
+                message,
+                statusLabel,
+                showPendingLink = showPendingLink ? "true" : "false"
+            });
+    }
 
     public static Attachment BuildErrorCard(string errorCode, string errorMessage) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("error.json", new { errorCode, errorMessage });
@@ -96,7 +110,7 @@ internal static class TeamsCardBuilder
                 requestedBy = approval.RequestedBySapUser,
                 salesOrg = string.IsNullOrWhiteSpace(approval.SalesOrg) ? "-" : approval.SalesOrg,
                 comment = approval.Comment ?? string.Empty,
-                requestedAt = approval.RequestedAt.ToString("u")
+                requestedAt = approval.RequestedAt.ToString("dd MMM yyyy HH:mm") + " UTC"
             }).ToList()
         };
 
@@ -136,6 +150,42 @@ internal static class TeamsCardBuilder
 
     public static Attachment BuildSalesOrderDetailCard(object data) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("sales-order-detail.json", data);
+
+    public static Attachment BuildSalesOrderDetailCard(SalesOrder order, UserRole? role = null)
+    {
+        var isEmployee = role is null or UserRole.Employee;
+        var isApprover = role is UserRole.Manager or UserRole.Admin;
+        var items = order.Items ?? Array.Empty<SalesOrderItem>();
+
+        return BuildSalesOrderDetailCard(new
+        {
+            salesOrderNumber = order.SoNumber,
+            customerDisplay = $"{DisplayOrNa(order.CustomerName)} ({DisplayOrNa(order.CustomerId)})",
+            customerReference = DisplayOrNa(order.CustomerReference),
+            salesOrgDivision = $"{DisplayOrNa(order.SalesOrg)} / {DisplayOrNa(order.Division)}",
+            documentDate = order.OrderDate.ToString("dd MMM yyyy"),
+            requestedDeliveryDate = order.RequestedDeliveryDate?.ToString("dd MMM yyyy") ?? "N/A",
+            netAmount = $"{order.NetValue:N0}",
+            currency = order.Currency,
+            approvalStatus = order.Status.ToString(),
+            statusColor = StatusToColor(order.Status),
+            hasItems = items.Count > 0 ? "true" : "false",
+            showRequestRelease = isEmployee ? "true" : "false",
+            showApprove = isApprover ? "true" : "false",
+            showReject = "true",
+            showForward = "true",
+            items = items.Select(item => new
+            {
+                itemNumber = item.ItemNumber,
+                material = string.IsNullOrWhiteSpace(item.Material) ? "N/A" : item.Material,
+                description = string.IsNullOrWhiteSpace(item.Description) ? "N/A" : item.Description,
+                quantity = item.Quantity.ToString("0"),
+                unit = item.Unit,
+                netValue = $"{item.NetValue:N0}",
+                currency = order.Currency
+            }).ToList()
+        });
+    }
 
     public static Attachment? BuildKpiCardForRequest(string message, IReadOnlyList<SalesOrder> orders, string? chartUrl)
     {
@@ -248,4 +298,42 @@ internal static class TeamsCardBuilder
         SalesOrderStatus.Delivered or SalesOrderStatus.Invoiced => "Good",
         _ => "Default"
     };
+
+    private static string DisplayOrNa(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "N/A" : value;
+
+    private static (string Headline, string Message, string StatusLabel, bool ShowPendingLink) DescribeSuccess(string status) =>
+        status switch
+        {
+            "ReleaseRequested" => (
+                "Release requested",
+                "Your request was submitted. A Manager in your sales organization must approve before SAP releases the order.",
+                "Waiting for manager approval",
+                false),
+            "Approved" => (
+                "Order approved",
+                "The release request was approved and the sales order was released in SAP.",
+                "Approved & released",
+                true),
+            "Released" => (
+                "Order released",
+                "The sales order was released successfully in SAP.",
+                "Released",
+                false),
+            "ApprovalRejected" => (
+                "Approval rejected",
+                "The release request was declined. The sales order was not released.",
+                "Approval rejected",
+                true),
+            "Rejected" => (
+                "Order rejected",
+                "The sales order was rejected in SAP.",
+                "Rejected",
+                false),
+            _ => (
+                "Action completed",
+                "The requested action finished successfully.",
+                status,
+                false)
+        };
 }

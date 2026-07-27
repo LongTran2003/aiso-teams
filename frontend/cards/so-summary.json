@@ -4,27 +4,40 @@
   "version": "1.5",
   "body": [
     {
-      "type": "TextBlock",
-      "text": "Sales Orders",
-      "size": "Large",
-      "weight": "Bolder",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": "${count} order(s) found",
-      "size": "Small",
-      "isSubtle": true,
-      "spacing": "None",
-      "wrap": true
+      "type": "ColumnSet",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Sales orders",
+              "size": "Large",
+              "weight": "Bolder",
+              "wrap": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "${count} order(s) found",
+              "size": "Small",
+              "isSubtle": true,
+              "spacing": "None",
+              "wrap": true
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "Container",
       "separator": true,
+      "spacing": "Medium",
       "$data": "${orders}",
       "items": [
         {
           "type": "ColumnSet",
+          "spacing": "Medium",
           "columns": [
             {
               "type": "Column",
@@ -34,11 +47,20 @@
                   "type": "TextBlock",
                   "text": "${soNumber}",
                   "weight": "Bolder",
-                  "wrap": true
+                  "size": "Medium",
+                  "wrap": true,
+                  "spacing": "None"
                 },
                 {
                   "type": "TextBlock",
                   "text": "${customerName}",
+                  "size": "Small",
+                  "wrap": true,
+                  "spacing": "None"
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "${orderDate} | ${salesOrg}",
                   "size": "Small",
                   "isSubtle": true,
                   "spacing": "None",
@@ -55,12 +77,14 @@
                   "text": "${formattedValue}",
                   "weight": "Bolder",
                   "horizontalAlignment": "Right",
-                  "wrap": true
+                  "wrap": true,
+                  "spacing": "None"
                 },
                 {
                   "type": "TextBlock",
                   "text": "${status}",
                   "size": "Small",
+                  "weight": "Bolder",
                   "color": "${statusColor}",
                   "horizontalAlignment": "Right",
                   "spacing": "None",
@@ -71,23 +95,15 @@
           ]
         },
         {
-          "type": "TextBlock",
-          "text": "${orderDate} · ${salesOrg}",
-          "size": "Small",
-          "isSubtle": true,
-          "spacing": "None",
-          "wrap": true
-        },
-        {
           "type": "ActionSet",
           "actions": [
             {
               "type": "Action.Submit",
-              "title": "View Details",
+              "title": "View details",
               "data": {
                 "msteams": {
                   "type": "messageBack",
-                  "displayText": "View Order Details",
+                  "displayText": "View order ${soNumber}",
                   "text": "view order ${soNumber}"
                 },
                 "action": "view_details",
@@ -100,5 +116,4 @@
       ]
     }
   ]
-  
 }

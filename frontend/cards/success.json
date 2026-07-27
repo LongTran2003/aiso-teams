@@ -10,7 +10,7 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "Action completed",
+          "text": "${headline}",
           "weight": "Bolder",
           "size": "Medium",
           "color": "Good",
@@ -20,7 +20,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "The requested action finished successfully.",
+      "text": "${message}",
       "wrap": true,
       "spacing": "Medium"
     },
@@ -28,7 +28,7 @@
       "type": "FactSet",
       "facts": [
         { "title": "Sales order", "value": "${salesOrderNumber}" },
-        { "title": "Status", "value": "${status}" }
+        { "title": "Result", "value": "${statusLabel}" }
       ],
       "spacing": "Medium"
     }
@@ -40,11 +40,24 @@
       "data": {
         "msteams": {
           "type": "messageBack",
-          "displayText": "View order details",
+          "displayText": "View order ${salesOrderNumber}",
           "text": "view order ${salesOrderNumber}"
         },
         "action": "view_details",
         "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Pending approvals",
+      "$when": "${showPendingLink == 'true'}",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Show pending approvals",
+          "text": "show pending approvals"
+        },
+        "action": "view_pending_approvals"
       }
     }
   ]

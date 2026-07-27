@@ -4,43 +4,195 @@
   "version": "1.5",
   "body": [
     {
-      "type": "TextBlock",
-      "text": "SAP SALES ORDER DETAILS: ${salesOrderNumber}",
-      "weight": "Bolder",
-      "size": "Large",
-      "color": "Accent",
-      "wrap": true
+      "type": "Container",
+      "style": "Emphasis",
+      "bleed": true,
+      "items": [
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Sales order",
+                  "size": "Small",
+                  "isSubtle": true,
+                  "spacing": "None",
+                  "wrap": true
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "${salesOrderNumber}",
+                  "weight": "Bolder",
+                  "size": "Large",
+                  "spacing": "None",
+                  "wrap": true
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "auto",
+              "verticalContentAlignment": "Center",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${approvalStatus}",
+                  "weight": "Bolder",
+                  "color": "${statusColor}",
+                  "horizontalAlignment": "Right",
+                  "wrap": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "FactSet",
+      "spacing": "Medium",
       "facts": [
-        { "title": "Customer:", "value": "${customerDisplay}" },
-        { "title": "Cust. Reference (PO):", "value": "${customerReference}" },
-        { "title": "Sales Org / Division:", "value": "${salesOrgDivision}" },
-        { "title": "Document Date:", "value": "${documentDate}" },
-        { "title": "Req. Delivery Date:", "value": "${requestedDeliveryDate}" },
-        { "title": "Net Value:", "value": "${netAmount} ${currency}" },
-        { "title": "Approval Status:", "value": "${approvalStatus}" }
-      ],
-      "spacing": "Medium"
+        { "title": "Customer", "value": "${customerDisplay}" },
+        { "title": "PO reference", "value": "${customerReference}" },
+        { "title": "Sales org / Div.", "value": "${salesOrgDivision}" },
+        { "title": "Document date", "value": "${documentDate}" },
+        { "title": "Req. delivery", "value": "${requestedDeliveryDate}" },
+        { "title": "Net value", "value": "${netAmount} ${currency}" }
+      ]
     },
     {
       "type": "TextBlock",
-      "text": "Line Items:",
+      "text": "Line items",
       "weight": "Bolder",
       "spacing": "Medium",
       "separator": true,
       "wrap": true
     },
     {
+      "type": "TextBlock",
+      "text": "No line items available yet.",
+      "isSubtle": true,
+      "wrap": true,
+      "spacing": "Small",
+      "$when": "${hasItems == 'false'}"
+    },
+    {
       "type": "Container",
-      "$data": "${items}",
+      "$when": "${hasItems == 'true'}",
       "items": [
         {
-          "type": "TextBlock",
-          "text": "• **Item ${itemNumber}**: ${description}\n  🔹 Qty: ${quantity} ${unit} | Plant: ${plant} | Amount: **${netValue} ${currency}**",
-          "wrap": true,
-          "spacing": "Small"
+          "type": "ColumnSet",
+          "spacing": "Small",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Item",
+                  "size": "Small",
+                  "isSubtle": true,
+                  "weight": "Bolder",
+                  "wrap": true
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "auto",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Qty",
+                  "size": "Small",
+                  "isSubtle": true,
+                  "weight": "Bolder",
+                  "horizontalAlignment": "Right",
+                  "wrap": true
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "auto",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "Amount",
+                  "size": "Small",
+                  "isSubtle": true,
+                  "weight": "Bolder",
+                  "horizontalAlignment": "Right",
+                  "wrap": true
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Container",
+          "$data": "${items}",
+          "items": [
+            {
+              "type": "ColumnSet",
+              "spacing": "Small",
+              "columns": [
+                {
+                  "type": "Column",
+                  "width": "stretch",
+                  "items": [
+                    {
+                      "type": "TextBlock",
+                      "text": "${itemNumber} | ${material}",
+                      "weight": "Bolder",
+                      "wrap": true,
+                      "spacing": "None"
+                    },
+                    {
+                      "type": "TextBlock",
+                      "text": "${description}",
+                      "size": "Small",
+                      "isSubtle": true,
+                      "wrap": true,
+                      "spacing": "None"
+                    }
+                  ]
+                },
+                {
+                  "type": "Column",
+                  "width": "auto",
+                  "verticalContentAlignment": "Center",
+                  "items": [
+                    {
+                      "type": "TextBlock",
+                      "text": "${quantity} ${unit}",
+                      "horizontalAlignment": "Right",
+                      "wrap": true
+                    }
+                  ]
+                },
+                {
+                  "type": "Column",
+                  "width": "auto",
+                  "verticalContentAlignment": "Center",
+                  "items": [
+                    {
+                      "type": "TextBlock",
+                      "text": "${netValue} ${currency}",
+                      "weight": "Bolder",
+                      "horizontalAlignment": "Right",
+                      "wrap": true
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     }
@@ -48,12 +200,14 @@
   "actions": [
     {
       "type": "Action.Submit",
-      "title": "Approve (Release)",
+      "title": "Request release",
+      "style": "positive",
+      "$when": "${showRequestRelease == 'true'}",
       "data": {
         "msteams": {
           "type": "messageBack",
-          "displayText": "Approve order ${salesOrderNumber}",
-          "text": "release order ${salesOrderNumber}"
+          "displayText": "Request release ${salesOrderNumber}",
+          "text": "request release ${salesOrderNumber}"
         },
         "action": "release_so",
         "salesOrderId": "${salesOrderNumber}"
@@ -61,7 +215,24 @@
     },
     {
       "type": "Action.Submit",
-      "title": "Reject",
+      "title": "Approve & release",
+      "style": "positive",
+      "$when": "${showApprove == 'true'}",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Approve order ${salesOrderNumber}",
+          "text": "approve order ${salesOrderNumber}"
+        },
+        "action": "approve_so",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Reject order",
+      "style": "destructive",
+      "$when": "${showReject == 'true'}",
       "data": {
         "msteams": {
           "type": "messageBack",
@@ -75,6 +246,7 @@
     {
       "type": "Action.Submit",
       "title": "Forward",
+      "$when": "${showForward == 'true'}",
       "data": {
         "msteams": {
           "type": "messageBack",

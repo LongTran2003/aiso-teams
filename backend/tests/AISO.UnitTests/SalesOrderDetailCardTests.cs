@@ -1,0 +1,79 @@
+using AISO.Bot.Cards.Builders;
+using AISO.Domain.SalesOrders;
+using AISO.Domain.Users;
+using Newtonsoft.Json;
+using Xunit;
+
+namespace AISO.UnitTests;
+
+public class SalesOrderDetailCardTests
+{
+    [Fact]
+    public void BuildSalesOrderDetailCard_Employee_ShowsRequestReleaseNotApprove()
+    {
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(SampleOrder(), UserRole.Employee);
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Request release", json);
+        Assert.Contains("\"action\":\"release_so\"", json);
+        Assert.DoesNotContain("\"action\":\"approve_so\"", json);
+        Assert.Contains("Reject order", json);
+        Assert.Contains("Forward", json);
+        Assert.Contains("No line items available yet.", json);
+    }
+
+    [Fact]
+    public void BuildSalesOrderDetailCard_Manager_ShowsApproveAndItems()
+    {
+        var order = SampleOrder(withItems: true);
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(order, UserRole.Manager);
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("\"action\":\"approve_so\"", json);
+        Assert.DoesNotContain("\"action\":\"release_so\"", json);
+        Assert.Contains("MAT-001", json);
+        Assert.Contains("Widget", json);
+        Assert.DoesNotContain("No line items available yet.", json);
+    }
+
+    [Fact]
+    public void BuildSuccessCard_ReleaseRequested_ShowsWaitingCopy()
+    {
+        var attachment = TeamsCardBuilder.BuildSuccessCard("0000000009", "ReleaseRequested");
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Release requested", json);
+        Assert.Contains("Waiting for manager approval", json);
+        Assert.Contains("0000000009", json);
+    }
+
+    private static SalesOrder SampleOrder(bool withItems = false) =>
+        new()
+        {
+            SoNumber = "0000000009",
+            CustomerId = "1000",
+            CustomerName = "Acme",
+            CustomerReference = "PO-1",
+            Division = "00",
+            OrderDate = new DateOnly(2026, 7, 22),
+            RequestedDeliveryDate = new DateOnly(2026, 8, 1),
+            NetValue = 1200m,
+            Currency = "USD",
+            SalesOrg = "TV01",
+            Status = SalesOrderStatus.Blocked,
+            Items = withItems
+                ? new[]
+                {
+                    new SalesOrderItem
+                    {
+                        ItemNumber = "10",
+                        Material = "MAT-001",
+                        Description = "Widget",
+                        Quantity = 2,
+                        Unit = "EA",
+                        NetValue = 1200m
+                    }
+                }
+                : Array.Empty<SalesOrderItem>()
+        };
+}
