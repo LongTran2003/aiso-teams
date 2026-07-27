@@ -90,7 +90,7 @@
           "columns": [
             {
               "type": "Column",
-              "width": "50",
+              "width": "stretch",
               "items": [
                 {
                   "type": "TextBlock",
@@ -104,31 +104,42 @@
             },
             {
               "type": "Column",
-              "width": "20",
+              "width": "200px",
               "items": [
                 {
-                  "type": "TextBlock",
-                  "text": "Qty",
-                  "size": "Small",
-                  "isSubtle": true,
-                  "weight": "Bolder",
-                  "horizontalAlignment": "Right",
-                  "wrap": true
-                }
-              ]
-            },
-            {
-              "type": "Column",
-              "width": "30",
-              "items": [
-                {
-                  "type": "TextBlock",
-                  "text": "Amount",
-                  "size": "Small",
-                  "isSubtle": true,
-                  "weight": "Bolder",
-                  "horizontalAlignment": "Right",
-                  "wrap": true
+                  "type": "ColumnSet",
+                  "columns": [
+                    {
+                      "type": "Column",
+                      "width": "70px",
+                      "items": [
+                        {
+                          "type": "TextBlock",
+                          "text": "Qty",
+                          "size": "Small",
+                          "isSubtle": true,
+                          "weight": "Bolder",
+                          "horizontalAlignment": "Center",
+                          "wrap": true
+                        }
+                      ]
+                    },
+                    {
+                      "type": "Column",
+                      "width": "130px",
+                      "items": [
+                        {
+                          "type": "TextBlock",
+                          "text": "Amount",
+                          "size": "Small",
+                          "isSubtle": true,
+                          "weight": "Bolder",
+                          "horizontalAlignment": "Right",
+                          "wrap": true
+                        }
+                      ]
+                    }
+                  ]
                 }
               ]
             }
@@ -137,45 +148,60 @@
         {
           "type": "Container",
           "$data": "${items}",
-          "spacing": "Medium",
+          "spacing": "Small",
           "items": [
             {
               "type": "ColumnSet",
+              "spacing": "None",
               "columns": [
                 {
                   "type": "Column",
-                  "width": "50",
+                  "width": "stretch",
                   "items": [
                     {
                       "type": "TextBlock",
                       "text": "${itemNumber} | ${material}",
                       "weight": "Bolder",
-                      "wrap": true
+                      "wrap": true,
+                      "spacing": "None"
                     }
                   ]
                 },
                 {
                   "type": "Column",
-                  "width": "20",
+                  "width": "200px",
                   "items": [
                     {
-                      "type": "TextBlock",
-                      "text": "${quantity} ${unit}",
-                      "horizontalAlignment": "Right",
-                      "wrap": true
-                    }
-                  ]
-                },
-                {
-                  "type": "Column",
-                  "width": "30",
-                  "items": [
-                    {
-                      "type": "TextBlock",
-                      "text": "${netValue} ${currency}",
-                      "weight": "Bolder",
-                      "horizontalAlignment": "Right",
-                      "wrap": true
+                      "type": "ColumnSet",
+                      "columns": [
+                        {
+                          "type": "Column",
+                          "width": "70px",
+                          "items": [
+                            {
+                              "type": "TextBlock",
+                              "text": "${quantity} ${unit}",
+                              "horizontalAlignment": "Center",
+                              "wrap": true,
+                              "spacing": "None"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "Column",
+                          "width": "130px",
+                          "items": [
+                            {
+                              "type": "TextBlock",
+                              "text": "${netValue} ${currency}",
+                              "weight": "Bolder",
+                              "horizontalAlignment": "Right",
+                              "wrap": true,
+                              "spacing": "None"
+                            }
+                          ]
+                        }
+                      ]
                     }
                   ]
                 }
@@ -187,28 +213,30 @@
               "columns": [
                 {
                   "type": "Column",
-                  "width": "50",
+                  "width": "stretch",
                   "items": [
                     {
                       "type": "TextBlock",
                       "text": "${description}",
                       "size": "Small",
                       "isSubtle": true,
-                      "wrap": true
+                      "wrap": true,
+                      "spacing": "None"
                     }
                   ]
                 },
                 {
                   "type": "Column",
-                  "width": "50",
+                  "width": "200px",
                   "items": [
                     {
                       "type": "TextBlock",
-                      "text": "${unitPrice}/${unit}",
+                      "text": "${unitPriceLabel}",
                       "size": "Small",
                       "isSubtle": true,
                       "horizontalAlignment": "Center",
-                      "wrap": true
+                      "wrap": true,
+                      "spacing": "None"
                     }
                   ]
                 }

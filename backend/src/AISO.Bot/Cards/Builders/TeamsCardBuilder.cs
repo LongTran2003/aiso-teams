@@ -174,15 +174,26 @@ internal static class TeamsCardBuilder
             showApprove = isApprover ? "true" : "false",
             showReject = "true",
             showForward = "true",
-            items = items.Select(item => new
+            items = items.Select(item =>
             {
-                itemNumber = item.ItemNumber,
-                material = string.IsNullOrWhiteSpace(item.Material) ? "N/A" : item.Material,
-                description = string.IsNullOrWhiteSpace(item.Description) ? "N/A" : item.Description,
-                quantity = item.Quantity.ToString("0"),
-                unit = item.Unit,
-                netValue = $"{item.NetValue:N0}",
-                currency = order.Currency
+                var material = string.IsNullOrWhiteSpace(item.Material) ? "N/A" : item.Material;
+                var description = string.IsNullOrWhiteSpace(item.Description) ? material : item.Description;
+                var unit = string.IsNullOrWhiteSpace(item.Unit) ? "EA" : item.Unit;
+                var unitPrice = item.Quantity > 0
+                    ? item.NetValue / item.Quantity
+                    : item.NetValue;
+
+                return new
+                {
+                    itemNumber = item.ItemNumber,
+                    material,
+                    description,
+                    quantity = item.Quantity.ToString("0"),
+                    unit,
+                    unitPriceLabel = $"{unitPrice:N0}/{unit}",
+                    netValue = $"{item.NetValue:N0}",
+                    currency = order.Currency
+                };
             }).ToList()
         });
     }
