@@ -177,6 +177,7 @@ internal static class TeamsCardBuilder
             items = items.Select(item =>
             {
                 var material = string.IsNullOrWhiteSpace(item.Material) ? "N/A" : item.Material;
+                var description = string.IsNullOrWhiteSpace(item.Description) ? material : item.Description;
                 var unit = string.IsNullOrWhiteSpace(item.Unit) ? "EA" : item.Unit;
                 var currency = string.IsNullOrWhiteSpace(order.Currency) ? "USD" : order.Currency;
 
@@ -184,6 +185,7 @@ internal static class TeamsCardBuilder
                 {
                     itemNumber = TrimItemNumber(item.ItemNumber),
                     material,
+                    description,
                     currencyUnit = $"{currency}/{unit}",
                     quantity = item.Quantity.ToString("0"),
                     unit,
