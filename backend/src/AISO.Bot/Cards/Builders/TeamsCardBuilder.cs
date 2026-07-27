@@ -177,25 +177,18 @@ internal static class TeamsCardBuilder
             items = items.Select(item =>
             {
                 var material = string.IsNullOrWhiteSpace(item.Material) ? "N/A" : item.Material;
-                var description = string.IsNullOrWhiteSpace(item.Description) ? "N/A" : item.Description;
                 var unit = string.IsNullOrWhiteSpace(item.Unit) ? "EA" : item.Unit;
-                var unitPrice = item.Quantity > 0
-                    ? item.NetValue / item.Quantity
-                    : item.NetValue;
+                var currency = string.IsNullOrWhiteSpace(order.Currency) ? "USD" : order.Currency;
 
                 return new
                 {
                     itemNumber = TrimItemNumber(item.ItemNumber),
                     material,
-                    description,
-                    showDescription = string.Equals(description, material, StringComparison.OrdinalIgnoreCase)
-                        ? "false"
-                        : "true",
+                    currencyUnit = $"{currency}/{unit}",
                     quantity = item.Quantity.ToString("0"),
                     unit,
-                    unitPriceLabel = $"{unitPrice:N0} {order.Currency}/{unit}",
                     netValue = $"{item.NetValue:N0}",
-                    currency = order.Currency
+                    currency
                 };
             }).ToList()
         });

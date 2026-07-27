@@ -155,19 +155,18 @@
                     },
                     {
                       "type": "TextBlock",
-                      "text": "${description}",
+                      "text": "${currencyUnit}",
                       "size": "Small",
                       "isSubtle": true,
                       "wrap": true,
-                      "spacing": "None",
-                      "$when": "${showDescription == 'true'}"
+                      "spacing": "None"
                     }
                   ]
                 },
                 {
                   "type": "Column",
                   "width": "72",
-                  "verticalContentAlignment": "Top",
+                  "verticalContentAlignment": "Center",
                   "items": [
                     {
                       "type": "TextBlock",
@@ -181,17 +180,8 @@
                 {
                   "type": "Column",
                   "width": "120",
-                  "verticalContentAlignment": "Top",
+                  "verticalContentAlignment": "Center",
                   "items": [
-                    {
-                      "type": "TextBlock",
-                      "text": "${unitPriceLabel}",
-                      "size": "Small",
-                      "isSubtle": true,
-                      "horizontalAlignment": "Right",
-                      "wrap": true,
-                      "spacing": "None"
-                    },
                     {
                       "type": "TextBlock",
                       "text": "${netValue} ${currency}",
