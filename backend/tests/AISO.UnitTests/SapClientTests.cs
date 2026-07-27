@@ -101,6 +101,33 @@ public class SapClientTests
     }
 
     [Fact]
+    public async Task ApproveOrder_PostsApproveOrderAction_WithSapUserParam()
+    {
+        var client = CreateClient(HttpStatusCode.OK, "{}", out var handler);
+
+        var result = await client.ApproveOrderAsync("9", "DEV-249");
+
+        Assert.Equal("0000000009", result.SoNumber);
+        Assert.NotNull(handler.LastRequestUri);
+        Assert.Contains("approveOrder", handler.LastRequestUri!);
+        Assert.Contains("REQUESTING_TEAMS_USER", handler.LastRequestBody ?? "");
+        Assert.Contains("DEV-249", handler.LastRequestBody ?? "");
+    }
+
+    [Fact]
+    public async Task ForceRelease_PostsOverrideReason()
+    {
+        var client = CreateClient(HttpStatusCode.OK, "{}", out var handler);
+
+        var result = await client.ForceReleaseAsync("42", "DEV-001", "emergency unlock");
+
+        Assert.Equal("0000000042", result.SoNumber);
+        Assert.Contains("forceRelease", handler.LastRequestUri!);
+        Assert.Contains("OVERRIDE_REASON", handler.LastRequestBody ?? "");
+        Assert.Contains("emergency unlock", handler.LastRequestBody ?? "");
+    }
+
+    [Fact]
     public async Task GetSalesOrderById_WhenCustomerNameMissing_UsesNotAvailableLabel()
     {
         var body = "{\"SoNumber\":\"9\",\"Customer\":\"1000\",\"OverallStatus\":\"A\"}";
@@ -205,15 +232,19 @@ public class SapClientTests
         }
 
         public string? LastRequestUri { get; private set; }
+        public string? LastRequestBody { get; private set; }
 
-        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             LastRequestUri = request.RequestUri?.ToString();
+            LastRequestBody = request.Content is null
+                ? null
+                : await request.Content.ReadAsStringAsync(cancellationToken);
             var response = new HttpResponseMessage(_status)
             {
                 Content = new StringContent(_body, Encoding.UTF8, "application/json")
             };
-            return Task.FromResult(response);
+            return response;
         }
     }
 }

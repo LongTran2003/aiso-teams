@@ -41,6 +41,42 @@ public interface ISapClient
         string requestingTeamsUser,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Phase A: Manager/Admin approve via SAP <c>approveOrder</c>
+    /// (role from <c>ZAISO_USER_ROLE</c> + real release in saver).
+    /// </summary>
+    Task<SalesOrder> ApproveOrderAsync(
+        string soNumber,
+        string requestingSapUser,
+        CancellationToken ct = default);
+
+    /// <summary>Phase A: Manager/Admin SAP-side rejectApproval audit (no SO reject).</summary>
+    Task<SalesOrder> RejectApprovalAsync(
+        string soNumber,
+        string requestingSapUser,
+        CancellationToken ct = default);
+
+    /// <summary>Phase A: Admin forceRelease (bypasses ownership).</summary>
+    Task<SalesOrder> ForceReleaseAsync(
+        string soNumber,
+        string requestingSapUser,
+        string overrideReason,
+        CancellationToken ct = default);
+
+    /// <summary>Phase A: Admin forceCancel (bypasses ownership).</summary>
+    Task<SalesOrder> ForceCancelAsync(
+        string soNumber,
+        string requestingSapUser,
+        string overrideReason,
+        CancellationToken ct = default);
+
+    /// <summary>Phase A: Manager/Admin reassign SO owner in zaiso_so_map.</summary>
+    Task<SalesOrder> ReassignOwnerAsync(
+        string soNumber,
+        string newOwnerSapUser,
+        string requestingSapUser,
+        CancellationToken ct = default);
+
     Task<SalesOrder> ForwardOrderAsync(
         string soNumber,
         string forwardToUser,

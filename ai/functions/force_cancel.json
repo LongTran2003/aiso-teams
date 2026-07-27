@@ -1,0 +1,19 @@
+{
+  "name": "ForceCancel",
+  "description": "Admin only: force cancel a sales order in SAP bypassing ownership. Requires a reason. Use when admin says force cancel.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "order_id": {
+        "type": "string",
+        "description": "Sales order number."
+      },
+      "reason": {
+        "type": "string",
+        "description": "Mandatory override reason."
+      }
+    },
+    "required": ["order_id", "reason"],
+    "additionalProperties": false
+  }
+}

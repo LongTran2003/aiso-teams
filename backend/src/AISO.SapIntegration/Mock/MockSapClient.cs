@@ -218,6 +218,41 @@ public sealed class MockSapClient : ISapClient
         return Task.FromResult(order with { Status = SalesOrderStatus.Open });
     }
 
+    public Task<SalesOrder> ApproveOrderAsync(string soNumber, string requestingSapUser, CancellationToken ct = default)
+        => ReleaseOrderAsync(soNumber, requestingSapUser, ct);
+
+    public Task<SalesOrder> RejectApprovalAsync(string soNumber, string requestingSapUser, CancellationToken ct = default)
+    {
+        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
+            ?? throw new InvalidOperationException($"Order {soNumber} not found.");
+        return Task.FromResult(order);
+    }
+
+    public Task<SalesOrder> ForceReleaseAsync(
+        string soNumber,
+        string requestingSapUser,
+        string overrideReason,
+        CancellationToken ct = default)
+        => ReleaseOrderAsync(soNumber, requestingSapUser, ct);
+
+    public Task<SalesOrder> ForceCancelAsync(
+        string soNumber,
+        string requestingSapUser,
+        string overrideReason,
+        CancellationToken ct = default)
+        => RejectOrderAsync(soNumber, "02", requestingSapUser, ct);
+
+    public Task<SalesOrder> ReassignOwnerAsync(
+        string soNumber,
+        string newOwnerSapUser,
+        string requestingSapUser,
+        CancellationToken ct = default)
+    {
+        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
+            ?? throw new InvalidOperationException($"Order {soNumber} not found.");
+        return Task.FromResult(order);
+    }
+
     public Task<SalesOrder> ForwardOrderAsync(
         string soNumber,
         string forwardToUser,
