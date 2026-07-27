@@ -108,7 +108,7 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "Qty",
+                  "text": "Amount",
                   "size": "Small",
                   "isSubtle": true,
                   "weight": "Bolder",
@@ -123,7 +123,7 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "Amount",
+                  "text": "Currency/Unit",
                   "size": "Small",
                   "isSubtle": true,
                   "weight": "Bolder",
@@ -166,27 +166,29 @@
                 {
                   "type": "Column",
                   "width": "auto",
-                  "verticalContentAlignment": "Center",
+                  "verticalContentAlignment": "Top",
                   "items": [
                     {
                       "type": "TextBlock",
                       "text": "${quantity} ${unit}",
                       "horizontalAlignment": "Right",
-                      "wrap": true
+                      "wrap": true,
+                      "spacing": "None"
                     }
                   ]
                 },
                 {
                   "type": "Column",
                   "width": "auto",
-                  "verticalContentAlignment": "Center",
+                  "verticalContentAlignment": "Top",
                   "items": [
                     {
                       "type": "TextBlock",
                       "text": "${netValue} ${currency}",
                       "weight": "Bolder",
                       "horizontalAlignment": "Right",
-                      "wrap": true
+                      "wrap": true,
+                      "spacing": "None"
                     }
                   ]
                 }
