@@ -88,6 +88,18 @@ public sealed class GetKpiSummaryFunction : IFunction
                     plugins = new
                     {
                         title = new { display = true, text = "Revenue Trend" }
+                    },
+                    scales = new
+                    {
+                        y = new
+                        {
+                            ticks = new
+                            {
+                                // QuickChart evaluates JS callbacks sent as strings.
+                                // vi-VN uses '.' as thousands separator (e.g. 100.000.000).
+                                callback = "function(value){return Number(value).toLocaleString('vi-VN');}"
+                            }
+                        }
                     }
                 }
             };
