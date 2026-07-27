@@ -104,7 +104,7 @@
             },
             {
               "type": "Column",
-              "width": "72",
+              "width": "80px",
               "items": [
                 {
                   "type": "TextBlock",
@@ -119,7 +119,7 @@
             },
             {
               "type": "Column",
-              "width": "120",
+              "width": "140px",
               "items": [
                 {
                   "type": "TextBlock",
@@ -155,7 +155,7 @@
                     },
                     {
                       "type": "TextBlock",
-                      "text": "${currencyUnit}",
+                      "text": "${description}",
                       "size": "Small",
                       "isSubtle": true,
                       "wrap": true,
@@ -165,9 +165,14 @@
                 },
                 {
                   "type": "Column",
-                  "width": "72",
-                  "verticalContentAlignment": "Center",
+                  "width": "80px",
                   "items": [
+                    {
+                      "type": "TextBlock",
+                      "text": " ",
+                      "size": "Small",
+                      "spacing": "None"
+                    },
                     {
                       "type": "TextBlock",
                       "text": "${quantity} ${unit}",
@@ -179,9 +184,17 @@
                 },
                 {
                   "type": "Column",
-                  "width": "120",
-                  "verticalContentAlignment": "Center",
+                  "width": "140px",
                   "items": [
+                    {
+                      "type": "TextBlock",
+                      "text": "${currencyUnit}",
+                      "size": "Small",
+                      "isSubtle": true,
+                      "horizontalAlignment": "Right",
+                      "wrap": true,
+                      "spacing": "None"
+                    },
                     {
                       "type": "TextBlock",
                       "text": "${netValue} ${currency}",
