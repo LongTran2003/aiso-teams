@@ -8,6 +8,8 @@ define root view entity ZC_AISO_SO_WITH_ITEMS
   key SoNumber,
       DocType,
       Customer,
+      CustomerName,
+      CustomerReference,
       SalesOrg,
       DistChannel,
       Division,
@@ -15,6 +17,7 @@ define root view entity ZC_AISO_SO_WITH_ITEMS
       @Semantics.amount.currencyCode: 'Currency'
       NetValue,
       DocDate,
+      RequestedDeliveryDate,
       CreatedBy,
       CreatedDate,
       OverallStatus,
