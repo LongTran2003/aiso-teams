@@ -31,6 +31,24 @@ internal class SapSalesOrderDto
     public string? IsCancelled { get; set; }
 }
 
+/// <summary>
+/// Flat SalesOrderItem entity (ZI_AISO_SO_ITEM). Loaded via a separate OData request —
+/// the SalesOrder service does not expose an association/$expand for items.
+/// </summary>
+internal class SapSalesOrderItemDto
+{
+    public string? SoNumber { get; set; }
+    /// <summary>VBAP.POSNR — exposed as ItemNo in CDS.</summary>
+    public string? ItemNo { get; set; }
+    public string? Material { get; set; }
+    public string? Plant { get; set; }
+    public decimal? OrderQty { get; set; }
+    public string? Unit { get; set; }
+    public decimal? NetValue { get; set; }
+    public string? Currency { get; set; }
+    public string? RejectionRsn { get; set; }
+}
+
 // KPI DTOs — field names must match SAP CDS view element names (PascalCase via OData)
 internal class SapKpiRevenueDto
 {
