@@ -90,7 +90,7 @@
           "columns": [
             {
               "type": "Column",
-              "width": "stretch",
+              "width": 50,
               "items": [
                 {
                   "type": "TextBlock",
@@ -104,11 +104,11 @@
             },
             {
               "type": "Column",
-              "width": "auto",
+              "width": 20,
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "Amount",
+                  "text": "Qty",
                   "size": "Small",
                   "isSubtle": true,
                   "weight": "Bolder",
@@ -119,11 +119,11 @@
             },
             {
               "type": "Column",
-              "width": "auto",
+              "width": 30,
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "Currency/Unit",
+                  "text": "Item Total",
                   "size": "Small",
                   "isSubtle": true,
                   "weight": "Bolder",
@@ -144,7 +144,8 @@
               "columns": [
                 {
                   "type": "Column",
-                  "width": "stretch",
+                  "width": 50,
+                  "verticalContentAlignment": "Center",
                   "items": [
                     {
                       "type": "TextBlock",
@@ -165,8 +166,8 @@
                 },
                 {
                   "type": "Column",
-                  "width": "auto",
-                  "verticalContentAlignment": "Top",
+                  "width": 20,
+                  "verticalContentAlignment": "Center",
                   "items": [
                     {
                       "type": "TextBlock",
@@ -179,8 +180,8 @@
                 },
                 {
                   "type": "Column",
-                  "width": "auto",
-                  "verticalContentAlignment": "Top",
+                  "width": 30,
+                  "verticalContentAlignment": "Center",
                   "items": [
                     {
                       "type": "TextBlock",
