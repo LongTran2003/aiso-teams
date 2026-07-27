@@ -31,6 +31,27 @@
         { "title": "Required", "value": "${requiredRole}" }
       ],
       "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ask for help to see commands available for your role.",
+      "size": "Small",
+      "isSubtle": true,
+      "wrap": true,
+      "spacing": "Small"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Show help",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "help",
+          "text": "help"
+        }
+      }
     }
   ]
 }

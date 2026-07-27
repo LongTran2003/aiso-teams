@@ -10,22 +10,23 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "No data found",
+          "text": "No results",
           "weight": "Bolder",
           "size": "Medium",
-          "color": "Attention"
+          "color": "Attention",
+          "wrap": true
         }
       ]
     },
     {
       "type": "TextBlock",
-      "text": "There are no matching records for your request. Please check the input and try again.",
+      "text": "Nothing matched this request.",
       "wrap": true,
       "spacing": "Medium"
     },
     {
       "type": "TextBlock",
-      "text": "You can try a different sales order number or ask for a broader search.",
+      "text": "Try another order number, broaden the search, or open Help for commands available to your role.",
       "wrap": true,
       "isSubtle": true,
       "spacing": "Small"
@@ -34,7 +35,7 @@
   "actions": [
     {
       "type": "Action.Submit",
-      "title": "Show Help",
+      "title": "Show help",
       "data": {
         "msteams": {
           "type": "messageBack",

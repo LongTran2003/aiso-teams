@@ -130,29 +130,9 @@ public class TeamsBot : TeamsActivityHandler
                                 return;
                             }
 
+                            var roleForDetail = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
                             await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
-                                {
-                                    salesOrderNumber = order.SoNumber,
-                                    customerDisplay = $"{DisplayOrNa(order.CustomerName)} ({DisplayOrNa(order.CustomerId)})",
-                                    customerReference = DisplayOrNa(order.CustomerReference),
-                                    salesOrgDivision = $"{DisplayOrNa(order.SalesOrg)} / {DisplayOrNa(order.Division)}",
-                                    documentDate = order.OrderDate.ToString("dd MMM yyyy"),
-                                    requestedDeliveryDate = order.RequestedDeliveryDate?.ToString("dd MMM yyyy") ?? "N/A",
-                                    netAmount = $"{order.NetValue:N0}",
-                                    currency = order.Currency,
-                                    approvalStatus = order.Status.ToString(),
-                                    items = order.Items.Select(item => new
-                                    {
-                                        itemNumber = item.ItemNumber,
-                                        material = item.Material,
-                                        description = item.Description,
-                                        quantity = item.Quantity.ToString("0"),
-                                        unit = item.Unit,
-                                        netValue = $"{item.NetValue:N0}",
-                                        currency = order.Currency
-                                    }).ToList()
-                                })),
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(order, roleForDetail)),
                                 cancellationToken);
                         }
                         catch (SapODataException sapEx)
@@ -1238,33 +1218,11 @@ public class TeamsBot : TeamsActivityHandler
             return true;
         }
 
+        var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
+        var roleForDetail = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
         await turnContext.SendActivityAsync(
-            MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(new
-            {
-                salesOrderNumber = order.SoNumber,
-                customerDisplay = $"{DisplayOrNa(order.CustomerName)} ({DisplayOrNa(order.CustomerId)})",
-                customerReference = DisplayOrNa(order.CustomerReference),
-                salesOrgDivision = $"{DisplayOrNa(order.SalesOrg)} / {DisplayOrNa(order.Division)}",
-                documentDate = order.OrderDate.ToString("dd MMM yyyy"),
-                requestedDeliveryDate = order.RequestedDeliveryDate?.ToString("dd MMM yyyy") ?? "N/A",
-                netAmount = $"{order.NetValue:N0}",
-                currency = order.Currency,
-                approvalStatus = order.Status.ToString(),
-                items = order.Items.Select(item => new
-                {
-                    itemNumber = item.ItemNumber,
-                    material = item.Material,
-                    description = item.Description,
-                    quantity = item.Quantity.ToString("0"),
-                    unit = item.Unit,
-                    netValue = $"{item.NetValue:N0}",
-                    currency = order.Currency
-                }).ToList()
-            })),
+            MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(order, roleForDetail)),
             cancellationToken);
         return true;
     }
-
-    private static string DisplayOrNa(string? value) =>
-        string.IsNullOrWhiteSpace(value) ? "N/A" : value;
 }

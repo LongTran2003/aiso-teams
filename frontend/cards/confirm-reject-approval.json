@@ -13,20 +13,30 @@
           "text": "Reject approval request",
           "weight": "Bolder",
           "size": "Medium",
-          "color": "Attention"
+          "color": "Attention",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Sales order ${salesOrderNumber}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
         }
       ]
     },
     {
       "type": "TextBlock",
-      "text": "Reject the pending release request for sales order ${salesOrderNumber}? This does not reject the sales order in SAP — it only declines the approval request.",
+      "text": "Decline the pending release request? This does **not** reject the sales order in SAP — only the approval request is closed.",
       "wrap": true,
       "spacing": "Medium"
     },
     {
       "type": "Input.Text",
       "id": "comment",
-      "placeholder": "Reason for rejecting the approval...",
+      "label": "Reason",
+      "placeholder": "Why is this request being declined?",
       "isMultiline": true,
       "isRequired": true,
       "errorMessage": "Please provide a reason"
@@ -36,6 +46,7 @@
     {
       "type": "Action.Submit",
       "title": "Confirm reject approval",
+      "style": "destructive",
       "data": {
         "msteams": {
           "type": "messageBack",

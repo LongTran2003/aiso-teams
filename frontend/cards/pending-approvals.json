@@ -4,27 +4,39 @@
   "version": "1.5",
   "body": [
     {
-      "type": "TextBlock",
-      "text": "Pending approvals",
-      "size": "Large",
-      "weight": "Bolder",
-      "wrap": true
-    },
-    {
-      "type": "TextBlock",
-      "text": "${count} release request(s) waiting for approval",
-      "size": "Small",
-      "isSubtle": true,
-      "spacing": "None",
-      "wrap": true
+      "type": "ColumnSet",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "Pending approvals",
+              "size": "Large",
+              "weight": "Bolder",
+              "wrap": true
+            },
+            {
+              "type": "TextBlock",
+              "text": "${count} release request(s) waiting for your approval",
+              "size": "Small",
+              "isSubtle": true,
+              "spacing": "None",
+              "wrap": true
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "Container",
-      "separator": true,
+      "style": "Emphasis",
+      "spacing": "Medium",
       "items": [
         {
           "type": "TextBlock",
-          "text": "Filter approvals",
+          "text": "Filters",
           "weight": "Bolder",
           "wrap": true
         },
@@ -32,7 +44,7 @@
           "type": "Input.Text",
           "id": "search",
           "label": "Order, requester, or comment",
-          "placeholder": "Enter a keyword",
+          "placeholder": "e.g. 0000000009 or DEV-024",
           "value": "${search}"
         },
         {
@@ -95,11 +107,13 @@
       "text": "No approvals match the selected filters.",
       "isSubtle": true,
       "wrap": true,
+      "spacing": "Medium",
       "$when": "${count == 0}"
     },
     {
       "type": "Container",
       "separator": true,
+      "spacing": "Medium",
       "$data": "${items}",
       "items": [
         {
@@ -113,11 +127,13 @@
                   "type": "TextBlock",
                   "text": "${orderId}",
                   "weight": "Bolder",
-                  "wrap": true
+                  "size": "Medium",
+                  "wrap": true,
+                  "spacing": "None"
                 },
                 {
                   "type": "TextBlock",
-                  "text": "Requested by ${requestedBy} · ${salesOrg}",
+                  "text": "By ${requestedBy} | ${salesOrg}",
                   "size": "Small",
                   "isSubtle": true,
                   "spacing": "None",
@@ -128,12 +144,12 @@
                   "text": "${comment}",
                   "size": "Small",
                   "wrap": true,
-                  "spacing": "None",
+                  "spacing": "Small",
                   "$when": "${comment != ''}"
                 },
                 {
                   "type": "TextBlock",
-                  "text": "${requestedAt}",
+                  "text": "Requested ${requestedAt}",
                   "size": "Small",
                   "isSubtle": true,
                   "spacing": "None",
@@ -146,6 +162,19 @@
         {
           "type": "ActionSet",
           "actions": [
+            {
+              "type": "Action.Submit",
+              "title": "View details",
+              "data": {
+                "msteams": {
+                  "type": "messageBack",
+                  "displayText": "View order ${orderId}",
+                  "text": "view order ${orderId}"
+                },
+                "action": "view_details",
+                "salesOrderId": "${orderId}"
+              }
+            },
             {
               "type": "Action.Submit",
               "title": "Approve",
@@ -163,6 +192,7 @@
             {
               "type": "Action.Submit",
               "title": "Reject approval",
+              "style": "destructive",
               "data": {
                 "msteams": {
                   "type": "messageBack",
