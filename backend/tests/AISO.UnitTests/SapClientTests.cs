@@ -98,6 +98,60 @@ public class SapClientTests
         Assert.Equal(SalesOrderStatus.Delivered, result.Status);
         Assert.Equal("EUR", result.Currency);
         Assert.Equal("Philly Bikes", result.CustomerName);
+        Assert.Empty(result.Items);
+    }
+
+    [Fact]
+    public async Task GetSalesOrderById_LoadsItemsViaSideRequest()
+    {
+        var headerBody =
+            "{\"SoNumber\":\"15\",\"Customer\":\"1000\",\"CustomerName\":\"Acme\",\"OverallStatus\":\"A\",\"Currency\":\"USD\",\"NetValue\":1200}";
+        var itemsBody =
+            "{\"value\":[{\"SoNumber\":\"0000000015\",\"ItemNo\":\"000010\",\"Material\":\"TG11\",\"Plant\":\"1010\",\"OrderQty\":2,\"Unit\":\"PC\",\"NetValue\":800,\"Currency\":\"USD\"},{\"SoNumber\":\"0000000015\",\"ItemNo\":\"000020\",\"Material\":\"TG12\",\"OrderQty\":1,\"Unit\":\"PC\",\"NetValue\":400,\"Currency\":\"USD\"}]}";
+
+        var handler = new StubHttpMessageHandler(
+            (HttpStatusCode.OK, headerBody),
+            (HttpStatusCode.OK, itemsBody));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://sap.test/") };
+        var client = new SapClient(httpClient, new StubTokenManager(), NullLogger<SapClient>.Instance);
+
+        var result = await client.GetSalesOrderByIdAsync("15");
+
+        Assert.NotNull(result);
+        Assert.Equal("0000000015", result!.SoNumber);
+        Assert.Equal(2, result.Items.Count);
+        Assert.Equal("000010", result.Items[0].ItemNumber);
+        Assert.Equal("TG11", result.Items[0].Material);
+        Assert.Equal("TG11", result.Items[0].Description);
+        Assert.Equal(2m, result.Items[0].Quantity);
+        Assert.Equal("PC", result.Items[0].Unit);
+        Assert.Equal(800m, result.Items[0].NetValue);
+        Assert.Equal("000020", result.Items[1].ItemNumber);
+
+        Assert.Equal(2, handler.RequestUris.Count);
+        Assert.Contains("SalesOrder('0000000015')", handler.RequestUris[0]);
+        var itemsUrl = Uri.UnescapeDataString(handler.RequestUris[1]);
+        Assert.Contains("SalesOrderItem", itemsUrl);
+        Assert.Contains("SoNumber eq '0000000015'", itemsUrl);
+        Assert.Contains("sap-client=324", itemsUrl);
+    }
+
+    [Fact]
+    public async Task GetSalesOrderById_WhenItemsRequestFails_ReturnsHeaderWithoutItems()
+    {
+        var headerBody =
+            "{\"SoNumber\":\"15\",\"Customer\":\"1000\",\"OverallStatus\":\"A\",\"Currency\":\"USD\"}";
+        var handler = new StubHttpMessageHandler(
+            (HttpStatusCode.OK, headerBody),
+            (HttpStatusCode.InternalServerError, "{\"error\":{\"message\":\"boom\"}}"));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://sap.test/") };
+        var client = new SapClient(httpClient, new StubTokenManager(), NullLogger<SapClient>.Instance);
+
+        var result = await client.GetSalesOrderByIdAsync("15");
+
+        Assert.NotNull(result);
+        Assert.Equal("0000000015", result!.SoNumber);
+        Assert.Empty(result.Items);
     }
 
     [Fact]
@@ -222,29 +276,40 @@ public class SapClientTests
 
     private sealed class StubHttpMessageHandler : HttpMessageHandler
     {
-        private readonly HttpStatusCode _status;
-        private readonly string _body;
+        private readonly Queue<(HttpStatusCode Status, string Body)> _responses;
 
         public StubHttpMessageHandler(HttpStatusCode status, string body)
+            : this((status, body))
         {
-            _status = status;
-            _body = body;
+        }
+
+        public StubHttpMessageHandler(params (HttpStatusCode Status, string Body)[] responses)
+        {
+            _responses = new Queue<(HttpStatusCode, string)>(responses);
         }
 
         public string? LastRequestUri { get; private set; }
         public string? LastRequestBody { get; private set; }
+        public List<string> RequestUris { get; } = new();
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             LastRequestUri = request.RequestUri?.ToString();
+            if (LastRequestUri is not null)
+                RequestUris.Add(LastRequestUri);
+
             LastRequestBody = request.Content is null
                 ? null
                 : await request.Content.ReadAsStringAsync(cancellationToken);
-            var response = new HttpResponseMessage(_status)
+
+            var (status, body) = _responses.Count > 0
+                ? _responses.Dequeue()
+                : (HttpStatusCode.OK, "{\"value\":[]}");
+
+            return new HttpResponseMessage(status)
             {
-                Content = new StringContent(_body, Encoding.UTF8, "application/json")
+                Content = new StringContent(body, Encoding.UTF8, "application/json")
             };
-            return response;
         }
     }
 }

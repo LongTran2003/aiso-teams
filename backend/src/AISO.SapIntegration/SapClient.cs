@@ -63,7 +63,7 @@ public class SapClient : ISapClient
             ApplyStatusFilter(builder, query.Status.Value);
         }
 
-        // Note: The SalesOrder view in this SAP OData V4 service is flat and does not support Expand("ITEMS")
+        // SalesOrder is flat (no $expand). Detail loads items via a separate SalesOrderItem request.
 
         var url = builder.Build();
         _logger.LogInformation("Calling SAP OData: {Url}", url);
@@ -81,7 +81,7 @@ public class SapClient : ISapClient
             if (result?.Value == null)
                 return Array.Empty<SalesOrder>();
 
-            return result.Value.Select(MapToDomain).ToList();
+            return result.Value.Select(dto => MapToDomain(dto)).ToList();
         }
         catch (Exception ex)
         {
@@ -107,13 +107,62 @@ public class SapClient : ISapClient
                 response.EnsureSuccessStatusCode();
             }
 
-            var dto = await response.Content.ReadFromJsonAsync<SapSalesOrderDto>(cancellationToken: ct);
-            return dto == null ? null : MapToDomain(dto);
+            var dto = await response.Content.ReadFromJsonAsync<SapSalesOrderDto>(
+                JsonOptions,
+                cancellationToken: ct);
+            if (dto is null)
+                return null;
+
+            // No $expand association on SalesOrder — load items with a side request.
+            var items = await GetSalesOrderItemsAsync(formattedSo, ct);
+            return MapToDomain(dto, items);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error calling SAP OData GetSalesOrderByIdAsync for {SoNumber}", soNumber);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Loads line items for one SO via SalesOrderItem?$filter=SoNumber eq '…'
+    /// (SAP entity set is flat; association/$expand is not available).
+    /// </summary>
+    private async Task<IReadOnlyList<SalesOrderItem>> GetSalesOrderItemsAsync(
+        string formattedSoNumber,
+        CancellationToken ct)
+    {
+        var url = new ODataQueryBuilder("SalesOrderItem")
+            .AddCustomParam("sap-client", "324")
+            .Filter("SoNumber", "eq", formattedSoNumber)
+            .Build();
+
+        _logger.LogInformation("Calling SAP OData items: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "SAP SalesOrderItem request failed for {SoNumber}: {StatusCode}",
+                    formattedSoNumber,
+                    (int)response.StatusCode);
+                return Array.Empty<SalesOrderItem>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapSalesOrderItemDto>>(rawJson, JsonOptions);
+            if (result?.Value is null || result.Value.Count == 0)
+                return Array.Empty<SalesOrderItem>();
+
+            return result.Value.Select(MapItemToDomain).ToList();
+        }
+        catch (Exception ex)
+        {
+            // Detail card should still render header if items temporarily fail.
+            _logger.LogWarning(ex, "Failed to load SalesOrderItem for {SoNumber}", formattedSoNumber);
+            return Array.Empty<SalesOrderItem>();
         }
     }
 
@@ -688,7 +737,14 @@ public class SapClient : ISapClient
         return "All time";
     }
 
-    private SalesOrder MapToDomain(SapSalesOrderDto dto)
+    private static readonly JsonSerializerOptions JsonOptions = new()
+    {
+        PropertyNameCaseInsensitive = true
+    };
+
+    private SalesOrder MapToDomain(
+        SapSalesOrderDto dto,
+        IReadOnlyList<SalesOrderItem>? items = null)
     {
         return new SalesOrder
         {
@@ -705,7 +761,22 @@ public class SapClient : ISapClient
             Currency = string.IsNullOrEmpty(dto.Currency) ? "USD" : dto.Currency,
             Status = MapStatus(dto),
             SalesOrg = dto.SalesOrg ?? "UNKNOWN",
-            Items = Array.Empty<SalesOrderItem>()
+            Items = items ?? Array.Empty<SalesOrderItem>()
+        };
+    }
+
+    private static SalesOrderItem MapItemToDomain(SapSalesOrderItemDto dto)
+    {
+        var material = dto.Material ?? string.Empty;
+        return new SalesOrderItem
+        {
+            ItemNumber = string.IsNullOrWhiteSpace(dto.ItemNo) ? "000000" : dto.ItemNo.Trim(),
+            Material = material,
+            // ZI_AISO_SO_ITEM has no MAKT text yet — fall back to material code.
+            Description = string.IsNullOrWhiteSpace(material) ? "N/A" : material,
+            Quantity = dto.OrderQty ?? 0,
+            Unit = string.IsNullOrWhiteSpace(dto.Unit) ? "EA" : dto.Unit,
+            NetValue = dto.NetValue ?? 0
         };
     }
 
