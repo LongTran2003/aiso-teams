@@ -1,0 +1,19 @@
+{
+  "name": "ReassignOwner",
+  "description": "Manager or Admin: reassign sales order ownership to another SAP user. Use when user says reassign owner or change owner of order.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "order_id": {
+        "type": "string",
+        "description": "Sales order number."
+      },
+      "new_owner": {
+        "type": "string",
+        "description": "SAP user ID of the new owner (e.g. DEV-024)."
+      }
+    },
+    "required": ["order_id", "new_owner"],
+    "additionalProperties": false
+  }
+}

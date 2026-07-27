@@ -228,32 +228,82 @@ public class SapClient : ISapClient
 
     public async Task<SalesOrder> ReleaseOrderAsync(string soNumber, string requestingTeamsUser, CancellationToken ct = default)
     {
-        var formattedSo = FormatSoNumber(soNumber);
-        var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.releaseOrder?sap-client=324&$format=json";
-        _logger.LogInformation("Calling SAP OData: {Url}", url);
+        return await PostSalesOrderActionAsync(
+            soNumber,
+            "releaseOrder",
+            new { REQUESTING_TEAMS_USER = requestingTeamsUser },
+            ct);
+    }
 
-        var payload = new
-        {
-            REQUESTING_TEAMS_USER = requestingTeamsUser,
-        };
+    public async Task<SalesOrder> ApproveOrderAsync(string soNumber, string requestingSapUser, CancellationToken ct = default)
+    {
+        // Param name is REQUESTING_TEAMS_USER in DDIC but value must be SAP user id
+        // so get_user_role can read ZAISO_USER_ROLE.
+        return await PostSalesOrderActionAsync(
+            soNumber,
+            "approveOrder",
+            new { REQUESTING_TEAMS_USER = requestingSapUser },
+            ct);
+    }
 
-        try
-        {
-            var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
-            if (result == null)
-                throw new InvalidOperationException("Failed to deserialize released order.");
+    public async Task<SalesOrder> RejectApprovalAsync(string soNumber, string requestingSapUser, CancellationToken ct = default)
+    {
+        return await PostSalesOrderActionAsync(
+            soNumber,
+            "rejectApproval",
+            new { REQUESTING_TEAMS_USER = requestingSapUser },
+            ct);
+    }
 
-            // RAP action often returns only %tky (no SoNumber in body). Keep the known key.
-            var order = MapToDomain(result);
-            return order.SoNumber is "UNKNOWN"
-                ? order with { SoNumber = formattedSo }
-                : order;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error calling SAP OData ReleaseOrderAsync for {SoNumber}", soNumber);
-            throw;
-        }
+    public async Task<SalesOrder> ForceReleaseAsync(
+        string soNumber,
+        string requestingSapUser,
+        string overrideReason,
+        CancellationToken ct = default)
+    {
+        return await PostSalesOrderActionAsync(
+            soNumber,
+            "forceRelease",
+            new
+            {
+                REQUESTING_TEAMS_USER = requestingSapUser,
+                OVERRIDE_REASON = overrideReason,
+            },
+            ct);
+    }
+
+    public async Task<SalesOrder> ForceCancelAsync(
+        string soNumber,
+        string requestingSapUser,
+        string overrideReason,
+        CancellationToken ct = default)
+    {
+        return await PostSalesOrderActionAsync(
+            soNumber,
+            "forceCancel",
+            new
+            {
+                REQUESTING_TEAMS_USER = requestingSapUser,
+                OVERRIDE_REASON = overrideReason,
+            },
+            ct);
+    }
+
+    public async Task<SalesOrder> ReassignOwnerAsync(
+        string soNumber,
+        string newOwnerSapUser,
+        string requestingSapUser,
+        CancellationToken ct = default)
+    {
+        return await PostSalesOrderActionAsync(
+            soNumber,
+            "reassignOwner",
+            new
+            {
+                REQUESTING_TEAMS_USER = requestingSapUser,
+                NEW_OWNER_ID = newOwnerSapUser,
+            },
+            ct);
     }
 
     public async Task<SalesOrder> ForwardOrderAsync(
@@ -263,24 +313,35 @@ public class SapClient : ISapClient
         CancellationToken ct = default,
         string? remarks = null)
     {
-        var formattedSo = FormatSoNumber(soNumber);
-        var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.forwardOrder?sap-client=324&$format=json";
-        _logger.LogInformation("Calling SAP OData: {Url}", url);
+        return await PostSalesOrderActionAsync(
+            soNumber,
+            "forwardOrder",
+            new
+            {
+                REQUESTING_TEAMS_USER = requestingTeamsUser,
+                NEW_TEAMS_USER = forwardToUser,
+                REMARKS = remarks ?? string.Empty,
+            },
+            ct);
+    }
 
-        var payload = new
-        {
-            REQUESTING_TEAMS_USER = requestingTeamsUser,
-            NEW_TEAMS_USER = forwardToUser,
-            REMARKS = remarks ?? string.Empty,
-        };
+    private async Task<SalesOrder> PostSalesOrderActionAsync<TPayload>(
+        string soNumber,
+        string actionName,
+        TPayload payload,
+        CancellationToken ct)
+    {
+        var formattedSo = FormatSoNumber(soNumber);
+        var url =
+            $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.{actionName}?sap-client=324&$format=json";
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
 
         try
         {
-            var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
+            var result = await SendPostRequestAsync<SapSalesOrderDto, TPayload>(url, payload, ct);
             if (result == null)
-                throw new InvalidOperationException("Failed to deserialize forwarded order.");
+                throw new InvalidOperationException($"Failed to deserialize SAP action {actionName}.");
 
-            // RAP forward often returns only %tky (no SoNumber in body). Keep the known key.
             var order = MapToDomain(result);
             return order.SoNumber is "UNKNOWN"
                 ? order with { SoNumber = formattedSo }
@@ -288,7 +349,7 @@ public class SapClient : ISapClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling SAP OData ForwardOrderAsync for {SoNumber}", soNumber);
+            _logger.LogError(ex, "Error calling SAP OData {Action} for {SoNumber}", actionName, soNumber);
             throw;
         }
     }

@@ -7,7 +7,8 @@ using Microsoft.Extensions.Logging;
 namespace AISO.AiOrchestration.Functions;
 
 /// <summary>
-/// Checker step: Manager approves a pending release request and calls SAP releaseOrder.
+/// Checker step: Manager approves a pending release via SAP <c>approveOrder</c>
+/// (Phase A: role from ZAISO_USER_ROLE + real release), then clears Postgres pending.
 /// </summary>
 public sealed class ApproveOrderFunction : IFunction
 {
@@ -88,8 +89,8 @@ public sealed class ApproveOrderFunction : IFunction
                     $"Order {pending.SoNumber} belongs to sales org {pending.SalesOrg}; your scope is {salesOrg}.");
             }
 
-            // Release in SAP first so a SAP failure leaves the request still Pending.
-            var updatedOrder = await _sap.ReleaseOrderAsync(pending.SoNumber, requestingSapUser, ct);
+            // Phase A: SAP approveOrder enforces ZAISO_USER_ROLE and performs release (no ownership).
+            var updatedOrder = await _sap.ApproveOrderAsync(pending.SoNumber, requestingSapUser, ct);
 
             var approval = await _approvals.ApproveAsync(
                 pending.SoNumber,

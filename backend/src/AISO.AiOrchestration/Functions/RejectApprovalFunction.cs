@@ -1,24 +1,29 @@
 using System.Text.Json;
 using AISO.Domain.Approvals;
 using AISO.Domain.Users;
+using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.AiOrchestration.Functions;
 
 /// <summary>
-/// Checker step: Manager rejects a pending release request (no SAP release).
+/// Checker step: Manager rejects a pending release request.
+/// Clears Postgres pending and records SAP rejectApproval audit (Phase A).
 /// </summary>
 public sealed class RejectApprovalFunction : IFunction
 {
+    private readonly ISapClient _sap;
     private readonly IOrderApprovalService _approvals;
     private readonly IUserScopeLookup _scope;
     private readonly ILogger<RejectApprovalFunction> _logger;
 
     public RejectApprovalFunction(
+        ISapClient sap,
         IOrderApprovalService approvals,
         IUserScopeLookup scope,
         ILogger<RejectApprovalFunction> logger)
     {
+        _sap = sap;
         _approvals = approvals;
         _scope = scope;
         _logger = logger;
@@ -67,6 +72,9 @@ public sealed class RejectApprovalFunction : IFunction
         {
             var role = await _scope.GetRoleBySapUserAsync(requestingSapUser, ct);
             var salesOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
+
+            // Phase A: SAP role gate + audit (no SO reject BAPI).
+            await _sap.RejectApprovalAsync(orderId, requestingSapUser, ct);
 
             var approval = await _approvals.RejectAsync(
                 orderId,
