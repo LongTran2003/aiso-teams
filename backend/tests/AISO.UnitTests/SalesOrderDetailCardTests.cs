@@ -33,7 +33,6 @@ public class SalesOrderDetailCardTests
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
         Assert.Contains("MAT-001", json);
         Assert.Contains("Widget", json);
-        Assert.Contains("USD/EA", json);
         Assert.DoesNotContain("No line items available yet.", json);
     }
 

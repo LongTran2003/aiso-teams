@@ -174,35 +174,17 @@ internal static class TeamsCardBuilder
             showApprove = isApprover ? "true" : "false",
             showReject = "true",
             showForward = "true",
-            items = items.Select(item =>
+            items = items.Select(item => new
             {
-                var material = string.IsNullOrWhiteSpace(item.Material) ? "N/A" : item.Material;
-                var description = string.IsNullOrWhiteSpace(item.Description) ? material : item.Description;
-                var unit = string.IsNullOrWhiteSpace(item.Unit) ? "EA" : item.Unit;
-                var currency = string.IsNullOrWhiteSpace(order.Currency) ? "USD" : order.Currency;
-
-                return new
-                {
-                    itemNumber = TrimItemNumber(item.ItemNumber),
-                    material,
-                    description,
-                    currencyUnit = $"{currency}/{unit}",
-                    quantity = item.Quantity.ToString("0"),
-                    unit,
-                    netValue = $"{item.NetValue:N0}",
-                    currency
-                };
+                itemNumber = item.ItemNumber,
+                material = string.IsNullOrWhiteSpace(item.Material) ? "N/A" : item.Material,
+                description = string.IsNullOrWhiteSpace(item.Description) ? "N/A" : item.Description,
+                quantity = item.Quantity.ToString("0"),
+                unit = item.Unit,
+                netValue = $"{item.NetValue:N0}",
+                currency = order.Currency
             }).ToList()
         });
-    }
-
-    private static string TrimItemNumber(string itemNumber)
-    {
-        if (string.IsNullOrWhiteSpace(itemNumber))
-            return itemNumber;
-
-        var trimmed = itemNumber.TrimStart('0');
-        return string.IsNullOrEmpty(trimmed) ? "0" : trimmed;
     }
 
     public static Attachment? BuildKpiCardForRequest(string message, IReadOnlyList<SalesOrder> orders, string? chartUrl)
