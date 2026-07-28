@@ -99,6 +99,12 @@ public interface ISapClient
 
     /// <summary>Get sales orders that have exceeded their scheduled delivery date.</summary>
     Task<IReadOnlyList<OverdueOrder>> GetOverdueOrdersAsync(OverdueOrdersQuery query, CancellationToken ct = default);
+
+    /// <summary>
+    /// Returns whether <paramref name="sapUserId"/> exists in SAP AISO user-role master
+    /// (<c>UserRole</c> / <c>ZAISO_USER_ROLE</c>). Null means the lookup was unavailable.
+    /// </summary>
+    Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default);
 }
 
 public sealed record CreateSalesOrderDto

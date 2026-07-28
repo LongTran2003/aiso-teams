@@ -358,4 +358,16 @@ public sealed class MockSapClient : ISapClient
             .ToList();
         return Task.FromResult(result);
     }
+
+    public Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(sapUserId))
+            return Task.FromResult<bool?>(false);
+
+        var normalized = sapUserId.Trim().ToUpperInvariant();
+        // Demo seed IDs + DEV-* pattern used in AISO landscape.
+        var known = normalized is "DEV-024" or "DEV-249" or "DEV-230"
+            || normalized.StartsWith("DEV-", StringComparison.Ordinal);
+        return Task.FromResult<bool?>(known);
+    }
 }

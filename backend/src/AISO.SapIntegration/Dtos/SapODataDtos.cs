@@ -49,6 +49,13 @@ internal class SapSalesOrderItemDto
     public string? RejectionRsn { get; set; }
 }
 
+internal class SapUserRoleDto
+{
+    public string? SapUser { get; set; }
+    public string? Role { get; set; }
+    public string? SalesOrg { get; set; }
+}
+
 // KPI DTOs — field names must match SAP CDS view element names (PascalCase via OData)
 internal class SapKpiRevenueDto
 {

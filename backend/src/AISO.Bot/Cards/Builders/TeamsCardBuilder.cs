@@ -11,6 +11,16 @@ internal static class TeamsCardBuilder
     public static Attachment BuildWelcomeCard(string username) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("welcome.json", new { username });
 
+    public static Attachment BuildLinkSapAccountCard(string displayName, string? errorMessage = null) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "link-sap-account.json",
+            new
+            {
+                displayName,
+                hasError = string.IsNullOrWhiteSpace(errorMessage) ? "false" : "true",
+                errorMessage = errorMessage ?? string.Empty
+            });
+
     public static Attachment BuildHelpCard(string? role = null) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("help.json", new { role = role ?? "Employee" });
 
