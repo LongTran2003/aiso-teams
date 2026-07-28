@@ -1,0 +1,60 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Link SAP account",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "One-time setup for ${displayName}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Enter your **SAP User ID** exactly as registered in SAP (table ZAISO_USER_ROLE). This is not your Teams name or email.",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Example", "value": "DEV-249" },
+        { "title": "Also valid", "value": "DEV-024" }
+      ],
+      "spacing": "Small"
+    },
+    {
+      "type": "TextBlock",
+      "text": "${errorMessage}",
+      "color": "Attention",
+      "wrap": true,
+      "spacing": "Medium",
+      "$when": "${hasError == 'true'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Type your SAP User ID in the chat box below, then press Enter.",
+      "size": "Small",
+      "isSubtle": true,
+      "wrap": true,
+      "spacing": "Medium"
+    }
+  ]
+}
