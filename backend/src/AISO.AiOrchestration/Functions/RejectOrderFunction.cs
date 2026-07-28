@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AISO.Domain.Approvals;
 using AISO.Domain.SalesOrders;
 using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
@@ -13,11 +14,16 @@ namespace AISO.AiOrchestration.Functions;
 public sealed class RejectOrderFunction : IFunction
 {
     private readonly ISapClient _sap;
+    private readonly IOrderApprovalService _approvals;
     private readonly ILogger<RejectOrderFunction> _logger;
 
-    public RejectOrderFunction(ISapClient sap, ILogger<RejectOrderFunction> logger)
+    public RejectOrderFunction(
+        ISapClient sap,
+        IOrderApprovalService approvals,
+        ILogger<RejectOrderFunction> logger)
     {
         _sap = sap;
+        _approvals = approvals;
         _logger = logger;
     }
 
@@ -97,6 +103,15 @@ public sealed class RejectOrderFunction : IFunction
             {
                 return FunctionResult.Fail(
                     SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Reject"));
+            }
+
+            var pending = await _approvals.GetPendingBySoNumberAsync(existing.SoNumber, ct);
+            if (pending is not null)
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildPendingApprovalBlockedMessage(
+                        "Reject",
+                        pending.RequestedBySapUser));
             }
 
             var updatedOrder = await _sap.RejectOrderAsync(orderId, sapReasonCode, requestingSapUser, ct);

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AISO.Domain.Approvals;
 using AISO.Domain.SalesOrders;
 using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
@@ -13,11 +14,16 @@ namespace AISO.AiOrchestration.Functions;
 public sealed class ForwardOrderFunction : IFunction
 {
     private readonly ISapClient _sap;
+    private readonly IOrderApprovalService _approvals;
     private readonly ILogger<ForwardOrderFunction> _logger;
 
-    public ForwardOrderFunction(ISapClient sap, ILogger<ForwardOrderFunction> logger)
+    public ForwardOrderFunction(
+        ISapClient sap,
+        IOrderApprovalService approvals,
+        ILogger<ForwardOrderFunction> logger)
     {
         _sap = sap;
+        _approvals = approvals;
         _logger = logger;
     }
 
@@ -88,6 +94,15 @@ public sealed class ForwardOrderFunction : IFunction
             {
                 return FunctionResult.Fail(
                     SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Forward"));
+            }
+
+            var pending = await _approvals.GetPendingBySoNumberAsync(existing.SoNumber, ct);
+            if (pending is not null)
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildPendingApprovalBlockedMessage(
+                        "Forward",
+                        pending.RequestedBySapUser));
             }
 
             // Call SAP RAP action

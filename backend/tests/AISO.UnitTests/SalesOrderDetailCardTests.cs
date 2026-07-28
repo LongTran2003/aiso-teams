@@ -20,22 +20,60 @@ public class SalesOrderDetailCardTests
         Assert.Contains("Reject order", json);
         Assert.Contains("Forward", json);
         Assert.Contains("No line items available yet.", json);
+        Assert.DoesNotContain("Waiting for manager approval", json);
     }
 
     [Fact]
-    public void BuildSalesOrderDetailCard_Manager_ShowsApproveAndItems()
+    public void BuildSalesOrderDetailCard_Manager_WithoutPending_ShowsItemsNotApprove()
     {
         var order = SampleOrder(withItems: true);
         var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(order, UserRole.Manager);
         var json = JsonConvert.SerializeObject(attachment.Content);
 
-        Assert.Contains("\"action\":\"approve_so\"", json);
+        Assert.DoesNotContain("\"action\":\"approve_so\"", json);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
+        Assert.Contains("\"action\":\"reject_so\"", json);
         Assert.Contains("MAT-001", json);
         Assert.Contains("Widget", json);
         Assert.Contains("10 · MAT-001", json);
         Assert.Contains("/EA", json);
         Assert.DoesNotContain("No line items available yet.", json);
+    }
+
+    [Fact]
+    public void BuildSalesOrderDetailCard_Manager_WithPending_ShowsApproveHidesMutations()
+    {
+        var order = SampleOrder(withItems: true);
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(
+            order,
+            UserRole.Manager,
+            hasPendingApproval: true,
+            pendingRequestedBySapUser: "DEV-100");
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Waiting for manager approval", json);
+        Assert.Contains("DEV-100", json);
+        Assert.Contains("\"action\":\"approve_so\"", json);
+        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"forward_so\"", json);
+        Assert.DoesNotContain("\"action\":\"release_so\"", json);
+    }
+
+    [Fact]
+    public void BuildSalesOrderDetailCard_Employee_WithPending_HidesLifecycleActions()
+    {
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(
+            SampleOrder(),
+            UserRole.Employee,
+            hasPendingApproval: true,
+            pendingRequestedBySapUser: "DEV-100");
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Waiting for manager approval", json);
+        Assert.DoesNotContain("\"action\":\"release_so\"", json);
+        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"forward_so\"", json);
+        Assert.DoesNotContain("\"action\":\"approve_so\"", json);
     }
 
     [Theory]
@@ -44,7 +82,10 @@ public class SalesOrderDetailCardTests
     public void BuildSalesOrderDetailCard_WhenDelivered_HidesLifecycleActions(SalesOrderStatus status)
     {
         var order = SampleOrder(status: status);
-        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(order, UserRole.Manager);
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(
+            order,
+            UserRole.Manager,
+            hasPendingApproval: true);
         var json = JsonConvert.SerializeObject(attachment.Content);
 
         Assert.DoesNotContain("\"action\":\"approve_so\"", json);

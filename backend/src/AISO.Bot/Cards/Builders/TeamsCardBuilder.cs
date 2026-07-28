@@ -161,12 +161,20 @@ internal static class TeamsCardBuilder
     public static Attachment BuildSalesOrderDetailCard(object data) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("sales-order-detail.json", data);
 
-    public static Attachment BuildSalesOrderDetailCard(SalesOrder order, UserRole? role = null)
+    public static Attachment BuildSalesOrderDetailCard(
+        SalesOrder order,
+        UserRole? role = null,
+        bool hasPendingApproval = false,
+        string? pendingRequestedBySapUser = null)
     {
         var isEmployee = role is null or UserRole.Employee;
         var isApprover = role is UserRole.Manager or UserRole.Admin;
         var canMutateLifecycle = !SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status);
+        var canMutateWhilePending = canMutateLifecycle && !hasPendingApproval;
         var items = order.Items ?? Array.Empty<SalesOrderItem>();
+        var pendingBy = string.IsNullOrWhiteSpace(pendingRequestedBySapUser)
+            ? "a teammate"
+            : pendingRequestedBySapUser.Trim();
 
         return BuildSalesOrderDetailCard(new
         {
@@ -181,10 +189,14 @@ internal static class TeamsCardBuilder
             approvalStatus = order.Status.ToString(),
             statusColor = StatusToColor(order.Status),
             hasItems = items.Count > 0 ? "true" : "false",
-            showRequestRelease = isEmployee && canMutateLifecycle ? "true" : "false",
-            showApprove = isApprover && canMutateLifecycle ? "true" : "false",
-            showReject = canMutateLifecycle ? "true" : "false",
-            showForward = canMutateLifecycle ? "true" : "false",
+            showPendingApproval = hasPendingApproval ? "true" : "false",
+            pendingApprovalMessage = hasPendingApproval
+                ? $"Release requested by {pendingBy}. Reject / Forward / Request release are locked until a Manager decides."
+                : string.Empty,
+            showRequestRelease = isEmployee && canMutateWhilePending ? "true" : "false",
+            showApprove = isApprover && canMutateLifecycle && hasPendingApproval ? "true" : "false",
+            showReject = canMutateWhilePending ? "true" : "false",
+            showForward = canMutateWhilePending ? "true" : "false",
             items = items.Select(item =>
             {
                 var material = string.IsNullOrWhiteSpace(item.Material) ? "N/A" : item.Material.Trim();

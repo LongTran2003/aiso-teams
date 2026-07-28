@@ -79,6 +79,15 @@ public sealed class RequestReleaseFunction : IFunction
                     SalesOrderWorkflow.BuildBlockedMessage(order.Status, "Request release"));
             }
 
+            var pending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, ct);
+            if (pending is not null)
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildPendingApprovalBlockedMessage(
+                        "Request release",
+                        pending.RequestedBySapUser));
+            }
+
             var request = await _approvals.RequestReleaseAsync(
                 order.SoNumber,
                 requestingSapUser,

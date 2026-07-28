@@ -23,4 +23,15 @@ public class SalesOrderWorkflowTests
     {
         Assert.False(SalesOrderWorkflow.BlocksReleaseRejectForward(status));
     }
+
+    [Fact]
+    public void BuildPendingApprovalBlockedMessage_IncludesRequesterAndAction()
+    {
+        var message = SalesOrderWorkflow.BuildPendingApprovalBlockedMessage("Reject", "DEV-100");
+
+        Assert.Contains("pending release request", message);
+        Assert.Contains("DEV-100", message);
+        Assert.Contains("Reject", message);
+        Assert.Contains("approves or rejects", message);
+    }
 }
