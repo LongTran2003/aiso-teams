@@ -186,8 +186,9 @@ internal static class TeamsCardBuilder
             showForward = "true",
             items = items.Select(item =>
             {
-                var material = string.IsNullOrWhiteSpace(item.Material) ? "N/A" : item.Material;
-                var description = string.IsNullOrWhiteSpace(item.Description) ? material : item.Description;
+                var material = string.IsNullOrWhiteSpace(item.Material) ? "N/A" : item.Material.Trim();
+                var description = string.IsNullOrWhiteSpace(item.Description) ? material : item.Description.Trim();
+                var itemNumber = TrimItemNumber(item.ItemNumber);
                 var unit = string.IsNullOrWhiteSpace(item.Unit) ? "EA" : item.Unit;
                 var unitPrice = item.Quantity > 0
                     ? item.NetValue / item.Quantity
@@ -195,9 +196,8 @@ internal static class TeamsCardBuilder
 
                 return new
                 {
-                    itemNumber = item.ItemNumber,
-                    material,
                     description,
+                    itemCodeLabel = $"{itemNumber} · {material}",
                     quantity = item.Quantity.ToString("0"),
                     unit,
                     unitPriceLabel = $"{unitPrice:N0}/{unit}",
@@ -206,6 +206,15 @@ internal static class TeamsCardBuilder
                 };
             }).ToList()
         });
+    }
+
+    private static string TrimItemNumber(string itemNumber)
+    {
+        if (string.IsNullOrWhiteSpace(itemNumber))
+            return itemNumber;
+
+        var trimmed = itemNumber.TrimStart('0');
+        return string.IsNullOrEmpty(trimmed) ? "0" : trimmed;
     }
 
     public static Attachment? BuildKpiCardForRequest(string message, IReadOnlyList<SalesOrder> orders, string? chartUrl)

@@ -107,7 +107,7 @@ public class SapClientTests
         var headerBody =
             "{\"SoNumber\":\"15\",\"Customer\":\"1000\",\"CustomerName\":\"Acme\",\"OverallStatus\":\"A\",\"Currency\":\"USD\",\"NetValue\":1200}";
         var itemsBody =
-            "{\"value\":[{\"SoNumber\":\"0000000015\",\"ItemNo\":\"000010\",\"Material\":\"TG11\",\"Plant\":\"1010\",\"OrderQty\":2,\"Unit\":\"PC\",\"NetValue\":800,\"Currency\":\"USD\"},{\"SoNumber\":\"0000000015\",\"ItemNo\":\"000020\",\"Material\":\"TG12\",\"OrderQty\":1,\"Unit\":\"PC\",\"NetValue\":400,\"Currency\":\"USD\"}]}";
+            "{\"value\":[{\"SoNumber\":\"0000000015\",\"ItemNo\":\"000010\",\"Material\":\"TG11\",\"MaterialName\":\"Touring Bike\",\"Plant\":\"1010\",\"OrderQty\":2,\"Unit\":\"PC\",\"NetValue\":800,\"Currency\":\"USD\"},{\"SoNumber\":\"0000000015\",\"ItemNo\":\"000020\",\"Material\":\"TG12\",\"OrderQty\":1,\"Unit\":\"PC\",\"NetValue\":400,\"Currency\":\"USD\"}]}";
 
         var handler = new StubHttpMessageHandler(
             (HttpStatusCode.OK, headerBody),
@@ -122,11 +122,12 @@ public class SapClientTests
         Assert.Equal(2, result.Items.Count);
         Assert.Equal("000010", result.Items[0].ItemNumber);
         Assert.Equal("TG11", result.Items[0].Material);
-        Assert.Equal("TG11", result.Items[0].Description);
+        Assert.Equal("Touring Bike", result.Items[0].Description);
         Assert.Equal(2m, result.Items[0].Quantity);
         Assert.Equal("PC", result.Items[0].Unit);
         Assert.Equal(800m, result.Items[0].NetValue);
         Assert.Equal("000020", result.Items[1].ItemNumber);
+        Assert.Equal("TG12", result.Items[1].Description); // fallback when MaterialName missing
 
         Assert.Equal(2, handler.RequestUris.Count);
         Assert.Contains("SalesOrder('0000000015')", handler.RequestUris[0]);

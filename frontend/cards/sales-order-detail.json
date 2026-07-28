@@ -160,7 +160,7 @@
                   "items": [
                     {
                       "type": "TextBlock",
-                      "text": "${itemNumber} | ${material}",
+                      "text": "${description}",
                       "weight": "Bolder",
                       "wrap": true,
                       "spacing": "None"
@@ -217,7 +217,7 @@
                   "items": [
                     {
                       "type": "TextBlock",
-                      "text": "${description}",
+                      "text": "${itemCodeLabel}",
                       "size": "Small",
                       "isSubtle": true,
                       "wrap": true,
