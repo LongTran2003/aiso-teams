@@ -131,8 +131,13 @@ public class TeamsBot : TeamsActivityHandler
                             }
 
                             var roleForDetail = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                            var pending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
                             await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(order, roleForDetail)),
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(
+                                    order,
+                                    roleForDetail,
+                                    hasPendingApproval: pending is not null,
+                                    pendingRequestedBySapUser: pending?.RequestedBySapUser)),
                                 cancellationToken);
                         }
                         catch (SapODataException sapEx)
@@ -155,12 +160,15 @@ public class TeamsBot : TeamsActivityHandler
                     if (string.Equals(action, "release_so", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
-                        if (!await EnsureLifecycleActionAllowedAsync(turnContext, salesOrderId, "Release", cancellationToken))
+                        var roleForConfirm = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        // Employees request release — soft-lock if already pending. Managers may still open release/approve.
+                        var blockIfPending = roleForConfirm == UserRole.Employee;
+                        if (!await EnsureLifecycleActionAllowedAsync(
+                                turnContext, salesOrderId, "Request release", cancellationToken, blockIfPending))
                         {
                             return;
                         }
 
-                        var roleForConfirm = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
                         var confirmCard = roleForConfirm == UserRole.Employee
                             ? TeamsCardBuilder.BuildConfirmRequestReleaseCard(salesOrderId)
                             : TeamsCardBuilder.BuildConfirmReleaseCard(salesOrderId);
@@ -228,7 +236,8 @@ public class TeamsBot : TeamsActivityHandler
                     if (string.Equals(action, "reject_so", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
-                        if (!await EnsureLifecycleActionAllowedAsync(turnContext, salesOrderId, "Reject", cancellationToken))
+                        if (!await EnsureLifecycleActionAllowedAsync(
+                                turnContext, salesOrderId, "Reject", cancellationToken, blockIfPendingApproval: true))
                         {
                             return;
                         }
@@ -242,7 +251,8 @@ public class TeamsBot : TeamsActivityHandler
                     if (string.Equals(action, "forward_so", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
-                        if (!await EnsureLifecycleActionAllowedAsync(turnContext, salesOrderId, "Forward", cancellationToken))
+                        if (!await EnsureLifecycleActionAllowedAsync(
+                                turnContext, salesOrderId, "Forward", cancellationToken, blockIfPendingApproval: true))
                         {
                             return;
                         }
@@ -303,6 +313,19 @@ public class TeamsBot : TeamsActivityHandler
                                         MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
                                             "VALIDATION",
                                             SalesOrderWorkflow.BuildBlockedMessage(order.Status, "Request release"))),
+                                        cancellationToken);
+                                    return;
+                                }
+
+                                var existingPending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
+                                if (existingPending is not null)
+                                {
+                                    await turnContext.SendActivityAsync(
+                                        MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                            "VALIDATION",
+                                            SalesOrderWorkflow.BuildPendingApprovalBlockedMessage(
+                                                "Request release",
+                                                existingPending.RequestedBySapUser))),
                                         cancellationToken);
                                     return;
                                 }
@@ -424,6 +447,19 @@ public class TeamsBot : TeamsActivityHandler
                                     MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
                                         "VALIDATION",
                                         SalesOrderWorkflow.BuildBlockedMessage(order.Status, "Request release"))),
+                                    cancellationToken);
+                                return;
+                            }
+
+                            var existingPending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
+                            if (existingPending is not null)
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "VALIDATION",
+                                        SalesOrderWorkflow.BuildPendingApprovalBlockedMessage(
+                                            "Request release",
+                                            existingPending.RequestedBySapUser))),
                                     cancellationToken);
                                 return;
                             }
@@ -646,7 +682,8 @@ public class TeamsBot : TeamsActivityHandler
 
                         try
                         {
-                            if (!await EnsureLifecycleActionAllowedAsync(turnContext, salesOrderId, "Reject", cancellationToken))
+                            if (!await EnsureLifecycleActionAllowedAsync(
+                                    turnContext, salesOrderId, "Reject", cancellationToken, blockIfPendingApproval: true))
                             {
                                 return;
                             }
@@ -698,7 +735,8 @@ public class TeamsBot : TeamsActivityHandler
 
                         try
                         {
-                            if (!await EnsureLifecycleActionAllowedAsync(turnContext, salesOrderId, "Forward", cancellationToken))
+                            if (!await EnsureLifecycleActionAllowedAsync(
+                                    turnContext, salesOrderId, "Forward", cancellationToken, blockIfPendingApproval: true))
                             {
                                 return;
                             }
@@ -1195,7 +1233,8 @@ public class TeamsBot : TeamsActivityHandler
         ITurnContext turnContext,
         string salesOrderId,
         string actionLabel,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool blockIfPendingApproval = false)
     {
         try
         {
@@ -1210,17 +1249,33 @@ public class TeamsBot : TeamsActivityHandler
                 return false;
             }
 
-            if (!SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status))
+            if (SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status))
             {
-                return true;
+                await turnContext.SendActivityAsync(
+                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                        "VALIDATION",
+                        SalesOrderWorkflow.BuildBlockedMessage(order.Status, actionLabel))),
+                    cancellationToken);
+                return false;
             }
 
-            await turnContext.SendActivityAsync(
-                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
-                    "VALIDATION",
-                    SalesOrderWorkflow.BuildBlockedMessage(order.Status, actionLabel))),
-                cancellationToken);
-            return false;
+            if (blockIfPendingApproval)
+            {
+                var pending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
+                if (pending is not null)
+                {
+                    await turnContext.SendActivityAsync(
+                        MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                            "VALIDATION",
+                            SalesOrderWorkflow.BuildPendingApprovalBlockedMessage(
+                                actionLabel,
+                                pending.RequestedBySapUser))),
+                        cancellationToken);
+                    return false;
+                }
+            }
+
+            return true;
         }
         catch (SapODataException sapEx)
         {
@@ -1329,8 +1384,13 @@ public class TeamsBot : TeamsActivityHandler
 
         var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
         var roleForDetail = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+        var pending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
         await turnContext.SendActivityAsync(
-            MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(order, roleForDetail)),
+            MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(
+                order,
+                roleForDetail,
+                hasPendingApproval: pending is not null,
+                pendingRequestedBySapUser: pending?.RequestedBySapUser)),
             cancellationToken);
         return true;
     }

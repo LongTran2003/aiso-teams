@@ -22,4 +22,18 @@ public static class SalesOrderWorkflow
 
         return $"Sales order is already {statusLabel}. {actionLabel} is not allowed after delivery has started.";
     }
+
+    /// <summary>
+    /// Soft-lock while a release request is waiting for Manager decision.
+    /// Blocks request-release / reject / forward; ApproveOrder and RejectApproval remain allowed.
+    /// </summary>
+    public static string BuildPendingApprovalBlockedMessage(string actionLabel, string? requestedBySapUser = null)
+    {
+        var by = string.IsNullOrWhiteSpace(requestedBySapUser)
+            ? string.Empty
+            : $" (submitted by {requestedBySapUser.Trim()})";
+
+        return $"Sales order already has a pending release request{by}. " +
+               $"{actionLabel} is not allowed until a Manager approves or rejects the request.";
+    }
 }

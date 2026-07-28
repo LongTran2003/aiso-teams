@@ -53,6 +53,27 @@
       ]
     },
     {
+      "type": "Container",
+      "style": "warning",
+      "spacing": "Medium",
+      "$when": "${showPendingApproval == 'true'}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Waiting for manager approval",
+          "weight": "Bolder",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "${pendingApprovalMessage}",
+          "isSubtle": true,
+          "wrap": true,
+          "spacing": "None"
+        }
+      ]
+    },
+    {
       "type": "FactSet",
       "spacing": "Medium",
       "facts": [
