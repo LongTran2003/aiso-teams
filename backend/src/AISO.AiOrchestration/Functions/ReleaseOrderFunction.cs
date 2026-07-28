@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AISO.Domain.SalesOrders;
 using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
 
@@ -66,6 +67,18 @@ public sealed class ReleaseOrderFunction : IFunction
 
         try
         {
+            var existing = await _sap.GetSalesOrderByIdAsync(orderId, ct);
+            if (existing is null)
+            {
+                return FunctionResult.Fail($"Sales order {orderId} was not found in SAP.");
+            }
+
+            if (SalesOrderWorkflow.BlocksReleaseRejectForward(existing.Status))
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Release"));
+            }
+
             // Call SAP RAP action
             var updatedOrder = await _sap.ReleaseOrderAsync(orderId, requestingSapUser, ct);
 

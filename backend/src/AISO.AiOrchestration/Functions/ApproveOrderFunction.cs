@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AISO.Domain.Approvals;
+using AISO.Domain.SalesOrders;
 using AISO.Domain.Users;
 using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
@@ -87,6 +88,13 @@ public sealed class ApproveOrderFunction : IFunction
             {
                 return FunctionResult.Fail(
                     $"Order {pending.SoNumber} belongs to sales org {pending.SalesOrg}; your scope is {salesOrg}.");
+            }
+
+            var existing = await _sap.GetSalesOrderByIdAsync(pending.SoNumber, ct);
+            if (existing is not null && SalesOrderWorkflow.BlocksReleaseRejectForward(existing.Status))
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Approve / release"));
             }
 
             // Phase A: SAP approveOrder enforces ZAISO_USER_ROLE and performs release (no ownership).

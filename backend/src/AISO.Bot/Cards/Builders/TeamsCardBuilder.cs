@@ -165,6 +165,7 @@ internal static class TeamsCardBuilder
     {
         var isEmployee = role is null or UserRole.Employee;
         var isApprover = role is UserRole.Manager or UserRole.Admin;
+        var canMutateLifecycle = !SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status);
         var items = order.Items ?? Array.Empty<SalesOrderItem>();
 
         return BuildSalesOrderDetailCard(new
@@ -180,10 +181,10 @@ internal static class TeamsCardBuilder
             approvalStatus = order.Status.ToString(),
             statusColor = StatusToColor(order.Status),
             hasItems = items.Count > 0 ? "true" : "false",
-            showRequestRelease = isEmployee ? "true" : "false",
-            showApprove = isApprover ? "true" : "false",
-            showReject = "true",
-            showForward = "true",
+            showRequestRelease = isEmployee && canMutateLifecycle ? "true" : "false",
+            showApprove = isApprover && canMutateLifecycle ? "true" : "false",
+            showReject = canMutateLifecycle ? "true" : "false",
+            showForward = canMutateLifecycle ? "true" : "false",
             items = items.Select(item =>
             {
                 var material = string.IsNullOrWhiteSpace(item.Material) ? "N/A" : item.Material.Trim();
