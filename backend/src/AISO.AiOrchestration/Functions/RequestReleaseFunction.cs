@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AISO.Domain.Approvals;
+using AISO.Domain.SalesOrders;
 using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
 
@@ -70,6 +71,12 @@ public sealed class RequestReleaseFunction : IFunction
             if (order is null)
             {
                 return FunctionResult.Fail($"Sales order {orderId} was not found in SAP.");
+            }
+
+            if (SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status))
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildBlockedMessage(order.Status, "Request release"));
             }
 
             var request = await _approvals.RequestReleaseAsync(

@@ -38,6 +38,21 @@ public class SalesOrderDetailCardTests
         Assert.DoesNotContain("No line items available yet.", json);
     }
 
+    [Theory]
+    [InlineData(SalesOrderStatus.Delivered)]
+    [InlineData(SalesOrderStatus.PartiallyDelivered)]
+    public void BuildSalesOrderDetailCard_WhenDelivered_HidesLifecycleActions(SalesOrderStatus status)
+    {
+        var order = SampleOrder(status: status);
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(order, UserRole.Manager);
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.DoesNotContain("\"action\":\"approve_so\"", json);
+        Assert.DoesNotContain("\"action\":\"release_so\"", json);
+        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"forward_so\"", json);
+    }
+
     [Fact]
     public void BuildSuccessCard_ReleaseRequested_ShowsWaitingCopy()
     {
@@ -49,7 +64,7 @@ public class SalesOrderDetailCardTests
         Assert.Contains("0000000009", json);
     }
 
-    private static SalesOrder SampleOrder(bool withItems = false) =>
+    private static SalesOrder SampleOrder(bool withItems = false, SalesOrderStatus status = SalesOrderStatus.Blocked) =>
         new()
         {
             SoNumber = "0000000009",
@@ -62,7 +77,7 @@ public class SalesOrderDetailCardTests
             NetValue = 1200m,
             Currency = "USD",
             SalesOrg = "TV01",
-            Status = SalesOrderStatus.Blocked,
+            Status = status,
             Items = withItems
                 ? new[]
                 {
