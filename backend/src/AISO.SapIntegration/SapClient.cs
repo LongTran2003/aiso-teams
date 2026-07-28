@@ -728,6 +728,54 @@ public class SapClient : ISapClient
         }
     }
 
+    public async Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(sapUserId))
+            return false;
+
+        var normalized = sapUserId.Trim().ToUpperInvariant();
+        var url = new ODataQueryBuilder("UserRole")
+            .AddCustomParam("sap-client", "324")
+            .Filter("SapUser", "eq", normalized)
+            .Top(1)
+            .Build();
+
+        _logger.LogInformation("Calling SAP OData user lookup: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (response.StatusCode is System.Net.HttpStatusCode.NotFound
+                or System.Net.HttpStatusCode.BadRequest)
+            {
+                // Entity set not published yet, or filter rejected — caller may fall back.
+                _logger.LogWarning(
+                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode}",
+                    normalized,
+                    (int)response.StatusCode);
+                return null;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "SAP UserRole lookup failed for {SapUser}: {StatusCode}",
+                    normalized,
+                    (int)response.StatusCode);
+                return null;
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleDto>>(rawJson, JsonOptions);
+            return result?.Value is { Count: > 0 };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SAP UserRole lookup error for {SapUser}", normalized);
+            return null;
+        }
+    }
+
     private static string BuildPeriodLabel(DateOnly? from, DateOnly? to)
     {
         if (from.HasValue && to.HasValue)
