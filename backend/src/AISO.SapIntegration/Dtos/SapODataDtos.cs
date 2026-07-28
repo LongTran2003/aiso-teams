@@ -41,6 +41,8 @@ internal class SapSalesOrderItemDto
     /// <summary>VBAP.POSNR — exposed as ItemNo in CDS.</summary>
     public string? ItemNo { get; set; }
     public string? Material { get; set; }
+    /// <summary>MAKT.MAKTX — exposed as MaterialName in CDS.</summary>
+    public string? MaterialName { get; set; }
     public string? Plant { get; set; }
     public decimal? OrderQty { get; set; }
     public string? Unit { get; set; }

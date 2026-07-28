@@ -815,13 +815,15 @@ public class SapClient : ISapClient
 
     private static SalesOrderItem MapItemToDomain(SapSalesOrderItemDto dto)
     {
-        var material = dto.Material ?? string.Empty;
+        var material = dto.Material?.Trim() ?? string.Empty;
+        var materialName = dto.MaterialName?.Trim() ?? string.Empty;
         return new SalesOrderItem
         {
             ItemNumber = string.IsNullOrWhiteSpace(dto.ItemNo) ? "000000" : dto.ItemNo.Trim(),
             Material = material,
-            // ZI_AISO_SO_ITEM has no MAKT text yet — fall back to material code.
-            Description = string.IsNullOrWhiteSpace(material) ? "N/A" : material,
+            Description = !string.IsNullOrWhiteSpace(materialName)
+                ? materialName
+                : string.IsNullOrWhiteSpace(material) ? "N/A" : material,
             Quantity = dto.OrderQty ?? 0,
             Unit = string.IsNullOrWhiteSpace(dto.Unit) ? "EA" : dto.Unit,
             NetValue = dto.NetValue ?? 0
