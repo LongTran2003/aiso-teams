@@ -174,7 +174,8 @@ internal static class TeamsCardBuilder
         UserRole? role = null,
         bool hasPendingApproval = false,
         string? pendingRequestedBySapUser = null,
-        string? currentSapUser = null)
+        string? currentSapUser = null,
+        string? pendingComment = null)
     {
         var isEmployee = role is null or UserRole.Employee;
         var isApprover = role is UserRole.Manager or UserRole.Admin;
@@ -187,6 +188,11 @@ internal static class TeamsCardBuilder
             : pendingRequestedBySapUser.Trim();
         var owner = order.OwnerSapUser?.Trim();
         var hasOwner = !string.IsNullOrWhiteSpace(owner);
+        var showActivePending = hasPendingApproval
+            && SalesOrderWorkflow.ShowsPendingApprovalBanner(order.Status);
+        var noteText = string.IsNullOrWhiteSpace(pendingComment)
+            ? "N/A"
+            : pendingComment.Trim();
 
         return BuildSalesOrderDetailCard(new
         {
@@ -208,12 +214,19 @@ internal static class TeamsCardBuilder
                 : isOwner
                     ? "You currently own this order."
                     : "You can view this order, but Request release / Reject / Forward are limited to the owner.",
-            showPendingApproval = hasPendingApproval ? "true" : "false",
-            pendingApprovalMessage = hasPendingApproval
-                ? $"Release requested by {pendingBy}. Reject / Forward / Request release are locked until a Manager decides."
+            showPendingEmployee = showActivePending && isEmployee ? "true" : "false",
+            pendingEmployeeMessage = showActivePending && isEmployee
+                ? $"Release requested by {pendingBy}. Waiting for a manager to approve — you can't change this order until then."
+                : string.Empty,
+            showPendingManager = showActivePending && isApprover ? "true" : "false",
+            pendingManagerSubmittedBy = showActivePending && isApprover
+                ? $"Submitted by {pendingBy}."
+                : string.Empty,
+            pendingManagerNote = showActivePending && isApprover
+                ? $"Note for manager: {noteText}"
                 : string.Empty,
             showRequestRelease = isEmployee && canMutateWhilePending ? "true" : "false",
-            showApprove = isApprover && canMutateLifecycle && hasPendingApproval ? "true" : "false",
+            showApprove = isApprover && canMutateLifecycle && showActivePending ? "true" : "false",
             showReject = canMutateWhilePending ? "true" : "false",
             showForward = canMutateWhilePending ? "true" : "false",
             items = items.Select(item =>

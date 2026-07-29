@@ -139,7 +139,8 @@ public class TeamsBot : TeamsActivityHandler
                                     roleForDetail,
                                     hasPendingApproval: pending is not null,
                                     pendingRequestedBySapUser: pending?.RequestedBySapUser,
-                                    currentSapUser: linkedSapForDetail)),
+                                    currentSapUser: linkedSapForDetail,
+                                    pendingComment: pending?.Comment)),
                                 cancellationToken);
                         }
                         catch (SapODataException sapEx)
@@ -1435,7 +1436,8 @@ public class TeamsBot : TeamsActivityHandler
                 roleForDetail,
                 hasPendingApproval: pending is not null,
                 pendingRequestedBySapUser: pending?.RequestedBySapUser,
-                currentSapUser: linkedSapForDetail)),
+                currentSapUser: linkedSapForDetail,
+                pendingComment: pending?.Comment)),
             cancellationToken);
         return true;
     }
