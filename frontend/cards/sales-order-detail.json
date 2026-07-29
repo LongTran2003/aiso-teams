@@ -54,6 +54,27 @@
     },
     {
       "type": "Container",
+      "style": "emphasis",
+      "spacing": "Medium",
+      "$when": "${showOwnedBy == 'true'}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Owned by ${ownedBySapUser}",
+          "weight": "Bolder",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "${ownedByMessage}",
+          "isSubtle": true,
+          "wrap": true,
+          "spacing": "None"
+        }
+      ]
+    },
+    {
+      "type": "Container",
       "style": "warning",
       "spacing": "Medium",
       "$when": "${showPendingApproval == 'true'}",

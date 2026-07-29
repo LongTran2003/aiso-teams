@@ -131,13 +131,15 @@ public class TeamsBot : TeamsActivityHandler
                             }
 
                             var roleForDetail = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                            var linkedSapForDetail = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
                             var pending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(
                                     order,
                                     roleForDetail,
                                     hasPendingApproval: pending is not null,
-                                    pendingRequestedBySapUser: pending?.RequestedBySapUser)),
+                                    pendingRequestedBySapUser: pending?.RequestedBySapUser,
+                                    currentSapUser: linkedSapForDetail)),
                                 cancellationToken);
                         }
                         catch (SapODataException sapEx)
@@ -161,10 +163,17 @@ public class TeamsBot : TeamsActivityHandler
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
                         var roleForConfirm = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        var linkedSapForGate = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
                         // Employees request release — soft-lock if already pending. Managers may still open release/approve.
                         var blockIfPending = roleForConfirm == UserRole.Employee;
                         if (!await EnsureLifecycleActionAllowedAsync(
-                                turnContext, salesOrderId, "Request release", cancellationToken, blockIfPending))
+                                turnContext,
+                                salesOrderId,
+                                roleForConfirm == UserRole.Employee ? "Request release" : "Release",
+                                cancellationToken,
+                                blockIfPendingApproval: blockIfPending,
+                                blockIfNotOwner: roleForConfirm == UserRole.Employee,
+                                currentSapUser: linkedSapForGate))
                         {
                             return;
                         }
@@ -236,8 +245,15 @@ public class TeamsBot : TeamsActivityHandler
                     if (string.Equals(action, "reject_so", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        var linkedSapForGate = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
                         if (!await EnsureLifecycleActionAllowedAsync(
-                                turnContext, salesOrderId, "Reject", cancellationToken, blockIfPendingApproval: true))
+                                turnContext,
+                                salesOrderId,
+                                "Reject",
+                                cancellationToken,
+                                blockIfPendingApproval: true,
+                                blockIfNotOwner: true,
+                                currentSapUser: linkedSapForGate))
                         {
                             return;
                         }
@@ -251,8 +267,15 @@ public class TeamsBot : TeamsActivityHandler
                     if (string.Equals(action, "forward_so", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
+                        var linkedSapForGate = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
                         if (!await EnsureLifecycleActionAllowedAsync(
-                                turnContext, salesOrderId, "Forward", cancellationToken, blockIfPendingApproval: true))
+                                turnContext,
+                                salesOrderId,
+                                "Forward",
+                                cancellationToken,
+                                blockIfPendingApproval: true,
+                                blockIfNotOwner: true,
+                                currentSapUser: linkedSapForGate))
                         {
                             return;
                         }
@@ -678,7 +701,13 @@ public class TeamsBot : TeamsActivityHandler
                         try
                         {
                             if (!await EnsureLifecycleActionAllowedAsync(
-                                    turnContext, salesOrderId, "Reject", cancellationToken, blockIfPendingApproval: true))
+                                    turnContext,
+                                    salesOrderId,
+                                    "Reject",
+                                    cancellationToken,
+                                    blockIfPendingApproval: true,
+                                    blockIfNotOwner: true,
+                                    currentSapUser: linkedSapUsername))
                             {
                                 return;
                             }
@@ -731,7 +760,13 @@ public class TeamsBot : TeamsActivityHandler
                         try
                         {
                             if (!await EnsureLifecycleActionAllowedAsync(
-                                    turnContext, salesOrderId, "Forward", cancellationToken, blockIfPendingApproval: true))
+                                    turnContext,
+                                    salesOrderId,
+                                    "Forward",
+                                    cancellationToken,
+                                    blockIfPendingApproval: true,
+                                    blockIfNotOwner: true,
+                                    currentSapUser: linkedSapUsername))
                             {
                                 return;
                             }
@@ -745,10 +780,9 @@ public class TeamsBot : TeamsActivityHandler
                             var displayedSo = updatedOrder.SoNumber == "UNKNOWN"
                                 ? salesOrderId
                                 : updatedOrder.SoNumber;
-                            // Show the SAP User ID directly: several Teams users may map
-                            // to the same SAP account, so a name lookup would be ambiguous.
                             await turnContext.SendActivityAsync(
-                                $"Sales order {displayedSo} has been forwarded to {forwardToUser}.",
+                                MessageFactory.Attachment(
+                                    TeamsCardBuilder.BuildSuccessCard(displayedSo, "Forwarded", forwardToUser)),
                                 cancellationToken: cancellationToken);
                         }
                         catch (SapODataException sapEx)
@@ -1229,7 +1263,9 @@ public class TeamsBot : TeamsActivityHandler
         string salesOrderId,
         string actionLabel,
         CancellationToken cancellationToken,
-        bool blockIfPendingApproval = false)
+        bool blockIfPendingApproval = false,
+        bool blockIfNotOwner = false,
+        string? currentSapUser = null)
     {
         try
         {
@@ -1268,6 +1304,18 @@ public class TeamsBot : TeamsActivityHandler
                         cancellationToken);
                     return false;
                 }
+            }
+
+            if (blockIfNotOwner
+                && !SalesOrderWorkflow.IsCurrentOwner(order.OwnerSapUser, currentSapUser)
+                && !string.IsNullOrWhiteSpace(order.OwnerSapUser))
+            {
+                await turnContext.SendActivityAsync(
+                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                        "VALIDATION",
+                        SalesOrderWorkflow.BuildNotOwnerBlockedMessage(actionLabel, order.OwnerSapUser))),
+                    cancellationToken);
+                return false;
             }
 
             return true;
@@ -1379,13 +1427,15 @@ public class TeamsBot : TeamsActivityHandler
 
         var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
         var roleForDetail = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+        var linkedSapForDetail = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
         var pending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
         await turnContext.SendActivityAsync(
             MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(
                 order,
                 roleForDetail,
                 hasPendingApproval: pending is not null,
-                pendingRequestedBySapUser: pending?.RequestedBySapUser)),
+                pendingRequestedBySapUser: pending?.RequestedBySapUser,
+                currentSapUser: linkedSapForDetail)),
             cancellationToken);
         return true;
     }

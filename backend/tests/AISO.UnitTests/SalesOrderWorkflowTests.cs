@@ -41,4 +41,15 @@ public class SalesOrderWorkflowTests
         Assert.Contains("Reject", message);
         Assert.Contains("approves or rejects", message);
     }
+
+    [Theory]
+    [InlineData(null, "DEV-100", true)]
+    [InlineData("", "DEV-100", true)]
+    [InlineData("DEV-100", "DEV-100", true)]
+    [InlineData("DEV-200", "DEV-100", false)]
+    [InlineData("DEV-200", null, false)]
+    public void IsCurrentOwner_MatchesSapEmptyOwnerSemantics(string? owner, string? current, bool expected)
+    {
+        Assert.Equal(expected, SalesOrderWorkflow.IsCurrentOwner(owner, current));
+    }
 }
