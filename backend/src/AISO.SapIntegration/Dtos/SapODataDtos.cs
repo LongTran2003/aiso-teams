@@ -29,6 +29,8 @@ internal class SapSalesOrderDto
     public string? DeliveryBlock { get; set; }
     public string? BillingStatus { get; set; }
     public string? IsCancelled { get; set; }
+    /// <summary>Owner SAP user from zaiso_so_map (when Quân exposes it on SalesOrder).</summary>
+    public string? OwnerSapUser { get; set; }
 }
 
 /// <summary>

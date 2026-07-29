@@ -9,7 +9,7 @@ namespace AISO.AiOrchestration.Functions;
 /// <summary>
 /// Forwards a Sales Order to another user for review/approval.
 /// Maps to AI function schema <c>ForwardOrder</c>.
-/// Sprint 2-3: returns mock success. Sprint 4: calls SAP substitution service.
+/// Ownership is enforced by SAP <c>zaiso_so_map</c> (and by BE when <c>OwnerSapUser</c> is present).
 /// </summary>
 public sealed class ForwardOrderFunction : IFunction
 {
@@ -30,7 +30,7 @@ public sealed class ForwardOrderFunction : IFunction
     public string Name => "ForwardOrder";
 
     public string Description =>
-        "Forward a sales order to another user for further review or approval.";
+        "Forward a sales order you own to another SAP user. Transfers ownership; you will no longer own the order.";
 
     public string ParametersJsonSchema => """
         {
@@ -42,7 +42,7 @@ public sealed class ForwardOrderFunction : IFunction
             },
             "forward_to_user": {
               "type": "string",
-              "description": "Target recipient username, name, or email."
+              "description": "Target recipient SAP user id (e.g. DEV-300)."
             }
           },
           "required": ["order_id", "forward_to_user"]
@@ -71,14 +71,7 @@ public sealed class ForwardOrderFunction : IFunction
             return FunctionResult.Fail("Missing required parameter: forward_to_user");
         }
 
-        // Authorization Check
-        var allowedManagers = new[] { "DEV-249" };
-        if (!allowedManagers.Contains(requestingSapUser.ToUpperInvariant()))
-        {
-            _logger.LogWarning("AUDIT: User {User} attempted to forward order {OrderId} but does not have manager role.", requestingSapUser, orderId);
-            return FunctionResult.Fail("Authorization failed: You do not have the required 'Manager' role to forward sales orders.");
-        }
-
+        // Role gating is RolePolicy (Employee+). Ownership is enforced below / in SAP.
         _logger.LogInformation(
             "ForwardOrder: orderId={OrderId}, forwardTo={ForwardTo}, sapUser={SapUser}", orderId, forwardTo, requestingSapUser);
 
@@ -105,10 +98,15 @@ public sealed class ForwardOrderFunction : IFunction
                         pending.RequestedBySapUser));
             }
 
-            // Call SAP RAP action
+            if (!SalesOrderWorkflow.IsCurrentOwner(existing.OwnerSapUser, requestingSapUser)
+                && !string.IsNullOrWhiteSpace(existing.OwnerSapUser))
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildNotOwnerBlockedMessage("Forward", existing.OwnerSapUser));
+            }
+
             var updatedOrder = await _sap.ForwardOrderAsync(orderId, forwardTo, requestingSapUser, ct);
 
-            // Audit Log
             _logger.LogInformation("AUDIT: User {User} successfully forwarded order {OrderId} to {ForwardTo}", requestingSapUser, orderId, forwardTo);
 
             var result = new
@@ -116,7 +114,7 @@ public sealed class ForwardOrderFunction : IFunction
                 order_id = updatedOrder.SoNumber,
                 action = "Forwarded",
                 forward_to_user = forwardTo,
-                message = $"Sales order {updatedOrder.SoNumber} has been forwarded to {forwardTo}. Status is {updatedOrder.Status}."
+                message = $"Ownership of sales order {updatedOrder.SoNumber} transferred to {forwardTo}. You no longer own this order."
             };
 
             return FunctionResult.Ok(result);
@@ -128,4 +126,3 @@ public sealed class ForwardOrderFunction : IFunction
         }
     }
 }
-

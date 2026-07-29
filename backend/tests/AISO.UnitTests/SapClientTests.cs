@@ -251,6 +251,17 @@ public class SapClientTests
         Assert.Equal(SalesOrderStatus.Cancelled, result!.Status);
     }
 
+    [Fact]
+    public async Task GetSalesOrderById_MapsOwnerSapUser()
+    {
+        var body = "{\"SoNumber\":\"9\",\"Customer\":\"1000\",\"OverallStatus\":\"A\",\"OwnerSapUser\":\"DEV-249\"}";
+        var client = CreateClient(HttpStatusCode.OK, body, out _);
+
+        var result = await client.GetSalesOrderByIdAsync("9");
+
+        Assert.Equal("DEV-249", result!.OwnerSapUser);
+    }
+
     [Theory]
     [InlineData(SalesOrderStatus.Open, "OverallStatus eq 'A'")]
     [InlineData(SalesOrderStatus.PartiallyDelivered, "OverallStatus eq 'B'")]

@@ -95,14 +95,47 @@ public class SalesOrderDetailCardTests
     }
 
     [Fact]
-    public void BuildSuccessCard_ReleaseRequested_ShowsWaitingCopy()
+    public void BuildSalesOrderDetailCard_WhenNotOwner_HidesMutationsAndShowsOwnedBy()
     {
-        var attachment = TeamsCardBuilder.BuildSuccessCard("0000000009", "ReleaseRequested");
+        var order = SampleOrder() with { OwnerSapUser = "DEV-200" };
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(
+            order,
+            UserRole.Employee,
+            currentSapUser: "DEV-100");
         var json = JsonConvert.SerializeObject(attachment.Content);
 
-        Assert.Contains("Release requested", json);
-        Assert.Contains("Waiting for manager approval", json);
-        Assert.Contains("0000000009", json);
+        Assert.Contains("Owned by DEV-200", json);
+        Assert.Contains("limited to the owner", json);
+        Assert.DoesNotContain("\"action\":\"release_so\"", json);
+        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"forward_so\"", json);
+    }
+
+    [Fact]
+    public void BuildSalesOrderDetailCard_WhenOwner_ShowsMutations()
+    {
+        var order = SampleOrder() with { OwnerSapUser = "DEV-100" };
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(
+            order,
+            UserRole.Employee,
+            currentSapUser: "DEV-100");
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Owned by DEV-100", json);
+        Assert.Contains("You currently own this order", json);
+        Assert.Contains("\"action\":\"release_so\"", json);
+        Assert.Contains("\"action\":\"forward_so\"", json);
+    }
+
+    [Fact]
+    public void BuildSuccessCard_Forwarded_ShowsOwnershipTransferCopy()
+    {
+        var attachment = TeamsCardBuilder.BuildSuccessCard("0000000009", "Forwarded", "DEV-300");
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Order forwarded", json);
+        Assert.Contains("DEV-300", json);
+        Assert.Contains("no longer own", json);
     }
 
     private static SalesOrder SampleOrder(bool withItems = false, SalesOrderStatus status = SalesOrderStatus.Blocked) =>

@@ -809,6 +809,7 @@ public class SapClient : ISapClient
             Currency = string.IsNullOrEmpty(dto.Currency) ? "USD" : dto.Currency,
             Status = MapStatus(dto),
             SalesOrg = dto.SalesOrg ?? "UNKNOWN",
+            OwnerSapUser = string.IsNullOrWhiteSpace(dto.OwnerSapUser) ? null : dto.OwnerSapUser.Trim(),
             Items = items ?? Array.Empty<SalesOrderItem>()
         };
     }

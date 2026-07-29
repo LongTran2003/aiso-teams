@@ -7,6 +7,7 @@ namespace AISO.SapIntegration.Mock;
 public sealed class MockSapClient : ISapClient
 {
     private readonly ILogger<MockSapClient>? _logger;
+    private readonly Dictionary<string, string> _owners = new(StringComparer.OrdinalIgnoreCase);
 
     public MockSapClient(ILogger<MockSapClient>? logger = null)
     {
@@ -178,7 +179,12 @@ public sealed class MockSapClient : ISapClient
     public Task<SalesOrder?> GetSalesOrderByIdAsync(string soNumber, CancellationToken ct = default)
     {
         _logger?.LogDebug("MockSapClient.GetSalesOrderByIdAsync: {SoNumber}", soNumber);
-        return Task.FromResult(SeedData.FirstOrDefault(x => x.SoNumber == soNumber));
+        var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber);
+        if (order is null)
+            return Task.FromResult<SalesOrder?>(null);
+
+        _owners.TryGetValue(soNumber, out var owner);
+        return Task.FromResult<SalesOrder?>(order with { OwnerSapUser = owner });
     }
 
     public Task<SalesOrder> CreateSalesOrderAsync(CreateSalesOrderDto dto, CancellationToken ct = default)
@@ -250,7 +256,8 @@ public sealed class MockSapClient : ISapClient
     {
         var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
             ?? throw new InvalidOperationException($"Order {soNumber} not found.");
-        return Task.FromResult(order);
+        _owners[soNumber] = newOwnerSapUser;
+        return Task.FromResult(order with { OwnerSapUser = newOwnerSapUser });
     }
 
     public Task<SalesOrder> ForwardOrderAsync(
@@ -262,8 +269,15 @@ public sealed class MockSapClient : ISapClient
     {
         var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
             ?? throw new InvalidOperationException($"Order {soNumber} not found.");
-        // Forwarding might not change the status, just assigning to someone else.
-        return Task.FromResult(order);
+
+        if (_owners.TryGetValue(soNumber, out var owner)
+            && !string.Equals(owner, requestingTeamsUser, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Order owned by another user");
+        }
+
+        _owners[soNumber] = forwardToUser;
+        return Task.FromResult(order with { OwnerSapUser = forwardToUser });
     }
 
     public Task<KpiSummary> GetKpiSummaryAsync(KpiSummaryQuery query, CancellationToken ct = default)

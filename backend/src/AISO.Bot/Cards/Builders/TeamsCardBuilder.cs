@@ -30,9 +30,9 @@ internal static class TeamsCardBuilder
     public static Attachment BuildLoadingCard() =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("loading.json");
 
-    public static Attachment BuildSuccessCard(string salesOrderNumber, string status)
+    public static Attachment BuildSuccessCard(string salesOrderNumber, string status, string? detail = null)
     {
-        var (headline, message, statusLabel, showPendingLink) = DescribeSuccess(status);
+        var (headline, message, statusLabel, showPendingLink) = DescribeSuccess(status, detail);
         return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "success.json",
             new
@@ -165,16 +165,20 @@ internal static class TeamsCardBuilder
         SalesOrder order,
         UserRole? role = null,
         bool hasPendingApproval = false,
-        string? pendingRequestedBySapUser = null)
+        string? pendingRequestedBySapUser = null,
+        string? currentSapUser = null)
     {
         var isEmployee = role is null or UserRole.Employee;
         var isApprover = role is UserRole.Manager or UserRole.Admin;
         var canMutateLifecycle = !SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status);
-        var canMutateWhilePending = canMutateLifecycle && !hasPendingApproval;
+        var isOwner = SalesOrderWorkflow.IsCurrentOwner(order.OwnerSapUser, currentSapUser);
+        var canMutateWhilePending = canMutateLifecycle && !hasPendingApproval && isOwner;
         var items = order.Items ?? Array.Empty<SalesOrderItem>();
         var pendingBy = string.IsNullOrWhiteSpace(pendingRequestedBySapUser)
             ? "a teammate"
             : pendingRequestedBySapUser.Trim();
+        var owner = order.OwnerSapUser?.Trim();
+        var hasOwner = !string.IsNullOrWhiteSpace(owner);
 
         return BuildSalesOrderDetailCard(new
         {
@@ -189,6 +193,13 @@ internal static class TeamsCardBuilder
             approvalStatus = order.Status.ToString(),
             statusColor = StatusToColor(order.Status),
             hasItems = items.Count > 0 ? "true" : "false",
+            showOwnedBy = hasOwner ? "true" : "false",
+            ownedBySapUser = hasOwner ? owner! : string.Empty,
+            ownedByMessage = !hasOwner
+                ? string.Empty
+                : isOwner
+                    ? "You currently own this order."
+                    : "You can view this order, but Request release / Reject / Forward are limited to the owner.",
             showPendingApproval = hasPendingApproval ? "true" : "false",
             pendingApprovalMessage = hasPendingApproval
                 ? $"Release requested by {pendingBy}. Reject / Forward / Request release are locked until a Manager decides."
@@ -310,7 +321,15 @@ internal static class TeamsCardBuilder
             ? actionElement.GetString()
             : functionName;
 
-        card = BuildSuccessCard(orderIdElement.GetString()!, action ?? "Completed");
+        string? detail = null;
+        if (string.Equals(action, "Forwarded", StringComparison.OrdinalIgnoreCase)
+            && payload.TryGetProperty("forward_to_user", out var forwardElement)
+            && forwardElement.ValueKind == JsonValueKind.String)
+        {
+            detail = forwardElement.GetString();
+        }
+
+        card = BuildSuccessCard(orderIdElement.GetString()!, action ?? "Completed", detail);
         return true;
     }
 
@@ -345,7 +364,9 @@ internal static class TeamsCardBuilder
     private static string DisplayOrNa(string? value) =>
         string.IsNullOrWhiteSpace(value) ? "N/A" : value;
 
-    private static (string Headline, string Message, string StatusLabel, bool ShowPendingLink) DescribeSuccess(string status) =>
+    private static (string Headline, string Message, string StatusLabel, bool ShowPendingLink) DescribeSuccess(
+        string status,
+        string? detail = null) =>
         status switch
         {
             "ReleaseRequested" => (
@@ -372,6 +393,13 @@ internal static class TeamsCardBuilder
                 "Order rejected",
                 "The sales order was rejected in SAP.",
                 "Rejected",
+                false),
+            "Forwarded" => (
+                "Order forwarded",
+                string.IsNullOrWhiteSpace(detail)
+                    ? "Ownership was transferred. You no longer own this order."
+                    : $"Ownership transferred to {detail.Trim()}. You no longer own this order.",
+                "Forwarded",
                 false),
             _ => (
                 "Action completed",
