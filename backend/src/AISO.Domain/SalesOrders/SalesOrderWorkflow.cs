@@ -36,4 +36,21 @@ public static class SalesOrderWorkflow
         return $"Sales order already has a pending release request{by}. " +
                $"{actionLabel} is not allowed until a Manager approves or rejects the request.";
     }
+
+    /// <summary>
+    /// Empty owner matches SAP: no <c>zaiso_so_map</c> row means any linked user may act.
+    /// </summary>
+    public static bool IsCurrentOwner(string? ownerSapUser, string? currentSapUser)
+    {
+        if (string.IsNullOrWhiteSpace(ownerSapUser))
+            return true;
+
+        if (string.IsNullOrWhiteSpace(currentSapUser))
+            return false;
+
+        return string.Equals(ownerSapUser.Trim(), currentSapUser.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    public static string BuildNotOwnerBlockedMessage(string actionLabel, string ownerSapUser) =>
+        $"Sales order is owned by {ownerSapUser.Trim()}. {actionLabel} is only allowed for the current owner.";
 }

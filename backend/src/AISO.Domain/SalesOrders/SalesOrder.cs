@@ -38,6 +38,12 @@ public sealed record SalesOrder
     /// <summary>Derived order status (computed from delivery/billing/block fields).</summary>
     public required SalesOrderStatus Status { get; init; }
 
+    /// <summary>
+    /// Current owner SAP user id from <c>zaiso_so_map</c> (OData <c>OwnerSapUser</c> when published).
+    /// Null/empty means no ownership row — SAP allows any linked user to act.
+    /// </summary>
+    public string? OwnerSapUser { get; init; }
+
     /// <summary>Order line items (VBAP rows).</summary>
     public required IReadOnlyList<SalesOrderItem> Items { get; init; }
 }
