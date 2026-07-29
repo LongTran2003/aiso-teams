@@ -31,6 +31,24 @@ public class SapClientTests
     }
 
     [Fact]
+    public async Task RejectOrder_RefetchesAndMapsCancelledFromIsCancelledFlag()
+    {
+        var handler = new StubHttpMessageHandler(
+            (HttpStatusCode.OK, "{}"), // rejectOrder POST
+            (HttpStatusCode.OK, "{\"SoNumber\":\"11\",\"Customer\":\"1000\",\"OverallStatus\":\"A\",\"IsCancelled\":\"X\"}"),
+            (HttpStatusCode.OK, "{\"value\":[]}"));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://sap.test/") };
+        var client = new SapClient(httpClient, new StubTokenManager(), NullLogger<SapClient>.Instance);
+
+        var result = await client.RejectOrderAsync("11", "03", "DEV-249");
+
+        Assert.Equal("0000000011", result.SoNumber);
+        Assert.Equal(SalesOrderStatus.Cancelled, result.Status);
+        Assert.Contains("rejectOrder", handler.RequestUris[0]);
+        Assert.Contains("SalesOrder('0000000011')", handler.RequestUris[1]);
+    }
+
+    [Fact]
     public async Task RejectOrder_RefetchesAndMapsCancelledFromItemRejectionRsn()
     {
         var handler = new StubHttpMessageHandler(

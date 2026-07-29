@@ -874,8 +874,8 @@ public class SapClient : ISapClient
 
     private static SalesOrderStatus MapStatus(SapSalesOrderDto dto, bool allItemsRejected = false)
     {
-        // Prefer header flag; fall back to all line items having ABGRU (RejectionRsn)
-        // because ZI_AISO_SO_HEADER currently hardcodes IsCancelled = ''.
+        // Prefer header IsCancelled (CDS ZI_AISO_SO_REJECT_STATUS); fall back to all
+        // line items having RejectionRsn/ABGRU when the flag is missing or delayed.
         if (string.Equals(dto.IsCancelled, "X", StringComparison.OrdinalIgnoreCase)
             || allItemsRejected)
             return SalesOrderStatus.Cancelled;
