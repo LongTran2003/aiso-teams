@@ -673,12 +673,7 @@ public class TeamsBot : TeamsActivityHandler
                             return;
                         }
 
-                        var sapReasonCode = reasonCode.ToUpperInvariant() switch
-                        {
-                            "PRICE_ISSUE" => "02",
-                            "OUT_OF_STOCK" => "04",
-                            _ => "03"
-                        };
+                        var sapReasonCode = SalesOrderRejectionReasons.ToSapAbgru(reasonCode);
 
                         try
                         {

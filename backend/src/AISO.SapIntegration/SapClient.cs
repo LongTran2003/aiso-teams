@@ -114,8 +114,8 @@ public class SapClient : ISapClient
                 return null;
 
             // No $expand association on SalesOrder — load items with a side request.
-            var items = await GetSalesOrderItemsAsync(formattedSo, ct);
-            return MapToDomain(dto, items);
+            var (items, allItemsRejected) = await GetSalesOrderItemsAsync(formattedSo, ct);
+            return MapToDomain(dto, items, allItemsRejected);
         }
         catch (Exception ex)
         {
@@ -128,7 +128,7 @@ public class SapClient : ISapClient
     /// Loads line items for one SO via SalesOrderItem?$filter=SoNumber eq '…'
     /// (SAP entity set is flat; association/$expand is not available).
     /// </summary>
-    private async Task<IReadOnlyList<SalesOrderItem>> GetSalesOrderItemsAsync(
+    private async Task<(IReadOnlyList<SalesOrderItem> Items, bool AllItemsRejected)> GetSalesOrderItemsAsync(
         string formattedSoNumber,
         CancellationToken ct)
     {
@@ -148,21 +148,23 @@ public class SapClient : ISapClient
                     "SAP SalesOrderItem request failed for {SoNumber}: {StatusCode}",
                     formattedSoNumber,
                     (int)response.StatusCode);
-                return Array.Empty<SalesOrderItem>();
+                return (Array.Empty<SalesOrderItem>(), false);
             }
 
             var rawJson = await response.Content.ReadAsStringAsync(ct);
             var result = JsonSerializer.Deserialize<ODataResponse<SapSalesOrderItemDto>>(rawJson, JsonOptions);
             if (result?.Value is null || result.Value.Count == 0)
-                return Array.Empty<SalesOrderItem>();
+                return (Array.Empty<SalesOrderItem>(), false);
 
-            return result.Value.Select(MapItemToDomain).ToList();
+            var allRejected = result.Value.All(i => !string.IsNullOrWhiteSpace(i.RejectionRsn));
+            var items = result.Value.Select(MapItemToDomain).ToList();
+            return (items, allRejected);
         }
         catch (Exception ex)
         {
             // Detail card should still render header if items temporarily fail.
             _logger.LogWarning(ex, "Failed to load SalesOrderItem for {SoNumber}", formattedSoNumber);
-            return Array.Empty<SalesOrderItem>();
+            return (Array.Empty<SalesOrderItem>(), false);
         }
     }
 
@@ -262,11 +264,18 @@ public class SapClient : ISapClient
             if (result == null)
                 throw new InvalidOperationException("Failed to deserialize rejected order.");
 
-            // RAP action often returns only %tky (no SoNumber in body). Keep the known key.
+            // RAP action returns only %tky — re-GET so IsCancelled / item RejectionRsn are visible.
+            var refreshed = await GetSalesOrderByIdAsync(formattedSo, ct);
+            if (refreshed is not null)
+                return refreshed;
+
             var order = MapToDomain(result);
-            return order.SoNumber is "UNKNOWN"
-                ? order with { SoNumber = formattedSo }
-                : order;
+            // Reject succeeded; if GET is unavailable, still treat as Cancelled for UX.
+            return order with
+            {
+                SoNumber = order.SoNumber is "UNKNOWN" ? formattedSo : order.SoNumber,
+                Status = SalesOrderStatus.Cancelled
+            };
         }
         catch (Exception ex)
         {
@@ -792,7 +801,8 @@ public class SapClient : ISapClient
 
     private SalesOrder MapToDomain(
         SapSalesOrderDto dto,
-        IReadOnlyList<SalesOrderItem>? items = null)
+        IReadOnlyList<SalesOrderItem>? items = null,
+        bool allItemsRejected = false)
     {
         return new SalesOrder
         {
@@ -807,7 +817,7 @@ public class SapClient : ISapClient
             OrderDate = DateOnly.TryParse(dto.DocDate, out var date) ? date : DateOnly.MinValue,
             NetValue = dto.NetValue ?? 0,
             Currency = string.IsNullOrEmpty(dto.Currency) ? "USD" : dto.Currency,
-            Status = MapStatus(dto),
+            Status = MapStatus(dto, allItemsRejected),
             SalesOrg = dto.SalesOrg ?? "UNKNOWN",
             Items = items ?? Array.Empty<SalesOrderItem>()
         };
@@ -861,9 +871,12 @@ public class SapClient : ISapClient
         }
     }
 
-    private SalesOrderStatus MapStatus(SapSalesOrderDto dto)
+    private static SalesOrderStatus MapStatus(SapSalesOrderDto dto, bool allItemsRejected = false)
     {
-        if (string.Equals(dto.IsCancelled, "X", StringComparison.OrdinalIgnoreCase))
+        // Prefer header flag; fall back to all line items having ABGRU (RejectionRsn)
+        // because ZI_AISO_SO_HEADER currently hardcodes IsCancelled = ''.
+        if (string.Equals(dto.IsCancelled, "X", StringComparison.OrdinalIgnoreCase)
+            || allItemsRejected)
             return SalesOrderStatus.Cancelled;
 
         if (!string.IsNullOrWhiteSpace(dto.DeliveryBlock))

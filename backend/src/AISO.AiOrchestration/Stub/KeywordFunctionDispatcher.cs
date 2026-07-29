@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using AISO.Domain.SalesOrders;
 using AISO.Domain.Users;
 
 namespace AISO.AiOrchestration.Stub;
@@ -127,8 +128,8 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
 
                 var reasonMatch = Regex.Match(text, @"reason:\s*(.+)");
                 var reasonCode = reasonMatch.Success
-                    ? reasonMatch.Groups[1].Value.Trim().ToUpperInvariant()
-                    : (text.Contains("sai giá") || text.Contains("price") ? "PRICE_ISSUE" : "OTHER");
+                    ? SalesOrderRejectionReasons.ToCanonicalCode(reasonMatch.Groups[1].Value)
+                    : InferRejectionReasonCode(text);
 
                 var paramsObj = new { order_id = orderId, reason_code = reasonCode };
                 var paramsJson = JsonSerializer.Serialize(paramsObj);
@@ -259,6 +260,25 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         || text.Contains("submit for approval")
         || text.Contains("send for approval")
         || (text.Contains("request") && text.Contains("release"));
+
+    private static string InferRejectionReasonCode(string text)
+    {
+        if (text.Contains("sai giá") || text.Contains("price") || text.Contains("đắt") || text.Contains("expensive"))
+            return "PRICE_ISSUE";
+        if (text.Contains("hết hàng") || text.Contains("stock") || text.Contains("inventory"))
+            return "OUT_OF_STOCK";
+        if (text.Contains("khách hủy") || text.Contains("customer cancel") || text.Contains("cancelled by customer"))
+            return "CUSTOMER_CANCEL";
+        if (text.Contains("sai hàng") || text.Contains("wrong item") || text.Contains("wrong material"))
+            return "WRONG_ITEM";
+        if (text.Contains("giao hàng") || text.Contains("delivery date") || text.Contains("ngày giao"))
+            return "DELIVERY_DATE";
+        if (text.Contains("tín dụng") || text.Contains("credit") || text.Contains("payment"))
+            return "CREDIT_ISSUE";
+        if (text.Contains("trùng") || text.Contains("duplicate"))
+            return "DUPLICATE_ORDER";
+        return "OTHER";
+    }
 
     [GeneratedRegex(@"(\d{4,10})")]
     private static partial Regex OrderIdPattern();

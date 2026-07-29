@@ -33,21 +33,15 @@
     {
       "type": "Input.ChoiceSet",
       "id": "reasonCode",
-      "label": "Select a reason for rejection",
+      "label": "Reason (short)",
       "isRequired": true,
       "errorMessage": "Please select a reason",
+      "placeholder": "Select a reason",
       "choices": [
         {
-          "title": "Too expensive",
-          "value": "PRICE_ISSUE"
-        },
-        {
-          "title": "Not in stock",
-          "value": "OUT_OF_STOCK"
-        },
-        {
-          "title": "Other / Customer Cancellation",
-          "value": "OTHER"
+          "$data": "${reasons}",
+          "title": "${title}",
+          "value": "${value}"
         }
       ]
     }

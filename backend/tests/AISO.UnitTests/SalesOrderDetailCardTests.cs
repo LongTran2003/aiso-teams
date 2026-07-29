@@ -79,7 +79,8 @@ public class SalesOrderDetailCardTests
     [Theory]
     [InlineData(SalesOrderStatus.Delivered)]
     [InlineData(SalesOrderStatus.PartiallyDelivered)]
-    public void BuildSalesOrderDetailCard_WhenDelivered_HidesLifecycleActions(SalesOrderStatus status)
+    [InlineData(SalesOrderStatus.Cancelled)]
+    public void BuildSalesOrderDetailCard_WhenLockedStatus_HidesLifecycleActions(SalesOrderStatus status)
     {
         var order = SampleOrder(status: status);
         var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(
@@ -92,6 +93,17 @@ public class SalesOrderDetailCardTests
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
         Assert.DoesNotContain("\"action\":\"reject_so\"", json);
         Assert.DoesNotContain("\"action\":\"forward_so\"", json);
+    }
+
+    [Fact]
+    public void BuildSuccessCard_Rejected_ShowsCancelledCopy()
+    {
+        var attachment = TeamsCardBuilder.BuildSuccessCard("0000000009", "Rejected");
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Order rejected", json);
+        Assert.Contains("Cancelled", json);
+        Assert.Contains("0000000009", json);
     }
 
     [Fact]
