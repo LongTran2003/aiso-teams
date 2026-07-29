@@ -3,15 +3,10 @@
 {
 "FROM":
 [
-"ZI_AISO_SO_REJECT_STATUS",
-"KNA1",
-"VBAK"
+"VBAP"
 ],
 "ASSOCIATED":
-[
-"ZI_AISO_SO_ITEM",
-"ZI_AISO_SO_REJECT_STATUS"
-],
+[],
 "BASE":
 [],
 "ANNO_REF":

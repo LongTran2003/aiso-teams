@@ -736,13 +736,15 @@ ENDMETHOD.
   ENDLOOP.
 ENDMETHOD.
 
-  METHOD rejectorder.
+METHOD rejectorder.
   LOOP AT keys INTO DATA(ls_key).
     DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
 
-    IF ls_key-%param-rejection_code <> '02' AND
-       ls_key-%param-rejection_code <> '03' AND
-       ls_key-%param-rejection_code <> '04'.
+    SELECT SINGLE abgru FROM tvag
+      INTO @DATA(lv_valid_reason)
+      WHERE abgru = @ls_key-%param-rejection_code.
+
+    IF sy-subrc <> 0.
       APPEND VALUE #( %tky        = ls_key-%tky
                        %fail-cause = if_abap_behv=>cause-unspecific )
              TO failed-SalesOrder.
