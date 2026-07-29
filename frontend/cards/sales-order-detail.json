@@ -77,7 +77,7 @@
       "type": "Container",
       "style": "warning",
       "spacing": "Medium",
-      "$when": "${showPendingApproval == 'true'}",
+      "$when": "${showPendingEmployee == 'true'}",
       "items": [
         {
           "type": "TextBlock",
@@ -87,7 +87,34 @@
         },
         {
           "type": "TextBlock",
-          "text": "${pendingApprovalMessage}",
+          "text": "${pendingEmployeeMessage}",
+          "isSubtle": true,
+          "wrap": true,
+          "spacing": "None"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "style": "attention",
+      "spacing": "Medium",
+      "$when": "${showPendingManager == 'true'}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Release request pending",
+          "weight": "Bolder",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "${pendingManagerSubmittedBy}",
+          "wrap": true,
+          "spacing": "Small"
+        },
+        {
+          "type": "TextBlock",
+          "text": "${pendingManagerNote}",
           "isSubtle": true,
           "wrap": true,
           "spacing": "None"

@@ -60,4 +60,11 @@ public static class SalesOrderWorkflow
 
     public static string BuildNotOwnerBlockedMessage(string actionLabel, string ownerSapUser) =>
         $"Sales order is owned by {ownerSapUser.Trim()}. {actionLabel} is only allowed for the current owner.";
+
+    /// <summary>
+    /// Pending release UI only makes sense while the order can still be released.
+    /// Stale Postgres pending on Delivered/Cancelled/etc. should not show "Waiting for approval".
+    /// </summary>
+    public static bool ShowsPendingApprovalBanner(SalesOrderStatus status) =>
+        status is SalesOrderStatus.Open or SalesOrderStatus.Blocked;
 }

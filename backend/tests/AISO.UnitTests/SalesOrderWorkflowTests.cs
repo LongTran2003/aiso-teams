@@ -43,6 +43,20 @@ public class SalesOrderWorkflowTests
     }
 
     [Theory]
+    [InlineData(SalesOrderStatus.Open, true)]
+    [InlineData(SalesOrderStatus.Blocked, true)]
+    [InlineData(SalesOrderStatus.Delivered, false)]
+    [InlineData(SalesOrderStatus.PartiallyDelivered, false)]
+    [InlineData(SalesOrderStatus.Cancelled, false)]
+    [InlineData(SalesOrderStatus.Invoiced, false)]
+    public void ShowsPendingApprovalBanner_OnlyWhileReleaseStillMakesSense(
+        SalesOrderStatus status,
+        bool expected)
+    {
+        Assert.Equal(expected, SalesOrderWorkflow.ShowsPendingApprovalBanner(status));
+    }
+
+    [Theory]
     [InlineData(null, "DEV-100", true)]
     [InlineData("", "DEV-100", true)]
     [InlineData("DEV-100", "DEV-100", true)]
