@@ -31,13 +31,54 @@ public class SapClientTests
     }
 
     [Fact]
-    public async Task RejectOrder_WhenBodyHasSoNumber_UsesReturnedNumber()
+    public async Task RejectOrder_RefetchesAndMapsCancelledFromItemRejectionRsn()
     {
-        var client = CreateClient(HttpStatusCode.OK, "{\"SoNumber\":\"0000000012\",\"OverallStatus\":\"A\"}", out _);
+        var handler = new StubHttpMessageHandler(
+            (HttpStatusCode.OK, "{}"), // rejectOrder POST
+            (HttpStatusCode.OK, "{\"SoNumber\":\"12\",\"Customer\":\"1000\",\"OverallStatus\":\"A\",\"IsCancelled\":\"\"}"),
+            (HttpStatusCode.OK,
+                "{\"value\":[{\"SoNumber\":\"0000000012\",\"ItemNo\":\"000010\",\"Material\":\"M1\",\"OrderQty\":1,\"RejectionRsn\":\"02\"}]}"));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://sap.test/") };
+        var client = new SapClient(httpClient, new StubTokenManager(), NullLogger<SapClient>.Instance);
 
-        var result = await client.RejectOrderAsync("0000000012", "R1", "DEV-249");
+        var result = await client.RejectOrderAsync("12", "02", "DEV-249");
 
         Assert.Equal("0000000012", result.SoNumber);
+        Assert.Equal(SalesOrderStatus.Cancelled, result.Status);
+        Assert.Contains("rejectOrder", handler.RequestUris[0]);
+        Assert.Contains("SalesOrder('0000000012')", handler.RequestUris[1]);
+        Assert.Contains("SalesOrderItem", handler.RequestUris[2]);
+    }
+
+    [Fact]
+    public async Task RejectOrder_WhenRefetchMissing_FallsBackToCancelled()
+    {
+        var handler = new StubHttpMessageHandler(
+            (HttpStatusCode.OK, "{\"SoNumber\":\"0000000012\"}"),
+            (HttpStatusCode.NotFound, ""));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://sap.test/") };
+        var client = new SapClient(httpClient, new StubTokenManager(), NullLogger<SapClient>.Instance);
+
+        var result = await client.RejectOrderAsync("12", "02", "DEV-249");
+
+        Assert.Equal("0000000012", result.SoNumber);
+        Assert.Equal(SalesOrderStatus.Cancelled, result.Status);
+    }
+
+    [Fact]
+    public async Task GetSalesOrderById_MapsCancelledWhenAllItemsHaveRejectionRsn()
+    {
+        var handler = new StubHttpMessageHandler(
+            (HttpStatusCode.OK, "{\"SoNumber\":\"9\",\"Customer\":\"1000\",\"OverallStatus\":\"A\",\"IsCancelled\":\"\"}"),
+            (HttpStatusCode.OK,
+                "{\"value\":[{\"ItemNo\":\"10\",\"Material\":\"A\",\"RejectionRsn\":\"03\"},{\"ItemNo\":\"20\",\"Material\":\"B\",\"RejectionRsn\":\"02\"}]}"));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://sap.test/") };
+        var client = new SapClient(httpClient, new StubTokenManager(), NullLogger<SapClient>.Instance);
+
+        var result = await client.GetSalesOrderByIdAsync("9");
+
+        Assert.Equal(SalesOrderStatus.Cancelled, result!.Status);
+        Assert.Equal(2, result.Items.Count);
     }
 
     [Fact]

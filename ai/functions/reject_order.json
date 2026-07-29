@@ -1,6 +1,6 @@
 {
   "name": "RejectOrder",
-  "description": "Reject a sales order. Requires both order_id and reason_code.",
+  "description": "Reject a sales order. Requires both order_id and a short reason_code.",
   "parameters": {
     "type": "object",
     "properties": {
@@ -10,8 +10,17 @@
       },
       "reason_code": {
         "type": "string",
-        "enum": ["PRICE_ISSUE", "OUT_OF_STOCK", "OTHER"],
-        "description": "Rejection reason. Enum: PRICE_ISSUE, OUT_OF_STOCK, OTHER."
+        "enum": [
+          "PRICE_ISSUE",
+          "OUT_OF_STOCK",
+          "CUSTOMER_CANCEL",
+          "WRONG_ITEM",
+          "DELIVERY_DATE",
+          "CREDIT_ISSUE",
+          "DUPLICATE_ORDER",
+          "OTHER"
+        ],
+        "description": "Short rejection reason. PRICE_ISSUE=Price too high; OUT_OF_STOCK=Out of stock; CUSTOMER_CANCEL=Customer cancelled; WRONG_ITEM=Wrong item; DELIVERY_DATE=Delivery date issue; CREDIT_ISSUE=Credit / payment; DUPLICATE_ORDER=Duplicate order; OTHER=Other."
       }
     },
     "required": ["order_id", "reason_code"],

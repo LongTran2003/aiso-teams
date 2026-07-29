@@ -6,13 +6,20 @@ namespace AISO.Domain.SalesOrders;
 public static class SalesOrderWorkflow
 {
     /// <summary>
-    /// Delivery has started or finished — release / reject / forward (and request-release) no longer apply.
+    /// Delivery started/finished or order cancelled — release / reject / forward no longer apply.
     /// </summary>
     public static bool BlocksReleaseRejectForward(SalesOrderStatus status) =>
-        status is SalesOrderStatus.PartiallyDelivered or SalesOrderStatus.Delivered;
+        status is SalesOrderStatus.PartiallyDelivered
+            or SalesOrderStatus.Delivered
+            or SalesOrderStatus.Cancelled;
 
     public static string BuildBlockedMessage(SalesOrderStatus status, string actionLabel)
     {
+        if (status == SalesOrderStatus.Cancelled)
+        {
+            return $"Sales order is Cancelled. {actionLabel} is not allowed on a rejected order.";
+        }
+
         var statusLabel = status switch
         {
             SalesOrderStatus.PartiallyDelivered => "Partially Delivered",

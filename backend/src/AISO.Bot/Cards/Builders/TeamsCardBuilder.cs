@@ -55,7 +55,15 @@ internal static class TeamsCardBuilder
             new { errorMessage, currentRole, requiredRole });
 
     public static Attachment BuildConfirmRejectCard(string salesOrderNumber) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-reject.json", new { salesOrderNumber });
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "confirm-reject.json",
+            new
+            {
+                salesOrderNumber,
+                reasons = SalesOrderRejectionReasons.All
+                    .Select(r => new { title = r.Title, value = r.Code })
+                    .ToList()
+            });
 
     public static Attachment BuildConfirmReleaseCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-release.json", new { salesOrderNumber });
@@ -355,7 +363,7 @@ internal static class TeamsCardBuilder
 
     private static string StatusToColor(SalesOrderStatus s) => s switch
     {
-        SalesOrderStatus.Blocked => "Attention",
+        SalesOrderStatus.Blocked or SalesOrderStatus.Cancelled => "Attention",
         SalesOrderStatus.Open or SalesOrderStatus.PartiallyDelivered => "Warning",
         SalesOrderStatus.Delivered or SalesOrderStatus.Invoiced => "Good",
         _ => "Default"
@@ -391,8 +399,8 @@ internal static class TeamsCardBuilder
                 true),
             "Rejected" => (
                 "Order rejected",
-                "The sales order was rejected in SAP.",
-                "Rejected",
+                "All line items were rejected in SAP. The sales order is cancelled and can no longer be released, rejected again, or forwarded.",
+                "Cancelled",
                 false),
             "Forwarded" => (
                 "Order forwarded",

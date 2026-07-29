@@ -30,25 +30,33 @@ public sealed class RejectOrderFunction : IFunction
     public string Name => "RejectOrder";
 
     public string Description =>
-        "Reject or cancel a sales order in the SAP ERP system with a reason code.";
+        "Reject or cancel a sales order in the SAP ERP system with a short reason code.";
 
-    public string ParametersJsonSchema => """
+    public string ParametersJsonSchema
+    {
+        get
         {
-          "type": "object",
-          "properties": {
-            "order_id": {
-              "type": "string",
-              "description": "The unique sales order identifier (e.g. '0000005001')."
-            },
-            "reason_code": {
-              "type": "string",
-              "enum": ["PRICE_ISSUE", "OUT_OF_STOCK", "OTHER"],
-              "description": "The reason for rejection."
-            }
-          },
-          "required": ["order_id", "reason_code"]
+            var enumJson = string.Join(", ", SalesOrderRejectionReasons.Codes.Select(c => $"\"{c}\""));
+            var titles = string.Join("; ", SalesOrderRejectionReasons.All.Select(r => $"{r.Code}={r.Title}"));
+            return $$"""
+                {
+                  "type": "object",
+                  "properties": {
+                    "order_id": {
+                      "type": "string",
+                      "description": "The unique sales order identifier (e.g. '0000005001')."
+                    },
+                    "reason_code": {
+                      "type": "string",
+                      "enum": [{{enumJson}}],
+                      "description": "Short rejection reason code. {{titles}}"
+                    }
+                  },
+                  "required": ["order_id", "reason_code"]
+                }
+                """;
         }
-        """;
+    }
 
     public async Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
     {
@@ -72,6 +80,10 @@ public sealed class RejectOrderFunction : IFunction
             return FunctionResult.Fail("Missing required parameter: reason_code");
         }
 
+        var canonicalReason = SalesOrderRejectionReasons.ToCanonicalCode(reasonCode);
+        var reason = SalesOrderRejectionReasons.All.First(r => r.Code == canonicalReason);
+        var sapReasonCode = reason.SapAbgru;
+
         // Authorization Check
         var allowedManagers = new[] { "DEV-249" };
         if (!allowedManagers.Contains(requestingSapUser.ToUpperInvariant()))
@@ -81,15 +93,8 @@ public sealed class RejectOrderFunction : IFunction
         }
 
         _logger.LogInformation(
-            "RejectOrder: orderId={OrderId}, reasonCode={ReasonCode}, sapUser={SapUser}", orderId, reasonCode, requestingSapUser);
-
-        // Map AI friendly reason_codes to SAP 2-char ABGRU (Reason for Rejection)
-        var sapReasonCode = reasonCode.ToUpperInvariant() switch
-        {
-            "PRICE_ISSUE" => "02", // Too expensive
-            "OUT_OF_STOCK" => "04", // Not in stock
-            _ => "03" // Other / Customer Cancellation
-        };
+            "RejectOrder: orderId={OrderId}, reasonCode={ReasonCode}, sapAbgru={SapAbgru}, sapUser={SapUser}",
+            orderId, canonicalReason, sapReasonCode, requestingSapUser);
 
         try
         {
@@ -117,14 +122,17 @@ public sealed class RejectOrderFunction : IFunction
             var updatedOrder = await _sap.RejectOrderAsync(orderId, sapReasonCode, requestingSapUser, ct);
 
             // Audit Log
-            _logger.LogInformation("AUDIT: User {User} successfully rejected order {OrderId} with reason: {Reason}", requestingSapUser, orderId, reasonCode);
+            _logger.LogInformation(
+                "AUDIT: User {User} successfully rejected order {OrderId} with reason: {Reason}",
+                requestingSapUser, orderId, canonicalReason);
 
             var result = new
             {
                 order_id = updatedOrder.SoNumber,
                 action = "Rejected",
-                reason_code = reasonCode,
-                message = $"Sales order {updatedOrder.SoNumber} has been rejected (reason: {reasonCode}). Status is now {updatedOrder.Status}."
+                reason_code = canonicalReason,
+                reason_title = reason.Title,
+                message = $"Sales order {updatedOrder.SoNumber} has been rejected ({reason.Title}). Status is now {updatedOrder.Status}."
             };
 
             return FunctionResult.Ok(result);

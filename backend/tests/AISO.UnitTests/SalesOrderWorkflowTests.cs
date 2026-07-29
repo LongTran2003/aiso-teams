@@ -8,18 +8,25 @@ public class SalesOrderWorkflowTests
     [Theory]
     [InlineData(SalesOrderStatus.PartiallyDelivered)]
     [InlineData(SalesOrderStatus.Delivered)]
-    public void BlocksReleaseRejectForward_WhenDeliveryStarted(SalesOrderStatus status)
+    [InlineData(SalesOrderStatus.Cancelled)]
+    public void BlocksReleaseRejectForward_WhenDeliveryStartedOrCancelled(SalesOrderStatus status)
     {
         Assert.True(SalesOrderWorkflow.BlocksReleaseRejectForward(status));
-        Assert.Contains("not allowed after delivery", SalesOrderWorkflow.BuildBlockedMessage(status, "Reject"));
+    }
+
+    [Fact]
+    public void BuildBlockedMessage_WhenCancelled_UsesRejectedCopy()
+    {
+        var message = SalesOrderWorkflow.BuildBlockedMessage(SalesOrderStatus.Cancelled, "Reject");
+        Assert.Contains("Cancelled", message);
+        Assert.Contains("rejected order", message);
     }
 
     [Theory]
     [InlineData(SalesOrderStatus.Open)]
     [InlineData(SalesOrderStatus.Blocked)]
     [InlineData(SalesOrderStatus.Invoiced)]
-    [InlineData(SalesOrderStatus.Cancelled)]
-    public void DoesNotBlock_WhenNotDelivered(SalesOrderStatus status)
+    public void DoesNotBlock_WhenStillMutable(SalesOrderStatus status)
     {
         Assert.False(SalesOrderWorkflow.BlocksReleaseRejectForward(status));
     }
