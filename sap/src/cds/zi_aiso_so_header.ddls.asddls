@@ -9,6 +9,8 @@ define root view entity ZI_AISO_SO_HEADER
     on $projection.SoNumber = _Items.SoNumber
   association [0..1] to kna1 as _Customer
     on $projection.Customer = _Customer.kunnr
+  association [0..1] to ZI_AISO_SO_REJECT_STATUS as _RejectStatus
+    on $projection.SoNumber = _RejectStatus.SoNumber
 {
   @ObjectModel.foreignKey.association: null
   key vbak.vbeln                          as SoNumber,
@@ -31,7 +33,14 @@ define root view entity ZI_AISO_SO_HEADER
       cast( '' as abap.char( 1 ) )        as CreditStatus,
       cast( '' as abap.char( 2 ) )        as DeliveryBlock,
       cast( '' as abap.char( 1 ) )        as BillingStatus,
-      cast( '' as abap.char( 1 ) )        as IsCancelled,
 
-      _Items
+      case
+        when _RejectStatus.TotalItems > 0
+         and _RejectStatus.TotalItems = _RejectStatus.RejectedItems
+        then 'X'
+        else ''
+      end                                  as IsCancelled,
+
+      _Items,
+      _RejectStatus
 }
