@@ -4,17 +4,12 @@ schemas.py – Pydantic models for request/response validation.
 
 from __future__ import annotations
 
-from typing import Any
-
-from pydantic import BaseModel, Field
-
-
 # ---------------------------------------------------------------------------
 # Request
 # ---------------------------------------------------------------------------
+from typing import Any
 
-
-from typing import Optional
+from pydantic import BaseModel, Field
 
 
 class ChatMessage(BaseModel):
@@ -34,7 +29,7 @@ class ChatRequest(BaseModel):
         description="Câu hỏi / lệnh của người dùng.",
         examples=["Kiểm tra trạng thái đơn hàng ORD-20240001"],
     )
-    chat_history: Optional[list[ChatMessage]] = Field(
+    chat_history: list[ChatMessage] | None = Field(
         default=None,
         description="Lịch sử cuộc trò chuyện (danh sách tin nhắn trước đó).",
     )

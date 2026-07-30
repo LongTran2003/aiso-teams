@@ -119,4 +119,17 @@
 {"query": "Kiểm tra trạng thái đơn 0000000009.", "expected_function": "CheckOrderStatus", "expected_args": {"order_id": "0000000009"}, "tier": 1}
 {"query": "Chuyển tiếp đơn hàng này cho anh Minh Tuấn.", "expected_function": null, "expected_args": {}, "tier": 1}
 {"query": "Từ chối đơn hàng này vì hết hàng.", "expected_function": null, "expected_args": {}, "tier": 1}
-
+{"query": "recent orders", "expected_function": "GetSalesOrders", "expected_args": {}, "tier": 1}
+{"query": "xem đơn hàng gần đây", "expected_function": "GetSalesOrders", "expected_args": {}, "tier": 1}
+{"query": "show open orders of TV01", "expected_function": "GetSalesOrders", "expected_args": {"status": "Open", "salesOrg": "TV01"}, "tier": 1}
+{"query": "hiển thị đơn hàng mở của TV01", "expected_function": "GetSalesOrders", "expected_args": {"status": "Open", "salesOrg": "TV01"}, "tier": 1}
+{"query": "show open orders of FU24", "expected_function": "GetSalesOrders", "expected_args": {"status": "Open", "salesOrg": "FU24"}, "tier": 1}
+{"query": "show overdue orders", "expected_function": "GetOverdueOrders", "expected_args": {}, "tier": 1}
+{"query": "xem đơn hàng quá hạn", "expected_function": "GetOverdueOrders", "expected_args": {}, "tier": 1}
+{"query": "kpi by customer 1000", "expected_function": "GetKpiByCustomer", "expected_args": {"customerIdOrName": "1000"}, "tier": 1}
+{"query": "KPI theo khách 1000", "expected_function": "GetKpiByCustomer", "expected_args": {"customerIdOrName": "1000"}, "tier": 1}
+{"query": "kpi by product MAT-01", "expected_function": "GetKpiByProduct", "expected_args": {"materialIdOrName": "MAT-01"}, "tier": 1}
+{"query": "request release 13122", "expected_function": "RequestRelease", "expected_args": {"order_id": "13122"}, "tier": 1}
+{"query": "xin duyệt đơn 13122", "expected_function": "RequestRelease", "expected_args": {"order_id": "13122"}, "tier": 1}
+{"query": "show pending approvals", "expected_function": "GetPendingApprovals", "expected_args": {}, "tier": 1}
+{"query": "xem đơn chờ duyệt", "expected_function": "GetPendingApprovals", "expected_args": {}, "tier": 1}

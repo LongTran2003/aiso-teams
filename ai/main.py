@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import logging
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, status
@@ -118,7 +118,7 @@ async def orchestrate(payload: ChatRequest) -> ChatResponse:
     try:
         response = process_user_message(payload)
     except Exception as exc:
-        logger.exception("Unexpected error during orchestration: %s", exc)
+        logger.exception("Unexpected error during orchestration")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Orchestration failed: {exc}",
