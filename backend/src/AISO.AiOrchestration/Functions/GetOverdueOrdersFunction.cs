@@ -33,7 +33,7 @@ public sealed class GetOverdueOrdersFunction : IFunction
             },
             "salesOrg": {
               "type": "string",
-              "enum": ["UE00", "UW00", "DN00", "DS00"]
+              "enum": ["TV01", "FU24", "UE00", "UW00", "DN00", "DS00"]
             },
             "daysPastDue": {
               "type": "integer",

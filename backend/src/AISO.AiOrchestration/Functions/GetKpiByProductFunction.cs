@@ -36,7 +36,7 @@ public sealed class GetKpiByProductFunction : IFunction
             "toDate":   { "type": "string", "format": "date" },
             "salesOrg": {
               "type": "string",
-              "enum": ["UE00", "UW00", "DN00", "DS00"]
+              "enum": ["TV01", "FU24", "UE00", "UW00", "DN00", "DS00"]
             },
             "top": { "type": "integer", "default": 10, "minimum": 1, "maximum": 50,
                      "description": "Number of top products to return, ordered by revenue." }

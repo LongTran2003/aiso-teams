@@ -10,7 +10,7 @@
       },
       "salesOrg": {
         "type": ["string", "null"],
-        "enum": ["UE00", "UW00", "DN00", "DS00", null],
+        "enum": ["TV01", "FU24", "UE00", "UW00", "DN00", "DS00", null],
         "description": "Sales org."
       },
       "daysPastDue": {

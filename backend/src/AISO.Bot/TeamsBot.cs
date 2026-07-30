@@ -1070,6 +1070,82 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
+            if (result.Payload is AISO.AiOrchestration.Functions.GetKpiByCustomerResponse kpiByCustomerResponse)
+            {
+                if (kpiByCustomerResponse.Customers.Count == 0)
+                {
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        TeamsCardBuilder.BuildEmptyCard(),
+                        cancellationToken);
+                    return;
+                }
+
+                var kpiByCustomerCard = TeamsCardBuilder.BuildKpiByCustomerCard(new
+                {
+                    count = kpiByCustomerResponse.Customers.Count,
+                    chartUrl = kpiByCustomerResponse.ChartUrl ?? string.Empty,
+                    customers = kpiByCustomerResponse.Customers.Select(c => new
+                    {
+                        customerId = string.IsNullOrWhiteSpace(c.CustomerId) ? "-" : c.CustomerId,
+                        customerName = string.IsNullOrWhiteSpace(c.CustomerName) ? c.CustomerId : c.CustomerName,
+                        orderCount = c.OrderCount,
+                        fulfillmentRate = $"{c.FulfillmentRate:0.#}%",
+                        formattedRevenue = $"{c.Revenue:N0} {c.Currency}"
+                    }).ToList()
+                });
+
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    kpiByCustomerCard,
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with KPI by customer card ({Count})",
+                    kpiByCustomerResponse.Customers.Count);
+                return;
+            }
+
+            if (result.Payload is AISO.AiOrchestration.Functions.GetKpiByProductResponse kpiByProductResponse)
+            {
+                if (kpiByProductResponse.Products.Count == 0)
+                {
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        TeamsCardBuilder.BuildEmptyCard(),
+                        cancellationToken);
+                    return;
+                }
+
+                var kpiByProductCard = TeamsCardBuilder.BuildKpiByProductCard(new
+                {
+                    count = kpiByProductResponse.Products.Count,
+                    chartUrl = kpiByProductResponse.ChartUrl ?? string.Empty,
+                    products = kpiByProductResponse.Products.Select(p => new
+                    {
+                        materialId = string.IsNullOrWhiteSpace(p.MaterialId) ? "-" : p.MaterialId,
+                        materialName = string.IsNullOrWhiteSpace(p.MaterialName) ? p.MaterialId : p.MaterialName,
+                        orderCount = p.OrderCount,
+                        formattedQty = $"{p.TotalQty:N0} {p.Unit}",
+                        formattedRevenue = $"{p.Revenue:N0} {p.Currency}"
+                    }).ToList()
+                });
+
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    kpiByProductCard,
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with KPI by product card ({Count})",
+                    kpiByProductResponse.Products.Count);
+                return;
+            }
+
             if (result.Payload is AISO.AiOrchestration.Functions.GetPendingApprovalsResponse pendingResponse)
             {
                 if (pendingResponse.Count == 0)
