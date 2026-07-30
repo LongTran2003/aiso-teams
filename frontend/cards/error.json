@@ -10,7 +10,7 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "Something went wrong",
+          "text": "${title}",
           "weight": "Bolder",
           "size": "Medium",
           "color": "Attention",
@@ -20,7 +20,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "The bot could not complete this request right now.",
+      "text": "${summary}",
       "wrap": true,
       "spacing": "Medium"
     },
@@ -34,11 +34,24 @@
     },
     {
       "type": "TextBlock",
-      "text": "Please try again in a moment or contact your system administrator if this keeps happening.",
+      "text": "Type help for example commands, or try again in a moment. Contact your admin if this keeps happening.",
       "wrap": true,
       "isSubtle": true,
       "size": "Small",
       "spacing": "Large"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Show help",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "help",
+          "text": "help"
+        }
+      }
     }
   ]
 }

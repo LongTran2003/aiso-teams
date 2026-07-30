@@ -126,7 +126,11 @@ public class TeamsBot : TeamsActivityHandler
                             var order = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
                             if (order is null)
                             {
-                                await turnContext.SendActivityAsync($"Sales order {salesOrderId} was not found.", cancellationToken: cancellationToken);
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "NOT_FOUND",
+                                        $"Sales order {salesOrderId} was not found.")),
+                                    cancellationToken);
                                 return;
                             }
 
@@ -311,7 +315,11 @@ public class TeamsBot : TeamsActivityHandler
                         var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
                         if (string.IsNullOrWhiteSpace(linkedSapUsername))
                         {
-                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_LINKED",
+                                    "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
                             return;
                         }
 
@@ -450,7 +458,11 @@ public class TeamsBot : TeamsActivityHandler
                         var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
                         if (string.IsNullOrWhiteSpace(linkedSapUsername))
                         {
-                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_LINKED",
+                                    "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
                             return;
                         }
 
@@ -526,7 +538,11 @@ public class TeamsBot : TeamsActivityHandler
                         var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
                         if (string.IsNullOrWhiteSpace(linkedSapUsername))
                         {
-                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_LINKED",
+                                    "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
                             return;
                         }
 
@@ -629,7 +645,11 @@ public class TeamsBot : TeamsActivityHandler
                         var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
                         if (string.IsNullOrWhiteSpace(linkedSapUsername))
                         {
-                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_LINKED",
+                                    "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
                             return;
                         }
 
@@ -756,13 +776,21 @@ public class TeamsBot : TeamsActivityHandler
                         var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
                         if (string.IsNullOrWhiteSpace(linkedSapUsername))
                         {
-                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_LINKED",
+                                    "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
                             return;
                         }
 
                         if (string.IsNullOrWhiteSpace(forwardToUser))
                         {
-                            await turnContext.SendActivityAsync("Please select a recipient before forwarding the order.", cancellationToken: cancellationToken);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "VALIDATION",
+                                    "Please select a recipient before forwarding the order.")),
+                                cancellationToken);
                             return;
                         }
 
@@ -876,7 +904,9 @@ public class TeamsBot : TeamsActivityHandler
                 string.Equals(normalizedMessage, "thoát", StringComparison.OrdinalIgnoreCase))
             {
                 await _conversationState.ClearStateAsync(turnContext, cancellationToken);
-                await turnContext.SendActivityAsync("Đã huỷ các tiến trình đang chạy. Bạn có thể bắt đầu lại.", cancellationToken: cancellationToken);
+                await turnContext.SendActivityAsync(
+                    "Cancelled the current flow. You can start again.",
+                    cancellationToken: cancellationToken);
                 return;
             }
 
@@ -884,7 +914,9 @@ public class TeamsBot : TeamsActivityHandler
                 string.Equals(normalizedMessage, "đăng xuất", StringComparison.OrdinalIgnoreCase))
             {
                 await _userMappingService.RemoveMappingAsync(teamsUserId, cancellationToken);
-                await turnContext.SendActivityAsync("Đã đăng xuất tài khoản SAP thành công. Bạn có thể gõ 'hi' để thử đăng nhập lại.", cancellationToken: cancellationToken);
+                await turnContext.SendActivityAsync(
+                    "Signed out of your SAP account. Type hi to sign in again.",
+                    cancellationToken: cancellationToken);
                 return;
             }
 
@@ -1339,7 +1371,7 @@ public class TeamsBot : TeamsActivityHandler
             {
                 await turnContext.SendActivityAsync(
                     MessageFactory.Attachment(
-                        TeamsCardBuilder.BuildWelcomeCard(member.Name ?? "bạn")),
+                        TeamsCardBuilder.BuildWelcomeCard(member.Name ?? "there")),
                     cancellationToken);
             }
         }
@@ -1520,7 +1552,11 @@ public class TeamsBot : TeamsActivityHandler
         var order = await _sap.GetSalesOrderByIdAsync(orderId, cancellationToken);
         if (order is null)
         {
-            await turnContext.SendActivityAsync($"Sales order {orderId} was not found.", cancellationToken: cancellationToken);
+            await turnContext.SendActivityAsync(
+                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                    "NOT_FOUND",
+                    $"Sales order {orderId} was not found.")),
+                cancellationToken);
             return true;
         }
 
