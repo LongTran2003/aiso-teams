@@ -46,8 +46,37 @@ internal static class TeamsCardBuilder
             });
     }
 
-    public static Attachment BuildErrorCard(string errorCode, string errorMessage) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("error.json", new { errorCode, errorMessage });
+    public static Attachment BuildErrorCard(string errorCode, string errorMessage, string? title = null, string? summary = null) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "error.json",
+            new
+            {
+                errorCode,
+                errorMessage,
+                title = title ?? TitleForErrorCode(errorCode),
+                summary = summary ?? SummaryForErrorCode(errorCode)
+            });
+
+    private static string TitleForErrorCode(string errorCode) => errorCode.ToUpperInvariant() switch
+    {
+        "NOT_FOUND" => "Not found",
+        "NOT_LINKED" => "Account not linked",
+        "VALIDATION" => "Invalid request",
+        "NOT_AUTHORIZED" => "Not authorized",
+        "UNAUTHENTICATED" => "Session expired",
+        "SAP_ERROR" => "SAP error",
+        _ => "Something went wrong"
+    };
+
+    private static string SummaryForErrorCode(string errorCode) => errorCode.ToUpperInvariant() switch
+    {
+        "NOT_FOUND" => "Nothing matched this request.",
+        "NOT_LINKED" => "Link your SAP User ID before running this action.",
+        "VALIDATION" => "Check the details below and try again.",
+        "UNAUTHENTICATED" => "Your session expired or is not authenticated. Send any message to sign in again.",
+        "SAP_ERROR" => "SAP could not complete this request.",
+        _ => "The bot could not complete this request right now."
+    };
 
     public static Attachment BuildNotAuthorizedCard(string errorMessage, string currentRole, string requiredRole) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment(
