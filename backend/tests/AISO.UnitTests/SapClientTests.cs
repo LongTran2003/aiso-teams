@@ -135,6 +135,32 @@ public class SapClientTests
     }
 
     [Fact]
+    public async Task RejectOrder_WhenSapReturnsObjectMessage_SurfacesValue()
+    {
+        var body =
+            "{\"error\":{\"code\":\"/IWBEP/CX_MGW_BUSI_EXCEPTION\",\"message\":{\"lang\":\"en\",\"value\":\"Order has invalid material master data\"}}}";
+        var client = CreateClient(HttpStatusCode.BadRequest, body, out _);
+
+        var ex = await Assert.ThrowsAsync<SapODataException>(
+            () => client.RejectOrderAsync("9", "02", "DEV-249"));
+
+        Assert.Equal("Order has invalid material master data", ex.Message);
+    }
+
+    [Fact]
+    public async Task RejectOrder_WhenSapReturnsErrorDetails_PrefersDetailMessage()
+    {
+        var body =
+            "{\"error\":{\"code\":\"GENERIC\",\"message\":\"Exception raised\",\"innererror\":{\"errordetails\":[{\"code\":\"V1\",\"message\":\"The material in item 000010 cannot be changed\",\"severity\":\"error\"}]}}}";
+        var client = CreateClient(HttpStatusCode.BadRequest, body, out _);
+
+        var ex = await Assert.ThrowsAsync<SapODataException>(
+            () => client.RejectOrderAsync("9", "02", "DEV-249"));
+
+        Assert.Equal("The material in item 000010 cannot be changed", ex.Message);
+    }
+
+    [Fact]
     public async Task GetSalesOrderById_WhenNotFound_ReturnsNull()
     {
         var client = CreateClient(HttpStatusCode.NotFound, "{}", out _);
