@@ -453,76 +453,115 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD cancelorder.
-    DATA: lt_items_in  TYPE TABLE OF bapisditm,
-          lt_items_inx TYPE TABLE OF bapisditmx,
-          lt_return    TYPE TABLE OF bapiret2,
-          lv_timestamp TYPE c LENGTH 14,
-          lv_audit_id  TYPE sysuuid_c32.
+  DATA: lt_items_in  TYPE TABLE OF bapisditm,
+        lt_items_inx TYPE TABLE OF bapisditmx,
+        lt_return    TYPE TABLE OF bapiret2,
+        lv_timestamp TYPE c LENGTH 14,
+        lv_audit_id  TYPE sysuuid_c32.
 
-    LOOP AT keys INTO DATA(ls_key).
-      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+  LOOP AT keys INTO DATA(ls_key).
+    DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
 
-      SELECT SINGLE teams_user_id FROM zaiso_so_map
-        INTO @DATA(lv_owner)
-        WHERE so_number = @lv_so_number.
+    SELECT SINGLE teams_user_id FROM zaiso_so_map
+      INTO @DATA(lv_owner)
+      WHERE so_number = @lv_so_number.
 
-      IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unauthorized )
-               TO failed-salesorder.
-        CONTINUE.
+    IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+             TO failed-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    CLEAR: lt_items_in, lt_items_inx, lt_return.
+
+    SELECT posnr, matnr FROM vbap
+      INTO TABLE @DATA(lt_posnr)
+      WHERE vbeln = @lv_so_number.
+
+    IF lt_posnr IS INITIAL.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-not_found )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Sales order items not found' ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    " --- Validate material master tồn tại (tránh ATP dump ITAB_LINE_NOT_FOUND) ---
+    DATA(lv_has_invalid_material) = abap_false.
+    LOOP AT lt_posnr INTO DATA(ls_check_item).
+      SELECT SINGLE matnr FROM mara
+        INTO @DATA(lv_matnr_exists)
+        WHERE matnr = @ls_check_item-matnr.
+      IF sy-subrc <> 0.
+        lv_has_invalid_material = abap_true.
+        EXIT.
       ENDIF.
-
-      CLEAR: lt_items_in, lt_items_inx, lt_return.
-
-      SELECT posnr FROM vbap
-        INTO TABLE @DATA(lt_posnr)
-        WHERE vbeln = @lv_so_number.
-
-      LOOP AT lt_posnr INTO DATA(ls_posnr).
-        APPEND VALUE #( itm_number = ls_posnr-posnr
-                         reason_rej = 'Z1' ) TO lt_items_in.
-        APPEND VALUE #( itm_number = ls_posnr-posnr
-                         reason_rej = 'X' )  TO lt_items_inx.
-      ENDLOOP.
-
-      CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
-        EXPORTING
-          salesdocument  = lv_so_number
-        TABLES
-          order_item_in  = lt_items_in
-          order_item_inx = lt_items_inx
-          return         = lt_return.
-
-      READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
-      IF sy-subrc = 0.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unspecific )
-               TO failed-salesorder.
-        CONTINUE.
-      ENDIF.
-
-      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
-
-      TRY.
-          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
-        CATCH cx_uuid_error.
-          CLEAR lv_audit_id.
-      ENDTRY.
-
-      APPEND VALUE #(
-        mandt       = sy-mandt
-        audit_id    = lv_audit_id
-        sap_user    = sy-uname
-        action_type = 'CANCEL_SO'
-        so_number   = lv_so_number
-        status      = 'SUCCESS'
-        created_at  = lv_timestamp
-      ) TO lcl_buffer=>gt_audit_db.
-
-      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
     ENDLOOP.
-  ENDMETHOD.
+
+    IF lv_has_invalid_material = abap_true.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Order has invalid material master data' ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+    " --- End validate ---
+
+    LOOP AT lt_posnr INTO DATA(ls_posnr).
+      APPEND VALUE #( itm_number = ls_posnr-posnr
+                       reason_rej = 'Z1' ) TO lt_items_in.
+      APPEND VALUE #( itm_number = ls_posnr-posnr
+                       reason_rej = 'X' )  TO lt_items_inx.
+    ENDLOOP.
+
+    CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+      EXPORTING
+        salesdocument  = lv_so_number
+      TABLES
+        order_item_in  = lt_items_in
+        order_item_inx = lt_items_inx
+        return         = lt_return.
+
+    READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
+    IF sy-subrc = 0.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
+
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = sy-uname
+      action_type = 'CANCEL_SO'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
+
+    APPEND VALUE #( %tky = ls_key-%tky ) TO result.
+  ENDLOOP.
+ENDMETHOD.
 
   METHOD updatereference.
   DATA: ls_header_in  TYPE bapisdh1,
@@ -671,6 +710,49 @@ ENDMETHOD.
       CONTINUE.
     ENDIF.
 
+    " --- Validate material master tồn tại (tránh ATP dump) ---
+    SELECT vbeln, matnr FROM vbap
+      INTO TABLE @DATA(lt_check_items)
+      WHERE vbeln = @lv_so_number.
+
+    IF lt_check_items IS INITIAL.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-not_found )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Sales order items not found' ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    DATA(lv_has_invalid_material) = abap_false.
+    LOOP AT lt_check_items INTO DATA(ls_check_item).
+      SELECT SINGLE matnr FROM mara
+        INTO @DATA(lv_matnr_exists)
+        WHERE matnr = @ls_check_item-matnr.
+      IF sy-subrc <> 0.
+        lv_has_invalid_material = abap_true.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
+
+    IF lv_has_invalid_material = abap_true.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Order has invalid material master data' ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+    " --- End validate ---
+
     " Chỉ buffer, KHÔNG gọi BAPI ở đây
     APPEND VALUE #( so_number   = lv_so_number
                      action_type = 'RELEASE' ) TO lcl_buffer=>gt_release_reject.
@@ -775,7 +857,7 @@ METHOD rejectorder.
       CONTINUE.
     ENDIF.
 
-    SELECT posnr FROM vbap
+    SELECT posnr, matnr FROM vbap
       INTO TABLE @DATA(lt_posnr)
       WHERE vbeln = @lv_so_number.
 
@@ -791,6 +873,32 @@ METHOD rejectorder.
              TO reported-SalesOrder.
       CONTINUE.
     ENDIF.
+
+    " --- Validate material master tồn tại (tránh ATP dump ITAB_LINE_NOT_FOUND) ---
+    DATA(lv_has_invalid_material) = abap_false.
+    LOOP AT lt_posnr INTO DATA(ls_check_item).
+      SELECT SINGLE matnr FROM mara
+        INTO @DATA(lv_matnr_exists)
+        WHERE matnr = @ls_check_item-matnr.
+      IF sy-subrc <> 0.
+        lv_has_invalid_material = abap_true.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
+
+    IF lv_has_invalid_material = abap_true.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-SalesOrder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Order has invalid material master data' ) )
+             TO reported-SalesOrder.
+      CONTINUE.
+    ENDIF.
+    " --- End validate ---
 
     " Chỉ buffer, KHÔNG gọi BAPI ở đây
     APPEND VALUE #( so_number      = lv_so_number
