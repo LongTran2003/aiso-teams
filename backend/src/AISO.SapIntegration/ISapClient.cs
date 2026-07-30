@@ -135,7 +135,7 @@ public sealed record SalesOrdersQuery
     /// <summary>Either an exact customer ID (e.g. "1000") or a partial name match (e.g. "Philly").</summary>
     public string? CustomerIdOrName { get; init; }
 
-    /// <summary>Sales organization code (UE00, UW00, DN00, DS00).</summary>
+    /// <summary>Sales organization code (TV01, FU24, UE00, UW00, DN00, DS00).</summary>
     public string? SalesOrg { get; init; }
 
     public DateOnly? FromDate { get; init; }

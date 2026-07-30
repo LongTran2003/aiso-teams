@@ -23,7 +23,7 @@ public sealed class GetSalesOrdersFunction : IFunction
 
     public string Description =>
         "Retrieve sales orders. Supports filtering by customer (ID or partial name), " +
-        "sales organization (UE00/UW00/DN00/DS00), date range, and status. " +
+        "sales organization (TV01/FU24/UE00/UW00/DN00/DS00), date range, and status. " +
         "Returns the most recent orders matching the filter.";
 
     public string ParametersJsonSchema => """
@@ -36,7 +36,7 @@ public sealed class GetSalesOrdersFunction : IFunction
             },
             "salesOrg": {
               "type": "string",
-              "enum": ["UE00", "UW00", "DN00", "DS00"],
+              "enum": ["TV01", "FU24", "UE00", "UW00", "DN00", "DS00"],
               "description": "Sales organization code."
             },
             "fromDate": { "type": "string", "format": "date" },

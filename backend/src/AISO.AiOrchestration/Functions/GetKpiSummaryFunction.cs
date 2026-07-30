@@ -34,7 +34,7 @@ public sealed class GetKpiSummaryFunction : IFunction
             "toDate":   { "type": "string", "format": "date", "description": "End date YYYY-MM-DD." },
             "salesOrg": {
               "type": "string",
-              "enum": ["UE00", "UW00", "DN00", "DS00"],
+              "enum": ["TV01", "FU24", "UE00", "UW00", "DN00", "DS00"],
               "description": "Sales org filter."
             },
             "granularity": {

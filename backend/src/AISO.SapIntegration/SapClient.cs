@@ -587,8 +587,9 @@ public class SapClient : ISapClient
 
     public async Task<IReadOnlyList<KpiByCustomer>> GetKpiByCustomerAsync(KpiByCustomerQuery query, CancellationToken ct = default)
     {
-        // Entity: ZI_AISO_KPI_BY_CUSTOMER (to be created by SAP team)
-        var builder = new ODataQueryBuilder("ZI_AISO_KPI_BY_CUSTOMER")
+        // Preferred: dedicated OData entity when SAP publishes it (alias KpiByCustomer).
+        // Fallback: aggregate from SalesOrder — current service has no by-customer KPI view.
+        var builder = new ODataQueryBuilder("KpiByCustomer")
             .AddCustomParam("sap-client", "324")
             .Top(query.Top);
 
@@ -607,6 +608,12 @@ public class SapClient : ISapClient
         try
         {
             var response = await _httpClient.GetAsync(url, ct);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("KpiByCustomer not found (404); aggregating from SalesOrder");
+                return await GetKpiByCustomerFallbackAsync(query, ct);
+            }
+
             response.EnsureSuccessStatusCode();
 
             var rawJson = await response.Content.ReadAsStringAsync(ct);
@@ -627,15 +634,51 @@ public class SapClient : ISapClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling SAP KPI By Customer endpoint");
-            throw;
+            _logger.LogError(ex, "Error calling SAP KPI By Customer endpoint; trying SalesOrder fallback");
+            return await GetKpiByCustomerFallbackAsync(query, ct);
         }
+    }
+
+    private async Task<IReadOnlyList<KpiByCustomer>> GetKpiByCustomerFallbackAsync(
+        KpiByCustomerQuery query,
+        CancellationToken ct)
+    {
+        var orders = await GetSalesOrdersAsync(new SalesOrdersQuery
+        {
+            CustomerIdOrName = query.CustomerIdOrName,
+            FromDate = query.FromDate,
+            ToDate = query.ToDate,
+            SalesOrg = query.SalesOrg,
+            Top = 500
+        }, ct);
+
+        return orders
+            .GroupBy(o => new
+            {
+                CustomerId = o.CustomerId ?? string.Empty,
+                CustomerName = string.IsNullOrWhiteSpace(o.CustomerName) ? (o.CustomerId ?? string.Empty) : o.CustomerName
+            })
+            .Select(g => new KpiByCustomer
+            {
+                CustomerId = g.Key.CustomerId,
+                CustomerName = g.Key.CustomerName,
+                Revenue = g.Sum(o => o.NetValue),
+                Currency = g.FirstOrDefault()?.Currency ?? "USD",
+                OrderCount = g.Count(),
+                FulfillmentRate = g.Count() > 0
+                    ? Math.Round(g.Count(o => o.Status == SalesOrderStatus.Delivered) * 100m / g.Count(), 1)
+                    : 0
+            })
+            .OrderByDescending(c => c.Revenue)
+            .Take(query.Top)
+            .ToList();
     }
 
     public async Task<IReadOnlyList<KpiByProduct>> GetKpiByProductAsync(KpiByProductQuery query, CancellationToken ct = default)
     {
-        // Entity: ZI_AISO_KPI_BY_PRODUCT (to be created by SAP team)
-        var builder = new ODataQueryBuilder("ZI_AISO_KPI_BY_PRODUCT")
+        // Preferred: dedicated OData entity when SAP publishes it (alias KpiByProduct).
+        // Fallback: aggregate from SalesOrderItem.
+        var builder = new ODataQueryBuilder("KpiByProduct")
             .AddCustomParam("sap-client", "324")
             .Top(query.Top);
 
@@ -654,6 +697,12 @@ public class SapClient : ISapClient
         try
         {
             var response = await _httpClient.GetAsync(url, ct);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogWarning("KpiByProduct not found (404); aggregating from SalesOrderItem");
+                return await GetKpiByProductFallbackAsync(query, ct);
+            }
+
             response.EnsureSuccessStatusCode();
 
             var rawJson = await response.Content.ReadAsStringAsync(ct);
@@ -675,9 +724,67 @@ public class SapClient : ISapClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error calling SAP KPI By Product endpoint");
-            throw;
+            _logger.LogError(ex, "Error calling SAP KPI By Product endpoint; trying SalesOrderItem fallback");
+            return await GetKpiByProductFallbackAsync(query, ct);
         }
+    }
+
+    private async Task<IReadOnlyList<KpiByProduct>> GetKpiByProductFallbackAsync(
+        KpiByProductQuery query,
+        CancellationToken ct)
+    {
+        var itemBuilder = new ODataQueryBuilder("SalesOrderItem")
+            .AddCustomParam("sap-client", "324")
+            .Top(500);
+
+        if (!string.IsNullOrWhiteSpace(query.MaterialIdOrName))
+            itemBuilder.Filter("Material", "eq", query.MaterialIdOrName);
+
+        var url = itemBuilder.Build();
+        _logger.LogInformation("Calling SAP OData (SalesOrderItem for product KPI): {Url}", url);
+
+        var response = await _httpClient.GetAsync(url, ct);
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogWarning(
+                "SalesOrderItem product KPI fallback failed: {StatusCode}",
+                (int)response.StatusCode);
+            return Array.Empty<KpiByProduct>();
+        }
+
+        var rawJson = await response.Content.ReadAsStringAsync(ct);
+        var result = JsonSerializer.Deserialize<ODataResponse<SapSalesOrderItemDto>>(rawJson, JsonOptions);
+        var items = result?.Value ?? new List<SapSalesOrderItemDto>();
+
+        if (!string.IsNullOrWhiteSpace(query.MaterialIdOrName))
+        {
+            var needle = query.MaterialIdOrName.Trim();
+            items = items
+                .Where(i =>
+                    string.Equals(i.Material, needle, StringComparison.OrdinalIgnoreCase)
+                    || (i.MaterialName?.Contains(needle, StringComparison.OrdinalIgnoreCase) ?? false))
+                .ToList();
+        }
+
+        return items
+            .GroupBy(i => new
+            {
+                MaterialId = i.Material ?? string.Empty,
+                MaterialName = string.IsNullOrWhiteSpace(i.MaterialName) ? (i.Material ?? string.Empty) : i.MaterialName!
+            })
+            .Select(g => new KpiByProduct
+            {
+                MaterialId = g.Key.MaterialId,
+                MaterialName = g.Key.MaterialName,
+                Revenue = g.Sum(i => i.NetValue ?? 0),
+                Currency = g.FirstOrDefault()?.Currency ?? "USD",
+                TotalQty = g.Sum(i => i.OrderQty ?? 0),
+                Unit = g.FirstOrDefault()?.Unit ?? "PC",
+                OrderCount = g.Select(i => i.SoNumber).Distinct(StringComparer.OrdinalIgnoreCase).Count()
+            })
+            .OrderByDescending(p => p.Revenue)
+            .Take(query.Top)
+            .ToList();
     }
 
     public async Task<IReadOnlyList<OverdueOrder>> GetOverdueOrdersAsync(OverdueOrdersQuery query, CancellationToken ct = default)
@@ -718,17 +825,21 @@ public class SapClient : ISapClient
 
             if (result?.Value == null) return Array.Empty<OverdueOrder>();
 
-            return result.Value.Select(r => new OverdueOrder
-            {
-                SoNumber = FormatSoNumber(r.SoNumber),
-                CustomerId = r.Customer ?? string.Empty,
-                CustomerName = r.CustomerName ?? "Unknown",
-                ScheduledDeliveryDate = DateOnly.TryParse(r.ScheduledDeliveryDate, out var d) ? d : DateOnly.MinValue,
-                DaysPastDue = r.DaysPastDue ?? 0,
-                NetValue = r.NetValue ?? 0,
-                Currency = r.Currency ?? "USD",
-                SalesOrg = r.SalesOrg ?? string.Empty
-            }).ToList();
+            return result.Value
+                .Select(r => new OverdueOrder
+                {
+                    SoNumber = FormatSoNumber(r.SoNumber),
+                    CustomerId = r.Customer ?? string.Empty,
+                    CustomerName = r.CustomerName ?? "Unknown",
+                    ScheduledDeliveryDate = DateOnly.TryParse(r.ScheduledDeliveryDate, out var d) ? d : DateOnly.MinValue,
+                    DaysPastDue = r.DaysPastDue ?? 0,
+                    NetValue = r.NetValue ?? 0,
+                    Currency = r.Currency ?? "USD",
+                    SalesOrg = r.SalesOrg ?? string.Empty
+                })
+                .OrderByDescending(o => o.DaysPastDue)
+                .Take(query.Top)
+                .ToList();
         }
         catch (Exception ex)
         {

@@ -141,6 +141,12 @@ internal static class TeamsCardBuilder
     public static Attachment BuildOverdueOrdersCard(object data) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("overdue-orders.json", data);
 
+    public static Attachment BuildKpiByCustomerCard(object data) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("kpi-by-customer.json", data);
+
+    public static Attachment BuildKpiByProductCard(object data) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("kpi-by-product.json", data);
+
     public static Attachment BuildConfirmForwardCard(string salesOrderNumber, IEnumerable<(string Title, string Value)>? choices = null, string? senderName = null)
     {
         var recipientChoice = (choices ?? Array.Empty<(string Title, string Value)>())
