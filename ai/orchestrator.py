@@ -18,9 +18,9 @@ import re
 from pathlib import Path
 from typing import Any
 
+import openai
 from dotenv import load_dotenv
 from openai import OpenAI
-import openai
 
 from schemas import ChatRequest, ChatResponse, ToolCall
 
@@ -50,9 +50,9 @@ def _load_system_prompt() -> str:
     """Đọc system prompt từ disk; fallback về chuỗi mặc định nếu không tìm thấy."""
     try:
         base_prompt = _SYSTEM_PROMPT_PATH.read_text(encoding="utf-8").strip()
-        import datetime
+        from datetime import UTC, datetime
 
-        today = datetime.date.today()
+        today = datetime.now(UTC).date()
         day_of_week = today.strftime("%A")
         return base_prompt.replace(
             "{{CURRENT_DATE}}", today.strftime("%Y-%m-%d")
@@ -603,17 +603,16 @@ class AIOrchestrator:
 
         if last_exc:
             raise last_exc
-        raise Exception("Groq API call failed after max retries.")
+        raise RuntimeError("Groq API call failed after max retries.")
 
     def _is_missing_or_null(self, value: Any) -> bool:
         """Trả về True nếu value là None, chuỗi rỗng, hoặc chuỗi 'null'."""
         if value is None:
             return True
-        if isinstance(value, str) and (
-            value.strip() == "" or value.strip().lower() == "null"
-        ):
-            return True
-        return False
+        return bool(
+            isinstance(value, str)
+            and (value.strip() == "" or value.strip().lower() == "null")
+        )
 
     def _validate_and_build_response(
         self, fn_name: str, args: dict, user_message: str
@@ -631,50 +630,56 @@ class AIOrchestrator:
         if isinstance(items, str) and items.strip().startswith("["):
             try:
                 args["items"] = json.loads(items)
-            except Exception:
-                pass
+            except json.JSONDecodeError:
+                logger.debug("Could not parse items JSON string: %r", items)
 
         lower_msg = user_message.lower()
         order_id = args.get("order_id")
         is_reject_intent = fn_name == "RejectOrder"
 
         # ── Chống ảo tưởng order_id ──────────────────────────────────────────
-        if order_id and not self._is_missing_or_null(order_id):
-            if not _is_order_id_in_message(order_id, user_message):
-                logger.warning(
-                    "Hallucinated order_id detected: '%s' not in query: '%s'",
-                    order_id,
-                    user_message,
-                )
-                if is_reject_intent:
-                    return ChatResponse(
-                        reply="Tôi chưa xác định được đơn hàng nào. Vui lòng cho tôi mã đơn hàng.",
-                        intent="general_query",
-                        tool_calls=[],
-                    )
+        if (
+            order_id
+            and not self._is_missing_or_null(order_id)
+            and not _is_order_id_in_message(order_id, user_message)
+        ):
+            logger.warning(
+                "Hallucinated order_id detected: '%s' not in query: '%s'",
+                order_id,
+                user_message,
+            )
+            if is_reject_intent:
                 return ChatResponse(
-                    reply="Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện.",
+                    reply="Tôi chưa xác định được đơn hàng nào. Vui lòng cho tôi mã đơn hàng.",
                     intent="general_query",
                     tool_calls=[],
                 )
+            return ChatResponse(
+                reply="Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện.",
+                intent="general_query",
+                tool_calls=[],
+            )
 
         # ── Chống ảo tưởng forward_to_user ──────────────────────────────────
         forward_to_user = args.get("forward_to_user")
-        if forward_to_user and not self._is_missing_or_null(forward_to_user):
-            if str(forward_to_user).lower() not in lower_msg:
-                logger.warning(
-                    "Hallucinated forward_to_user detected: '%s' not in query: '%s'",
-                    forward_to_user,
-                    user_message,
-                )
-                return ChatResponse(
-                    reply=(
-                        f"Tôi chưa rõ bạn muốn chuyển tiếp đơn hàng {order_id} cho ai. "
-                        "Vui lòng cung cấp tên hoặc email người nhận."
-                    ),
-                    intent="general_query",
-                    tool_calls=[],
-                )
+        if (
+            forward_to_user
+            and not self._is_missing_or_null(forward_to_user)
+            and str(forward_to_user).lower() not in lower_msg
+        ):
+            logger.warning(
+                "Hallucinated forward_to_user detected: '%s' not in query: '%s'",
+                forward_to_user,
+                user_message,
+            )
+            return ChatResponse(
+                reply=(
+                    f"Tôi chưa rõ bạn muốn chuyển tiếp đơn hàng {order_id} cho ai. "
+                    "Vui lòng cung cấp tên hoặc email người nhận."
+                ),
+                intent="general_query",
+                tool_calls=[],
+            )
 
         # ── Kiểm tra required fields từ JSON Schema (generic) ────────────────
         schema = self._schema_cache.get(fn_name, {})
@@ -783,10 +788,10 @@ class AIOrchestrator:
                         # Handle double/quadruple escaped quotes from string-serialized JSON arrays
                         cleaned = raw_args.replace('\\\\"', '\\"')
                         args = json.loads(cleaned)
-                    except Exception:
+                    except json.JSONDecodeError:
                         try:
                             args = json.loads(raw_args.replace("'", '"'))
-                        except Exception:
+                        except json.JSONDecodeError:
                             args = {}
 
                 # Validation các quy tắc
@@ -828,7 +833,13 @@ class AIOrchestrator:
                 tool_calls=recovered_tool_calls,
                 adaptive_card_type=card_type,
             )
-        except Exception as e:
+        except (
+            json.JSONDecodeError,
+            KeyError,
+            TypeError,
+            ValueError,
+            AttributeError,
+        ) as e:
             logger.warning("Failed to recover from failed_generation: %s", e)
             return None
 

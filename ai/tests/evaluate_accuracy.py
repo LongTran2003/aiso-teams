@@ -1,14 +1,15 @@
+import argparse
 import json
 import os
+import re
 import sys
 import time
-import argparse
-import re
 from pathlib import Path
+from typing import Any
+
+import openai
 from dotenv import load_dotenv
 from openai import OpenAI
-import openai
-from typing import Any
 
 # Force standard output to use UTF-8 encoding (especially on Windows)
 if hasattr(sys.stdout, "reconfigure"):
@@ -93,7 +94,7 @@ def load_tools() -> list[dict]:
                     },
                 }
             tools.append(tool)
-        except Exception as exc:
+        except (json.JSONDecodeError, KeyError, OSError, TypeError, ValueError) as exc:
             print(f"Error loading schema {path.name}: {exc}", file=sys.stderr)
 
     return tools
@@ -142,9 +143,9 @@ def generate_content_with_retry(
             time.sleep(sleep_time)
         except openai.AuthenticationError as exc:
             print(f"\n[Error] Invalid Groq API Key: {exc}", file=sys.stderr)
-            raise exc
-        except openai.BadRequestError as exc:
-            raise exc
+            raise
+        except openai.BadRequestError:
+            raise
         except openai.APIStatusError as exc:
             if exc.status_code == 413:
                 # Request too large – cannot retry, skip this query
@@ -152,7 +153,7 @@ def generate_content_with_retry(
                     f"\n[Error] Groq API error status 413: {exc}",
                     file=sys.stderr,
                 )
-                raise exc
+                raise
             elif exc.status_code >= 500:
                 last_exc = exc
                 sleep_time = initial_backoff * (2**attempt)
@@ -166,13 +167,13 @@ def generate_content_with_retry(
                     f"\n[Error] Groq API error status {exc.status_code}: {exc}",
                     file=sys.stderr,
                 )
-                raise exc
-        except Exception as exc:
-            raise exc
+                raise
+        except openai.APITimeoutError:
+            raise
 
     if last_exc:
         raise last_exc
-    raise Exception("API call failed after max retries without specific exception.")
+    raise RuntimeError("API call failed after max retries without specific exception.")
 
 
 def _is_order_id_in_message(order_id: Any, user_message: str) -> bool:
@@ -218,8 +219,8 @@ def validate_parameters(
     if isinstance(items, str) and items.strip().startswith("["):
         try:
             args["items"] = json.loads(items)
-        except Exception:
-            pass
+        except json.JSONDecodeError:
+            print(f"Warning: could not parse items JSON: {items!r}", file=sys.stderr)
 
     lower_msg = user_message.lower()
     order_id = args.get("order_id")
@@ -533,17 +534,17 @@ def parse_and_validate_failed_generation(
                 # Handle double/quadruple escaped quotes from string-serialized JSON arrays
                 cleaned = raw_args.replace('\\\\"', '\\"')
                 args = json.loads(cleaned)
-            except Exception:
+            except json.JSONDecodeError:
                 try:
                     args = json.loads(raw_args.replace("'", '"'))
-                except Exception:
+                except json.JSONDecodeError:
                     args = {}
 
         validated = validate_parameters(fn_name, args, query)
         if validated is None:
             return None, {}
         return validated
-    except Exception:
+    except (json.JSONDecodeError, TypeError, ValueError, AttributeError, KeyError):
         return None
 
 
@@ -588,8 +589,12 @@ def _normalize_val(v) -> str:
             else:
                 cleaned_list.append(_normalize_val(item))
         try:
-            cleaned_list.sort(key=lambda x: str(x.get("material", "")))
-        except Exception:
+            cleaned_list.sort(
+                key=lambda x: (
+                    str(x.get("material", "")) if isinstance(x, dict) else str(x)
+                )
+            )
+        except TypeError:
             pass
         v = cleaned_list
 
@@ -672,7 +677,7 @@ def run_evaluation(
                 continue
             try:
                 test_cases.append(json.loads(line))
-            except Exception as e:
+            except json.JSONDecodeError as e:
                 print(
                     f"Error parsing line {idx} in {GOLDEN_DATA_PATH.name}: {e}",
                     file=sys.stderr,
@@ -706,7 +711,7 @@ def run_evaluation(
     if CACHE_PATH.exists():
         try:
             cache = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
-        except Exception as e:
+        except (json.JSONDecodeError, OSError) as e:
             print(f"Warning: Failed to load cache file: {e}", file=sys.stderr)
             cache = {}
 
@@ -755,7 +760,7 @@ def run_evaluation(
         tools = load_tools()
         model_name = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
         print(f"Running evaluation using model: {model_name}\n")
-    except Exception as e:
+    except (OSError, ValueError, openai.OpenAIError) as e:
         print(f"Failed to initialize API client: {e}", file=sys.stderr)
         sys.exit(1)
 
@@ -951,7 +956,7 @@ def run_evaluation(
                     if recovered is not None:
                         pred_fn, pred_args = recovered
                     else:
-                        raise bad_req_exc
+                        raise
 
                 # Save successful result to cache
                 cache[query] = {
@@ -963,9 +968,15 @@ def run_evaluation(
                         json.dumps(cache, indent=2, ensure_ascii=False),
                         encoding="utf-8",
                     )
-                except Exception as e:
+                except OSError as e:
                     print(f"Warning: Failed to save cache: {e}", file=sys.stderr)
-            except Exception as exc:
+            except (
+                openai.APIError,
+                OSError,
+                RuntimeError,
+                TypeError,
+                ValueError,
+            ) as exc:
                 print(f"\n[ERR] Query {idx} failed (API error): {exc}", file=sys.stderr)
                 import traceback
 
