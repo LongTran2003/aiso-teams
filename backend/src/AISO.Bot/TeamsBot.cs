@@ -693,7 +693,11 @@ public class TeamsBot : TeamsActivityHandler
                         var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
                         if (string.IsNullOrWhiteSpace(linkedSapUsername))
                         {
-                            await turnContext.SendActivityAsync("No SAP account is linked to your Teams identity yet.", cancellationToken: cancellationToken);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_LINKED",
+                                    "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
                             return;
                         }
 
@@ -714,8 +718,12 @@ public class TeamsBot : TeamsActivityHandler
                             }
 
                             var updatedOrder = await _sap.RejectOrderAsync(salesOrderId, sapReasonCode, linkedSapUsername, cancellationToken);
+                            var displayedSo = string.IsNullOrWhiteSpace(updatedOrder.SoNumber)
+                                              || updatedOrder.SoNumber == "UNKNOWN"
+                                ? salesOrderId
+                                : updatedOrder.SoNumber;
                             await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Rejected")),
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(displayedSo, "Rejected")),
                                 cancellationToken);
                         }
                         catch (SapODataException sapEx)
@@ -968,7 +976,9 @@ public class TeamsBot : TeamsActivityHandler
                 await ReplaceLoadingActivityAsync(
                     turnContext,
                     loadingActivityId,
-                    TeamsCardBuilder.BuildErrorCard("FUNCTION_FAILED", dispatch.Result?.ErrorMessage ?? "Unknown error"),
+                    TeamsCardBuilder.BuildErrorCard(
+                        dispatch.Result?.ErrorCode ?? "FUNCTION_FAILED",
+                        dispatch.Result?.ErrorMessage ?? "Unknown error"),
                     cancellationToken);
                 return;
             }
@@ -1357,7 +1367,19 @@ public class TeamsBot : TeamsActivityHandler
                 return false;
             }
 
-            if (SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status))
+            if (SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status)
+                && !string.Equals(actionLabel, "Reject", StringComparison.OrdinalIgnoreCase))
+            {
+                await turnContext.SendActivityAsync(
+                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                        "VALIDATION",
+                        SalesOrderWorkflow.BuildBlockedMessage(order.Status, actionLabel))),
+                    cancellationToken);
+                return false;
+            }
+
+            if (string.Equals(actionLabel, "Reject", StringComparison.OrdinalIgnoreCase)
+                && SalesOrderWorkflow.BlocksReject(order.Status))
             {
                 await turnContext.SendActivityAsync(
                     MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(

@@ -14,6 +14,17 @@ public class SalesOrderWorkflowTests
         Assert.True(SalesOrderWorkflow.BlocksReleaseRejectForward(status));
     }
 
+    [Theory]
+    [InlineData(SalesOrderStatus.Open, false)]
+    [InlineData(SalesOrderStatus.Blocked, false)]
+    [InlineData(SalesOrderStatus.Delivered, false)]
+    [InlineData(SalesOrderStatus.PartiallyDelivered, false)]
+    [InlineData(SalesOrderStatus.Cancelled, true)]
+    public void BlocksReject_OnlyWhenAlreadyCancelled(SalesOrderStatus status, bool expected)
+    {
+        Assert.Equal(expected, SalesOrderWorkflow.BlocksReject(status));
+    }
+
     [Fact]
     public void BuildBlockedMessage_WhenCancelled_UsesRejectedCopy()
     {

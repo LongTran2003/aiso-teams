@@ -6,12 +6,20 @@ namespace AISO.Domain.SalesOrders;
 public static class SalesOrderWorkflow
 {
     /// <summary>
-    /// Delivery started/finished or order cancelled — release / reject / forward no longer apply.
+    /// Delivery started/finished or order cancelled — release / forward no longer apply.
+    /// Reject of delivered orders is left to SAP so business errors can surface.
     /// </summary>
     public static bool BlocksReleaseRejectForward(SalesOrderStatus status) =>
         status is SalesOrderStatus.PartiallyDelivered
             or SalesOrderStatus.Delivered
             or SalesOrderStatus.Cancelled;
+
+    /// <summary>
+    /// Reject is only blocked when the order is already cancelled.
+    /// Delivered / partially delivered may still call SAP (E2E expects SAP business errors).
+    /// </summary>
+    public static bool BlocksReject(SalesOrderStatus status) =>
+        status is SalesOrderStatus.Cancelled;
 
     public static string BuildBlockedMessage(SalesOrderStatus status, string actionLabel)
     {

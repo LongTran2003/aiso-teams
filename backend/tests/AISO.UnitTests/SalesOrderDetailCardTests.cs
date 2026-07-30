@@ -137,6 +137,24 @@ public class SalesOrderDetailCardTests
         Assert.DoesNotContain("\"action\":\"forward_so\"", json);
     }
 
+    [Theory]
+    [InlineData(SalesOrderStatus.Delivered)]
+    [InlineData(SalesOrderStatus.PartiallyDelivered)]
+    public void BuildSalesOrderDetailCard_WhenDelivered_StillAllowsRejectForSapErrorPath(SalesOrderStatus status)
+    {
+        var order = SampleOrder(status: status) with { OwnerSapUser = "DEV-249" };
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(
+            order,
+            UserRole.Employee,
+            hasPendingApproval: false,
+            currentSapUser: "DEV-249");
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"forward_so\"", json);
+        Assert.DoesNotContain("\"action\":\"release_so\"", json);
+    }
+
     [Fact]
     public void BuildSuccessCard_Rejected_ShowsCancelledCopy()
     {

@@ -186,8 +186,10 @@ internal static class TeamsCardBuilder
         var isEmployee = role is null or UserRole.Employee;
         var isApprover = role is UserRole.Manager or UserRole.Admin;
         var canMutateLifecycle = !SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status);
+        var canReject = !SalesOrderWorkflow.BlocksReject(order.Status);
         var isOwner = SalesOrderWorkflow.IsCurrentOwner(order.OwnerSapUser, currentSapUser);
         var canMutateWhilePending = canMutateLifecycle && !hasPendingApproval && isOwner;
+        var canRejectWhilePending = canReject && !hasPendingApproval && isOwner;
         var items = order.Items ?? Array.Empty<SalesOrderItem>();
         var pendingBy = string.IsNullOrWhiteSpace(pendingRequestedBySapUser)
             ? "a teammate"
@@ -233,7 +235,7 @@ internal static class TeamsCardBuilder
                 : string.Empty,
             showRequestRelease = isEmployee && canMutateWhilePending ? "true" : "false",
             showApprove = isApprover && canMutateLifecycle && showActivePending ? "true" : "false",
-            showReject = canMutateWhilePending ? "true" : "false",
+            showReject = canRejectWhilePending ? "true" : "false",
             showForward = canMutateWhilePending ? "true" : "false",
             items = items.Select(item =>
             {

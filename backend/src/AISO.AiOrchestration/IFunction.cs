@@ -31,12 +31,15 @@ public sealed record FunctionResult
     public required bool Success { get; init; }
     public string? ErrorMessage { get; init; }
 
+    /// <summary>Optional card/error code (e.g. SAP_ERROR, VALIDATION) for Teams UX.</summary>
+    public string? ErrorCode { get; init; }
+
     /// <summary>Typed payload (e.g. <see cref="IReadOnlyList{T}"/> of SalesOrder).</summary>
     public object? Payload { get; init; }
 
     public static FunctionResult Ok(object payload) =>
         new() { Success = true, Payload = payload };
 
-    public static FunctionResult Fail(string error) =>
-        new() { Success = false, ErrorMessage = error };
+    public static FunctionResult Fail(string error, string? errorCode = null) =>
+        new() { Success = false, ErrorMessage = error, ErrorCode = errorCode };
 }

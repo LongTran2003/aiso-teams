@@ -454,29 +454,86 @@ public class SapClient : ISapClient
         try
         {
             using var doc = System.Text.Json.JsonDocument.Parse(errorBody);
-            if (doc.RootElement.TryGetProperty("error", out var errorObj))
+            if (!doc.RootElement.TryGetProperty("error", out var errorObj))
             {
-                var code = errorObj.TryGetProperty("code", out var c) ? c.GetString() : null;
-                var message = errorObj.TryGetProperty("message", out var m) ? m.GetString() : null;
-
-                if (string.Equals(code, "RAISE_SHORTDUMP", StringComparison.OrdinalIgnoreCase))
-                {
-                    return $"SAP encountered an internal error (ABAP Short Dump). " +
-                           $"This is typically caused by a transaction control violation in the RAP handler. " +
-                           $"Please contact the SAP team to check transaction ST22 for details. " +
-                           (!string.IsNullOrWhiteSpace(message) ? $"SAP message: {message}" : string.Empty);
-                }
-
-                return !string.IsNullOrWhiteSpace(message) ? message : $"SAP error {code}: {statusCode}";
+                return TruncateRaw(errorBody, statusCode);
             }
+
+            var candidates = new List<string>();
+
+            CollectMessage(errorObj, "message", candidates);
+
+            if (errorObj.TryGetProperty("details", out var details)
+                && details.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var detail in details.EnumerateArray())
+                    CollectMessage(detail, "message", candidates);
+            }
+
+            if (errorObj.TryGetProperty("innererror", out var inner)
+                && inner.TryGetProperty("errordetails", out var innerDetails)
+                && innerDetails.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var detail in innerDetails.EnumerateArray())
+                    CollectMessage(detail, "message", candidates);
+            }
+
+            var code = errorObj.TryGetProperty("code", out var c) && c.ValueKind == JsonValueKind.String
+                ? c.GetString()
+                : null;
+
+            // Prefer the most specific (longest) business message from details.
+            var message = candidates
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .OrderByDescending(m => m.Length)
+                .FirstOrDefault();
+
+            if (string.Equals(code, "RAISE_SHORTDUMP", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"SAP encountered an internal error (ABAP Short Dump). " +
+                       $"This is typically caused by a transaction control violation in the RAP handler. " +
+                       $"Please contact the SAP team to check transaction ST22 for details. " +
+                       (!string.IsNullOrWhiteSpace(message) ? $"SAP message: {message}" : string.Empty);
+            }
+
+            if (!string.IsNullOrWhiteSpace(message))
+                return message!;
+
+            return $"SAP error {code}: {statusCode}";
         }
         catch
         {
             // JSON parse failed, fall through
         }
 
-        return $"SAP returned HTTP {statusCode}. Raw response: {errorBody[..Math.Min(errorBody.Length, 200)]}";
+        return TruncateRaw(errorBody, statusCode);
     }
+
+    private static void CollectMessage(JsonElement parent, string propertyName, List<string> sink)
+    {
+        if (!parent.TryGetProperty(propertyName, out var messageEl))
+            return;
+
+        if (messageEl.ValueKind == JsonValueKind.String)
+        {
+            var s = messageEl.GetString();
+            if (!string.IsNullOrWhiteSpace(s))
+                sink.Add(s.Trim());
+            return;
+        }
+
+        if (messageEl.ValueKind == JsonValueKind.Object
+            && messageEl.TryGetProperty("value", out var valueEl)
+            && valueEl.ValueKind == JsonValueKind.String)
+        {
+            var s = valueEl.GetString();
+            if (!string.IsNullOrWhiteSpace(s))
+                sink.Add(s.Trim());
+        }
+    }
+
+    private static string TruncateRaw(string errorBody, int statusCode) =>
+        $"SAP returned HTTP {statusCode}. Raw response: {errorBody[..Math.Min(errorBody.Length, 200)]}";
 
     // -----------------------------------------------------------------------
     // KPI methods
