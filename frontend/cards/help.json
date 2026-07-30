@@ -12,7 +12,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "You can type your questions directly in Vietnamese/English or use the shortcuts below to request AISO Bot to process the SAP system:",
+      "text": "Type a sample below in English (natural phrasing also works). Use the shortcuts for common actions.",
       "wrap": true,
       "spacing": "Medium"
     },
@@ -66,6 +66,23 @@
     },
     {
       "type": "TextBlock",
+      "text": "Example commands",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "size": "Small",
+      "$when": "${role == 'Employee'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "• recent orders\n• show open orders\n• show orders of TV01\n• show open orders of FU24\n• show order 13122\n• show overdue orders\n• show revenue kpi\n• kpi by customer 1000\n• kpi by product MAT-01\n• request release 13122\n• reject order 13122\n• forward order 13122 to DEV-xxx\n• help · logout",
+      "wrap": true,
+      "spacing": "Small",
+      "fontType": "Monospace",
+      "size": "Small",
+      "$when": "${role == 'Employee'}"
+    },
+    {
+      "type": "TextBlock",
       "text": "Commands for Manager",
       "weight": "Bolder",
       "spacing": "Medium",
@@ -114,6 +131,23 @@
     },
     {
       "type": "TextBlock",
+      "text": "Example commands",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "size": "Small",
+      "$when": "${role == 'Manager'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "• show pending approvals\n• approve order 13122\n• reject approval 13122\n• release order 13122\n• recent orders\n• show open orders of TV01\n• show order 13122\n• show overdue orders\n• show revenue kpi\n• help · logout",
+      "wrap": true,
+      "spacing": "Small",
+      "fontType": "Monospace",
+      "size": "Small",
+      "$when": "${role == 'Manager'}"
+    },
+    {
+      "type": "TextBlock",
       "text": "Commands for Admin",
       "weight": "Bolder",
       "spacing": "Medium",
@@ -159,6 +193,31 @@
         }
       ],
       "spacing": "Small"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Example commands",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "size": "Small",
+      "$when": "${role == 'Admin'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "• view audit log\n• show pending approvals\n• force release 13122\n• force cancel 13122\n• recent orders\n• show open orders of TV01\n• show order 13122\n• show revenue kpi\n• help · logout",
+      "wrap": true,
+      "spacing": "Small",
+      "fontType": "Monospace",
+      "size": "Small",
+      "$when": "${role == 'Admin'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Tip: Prefer one language per message (e.g. show open orders of TV01). Avoid mixing English and Vietnamese in the same line.",
+      "wrap": true,
+      "isSubtle": true,
+      "size": "Small",
+      "spacing": "Large"
     }
   ]
 }

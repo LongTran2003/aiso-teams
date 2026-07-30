@@ -34,7 +34,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "Ask for help to see commands available for your role.",
+      "text": "Type help to see example commands for your role (e.g. recent orders · show pending approvals · request release 13122).",
       "size": "Small",
       "isSubtle": true,
       "wrap": true,

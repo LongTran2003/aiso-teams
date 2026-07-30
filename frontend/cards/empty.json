@@ -26,7 +26,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "Try another order number, broaden the search, or open Help for commands available to your role.",
+      "text": "Try another order number or broaden the search. Example commands: recent orders · show open orders of TV01 · show order 13122. Type help for the full list for your role.",
       "wrap": true,
       "isSubtle": true,
       "spacing": "Small"
