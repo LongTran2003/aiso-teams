@@ -22,6 +22,8 @@ define root view entity ZC_AISO_SO_WITH_ITEMS
       CreatedDate,
       OverallStatus,
       IsCancelled,
+      HasInvalidMaterial,
+      OwnerSapUser,
       
       _Items
 }
