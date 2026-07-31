@@ -97,6 +97,13 @@ public sealed class ApproveOrderFunction : IFunction
                     SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Approve / release"));
             }
 
+            if (existing is { HasInvalidMaterial: true })
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildInvalidMaterialBlockedMessage("Approve / release"),
+                    "VALIDATION");
+            }
+
             // Phase A: SAP approveOrder enforces ZAISO_USER_ROLE and performs release (no ownership).
             var updatedOrder = await _sap.ApproveOrderAsync(pending.SoNumber, requestingSapUser, ct);
 

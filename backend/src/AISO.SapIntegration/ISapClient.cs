@@ -142,6 +142,13 @@ public sealed record SalesOrdersQuery
     public DateOnly? ToDate { get; init; }
     public SalesOrderStatus? Status { get; init; }
 
+    /// <summary>
+    /// When true (default), OData filters <c>HasInvalidMaterial eq ''</c> so list/KPI
+    /// paths exclude SOs with missing material master data.
+    /// Set false only for admin/debug listing of dirty orders.
+    /// </summary>
+    public bool ExcludeInvalidMaterials { get; init; } = true;
+
     /// <summary>Maximum number of records to return (default 10, max 50).</summary>
     public int Top { get; init; } = 10;
 }

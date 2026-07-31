@@ -79,6 +79,13 @@ public sealed class ReleaseOrderFunction : IFunction
                     SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Release"));
             }
 
+            if (existing.HasInvalidMaterial)
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildInvalidMaterialBlockedMessage("Release"),
+                    "VALIDATION");
+            }
+
             // Call SAP RAP action
             var updatedOrder = await _sap.ReleaseOrderAsync(orderId, requestingSapUser, ct);
 

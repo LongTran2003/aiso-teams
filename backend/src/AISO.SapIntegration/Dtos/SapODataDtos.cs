@@ -31,6 +31,8 @@ internal class SapSalesOrderDto
     public string? IsCancelled { get; set; }
     /// <summary>Owner SAP user from zaiso_so_map (when Quân exposes it on SalesOrder).</summary>
     public string? OwnerSapUser { get; set; }
+    /// <summary>X when any item material is missing from MARA; empty otherwise.</summary>
+    public string? HasInvalidMaterial { get; set; }
 }
 
 /// <summary>

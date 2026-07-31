@@ -77,6 +77,14 @@ public class SalesOrderWorkflowTests
         Assert.Equal(expected, SalesOrderWorkflow.ShowsPendingApprovalBanner(status));
     }
 
+    [Fact]
+    public void BuildInvalidMaterialBlockedMessage_IncludesAction()
+    {
+        var message = SalesOrderWorkflow.BuildInvalidMaterialBlockedMessage("Reject");
+        Assert.Contains("Reject", message);
+        Assert.Contains("invalid material", message);
+    }
+
     [Theory]
     [InlineData(null, "DEV-100", true)]
     [InlineData("", "DEV-100", true)]

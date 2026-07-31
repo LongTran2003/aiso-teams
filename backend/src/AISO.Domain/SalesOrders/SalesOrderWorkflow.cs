@@ -69,6 +69,12 @@ public static class SalesOrderWorkflow
         $"Sales order is owned by {ownerSapUser.Trim()}. {actionLabel} is only allowed for the current owner.";
 
     /// <summary>
+    /// SO has item material(s) missing from MARA — release/reject/forward will fail in SAP.
+    /// </summary>
+    public static string BuildInvalidMaterialBlockedMessage(string actionLabel) =>
+        $"{actionLabel} is not allowed: this sales order has invalid material master data.";
+
+    /// <summary>
     /// Pending release UI only makes sense while the order can still be released.
     /// Stale Postgres pending on Delivered/Cancelled/etc. should not show "Waiting for approval".
     /// </summary>

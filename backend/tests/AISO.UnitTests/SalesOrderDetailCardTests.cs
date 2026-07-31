@@ -212,6 +212,23 @@ public class SalesOrderDetailCardTests
     }
 
     [Fact]
+    public void BuildSalesOrderDetailCard_WhenInvalidMaterial_ShowsWarningAndHidesMutations()
+    {
+        var order = SampleOrder() with { OwnerSapUser = "DEV-249", HasInvalidMaterial = true };
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(
+            order,
+            UserRole.Employee,
+            hasPendingApproval: false,
+            currentSapUser: "DEV-249");
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Invalid material master data", json);
+        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"forward_so\"", json);
+        Assert.DoesNotContain("\"action\":\"release_so\"", json);
+    }
+
+    [Fact]
     public void BuildSuccessCard_Forwarded_ShowsOwnershipTransferCopy()
     {
         var attachment = TeamsCardBuilder.BuildSuccessCard("0000000009", "Forwarded", "DEV-300");
