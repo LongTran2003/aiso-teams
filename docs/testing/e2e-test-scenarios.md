@@ -32,7 +32,7 @@ Use for manual Teams testing and demo rehearsal.
 **Order status reminders:**
 - Release / Approve need Open (or blocked) orders.
 - Employee cannot release directly → `request release`; Manager `approve order`.
-- Reject Open = happy path; Reject Delivered = expect **SAP_ERROR** card (propagation).
+- Reject Open = happy path; Reject Delivered / Partially Delivered = **VALIDATION** (button hidden; NL blocked before SAP).
 - Use a **fresh SO** per mutating step.
 
 ---
@@ -96,7 +96,7 @@ Use for manual Teams testing and demo rehearsal.
 | # | Input | Expected |
 |---|---|---|
 | 5.1 | Reject Open → reason → Confirm | Success **Order rejected** / status **Cancelled**; SO number correct |
-| 5.2 | Reject Delivered / released+delivered | **SAP error** card with real SAP message (propagation) |
+| 5.2 | Reject Delivered / Partially Delivered | **VALIDATION** card (delivery started); Reject button hidden on detail |
 | 5.3 | Confirm without reason | Reason required |
 | 5.4 | Confirm → Cancel | No SAP reject |
 
@@ -157,7 +157,7 @@ Smoke **canonical EN** first (from Help). Then spot-check **VI** input still rou
 | KPI by product | `kpi by product MAT-01` | [ ] |
 | Overdue SOs | `show overdue orders` | [ ] |
 | Reject Open after confirm | Detail → Reject → reason → Confirm | [ ] |
-| SAP error on reject delivered | Reject delivered SO | [ ] |
+| Reject Delivered blocked | Delivered SO: no Reject button / VALIDATION on NL | [ ] |
 | Cancel / logout / unauth | `cancel`, `logout`, command while logged out | [ ] |
 | Bilingual NL regression | Section 8 matrix | [ ] |
 

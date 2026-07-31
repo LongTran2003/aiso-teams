@@ -17,12 +17,22 @@ public class SalesOrderWorkflowTests
     [Theory]
     [InlineData(SalesOrderStatus.Open, false)]
     [InlineData(SalesOrderStatus.Blocked, false)]
-    [InlineData(SalesOrderStatus.Delivered, false)]
-    [InlineData(SalesOrderStatus.PartiallyDelivered, false)]
+    [InlineData(SalesOrderStatus.Invoiced, false)]
+    [InlineData(SalesOrderStatus.Delivered, true)]
+    [InlineData(SalesOrderStatus.PartiallyDelivered, true)]
     [InlineData(SalesOrderStatus.Cancelled, true)]
-    public void BlocksReject_OnlyWhenAlreadyCancelled(SalesOrderStatus status, bool expected)
+    public void BlocksReject_WhenDeliveryStartedOrCancelled(SalesOrderStatus status, bool expected)
     {
         Assert.Equal(expected, SalesOrderWorkflow.BlocksReject(status));
+    }
+
+    [Fact]
+    public void BuildBlockedMessage_WhenDelivered_UsesDeliveryCopy()
+    {
+        var message = SalesOrderWorkflow.BuildBlockedMessage(SalesOrderStatus.Delivered, "Reject");
+        Assert.Contains("Delivered", message);
+        Assert.Contains("Reject", message);
+        Assert.Contains("delivery has started", message);
     }
 
     [Fact]
