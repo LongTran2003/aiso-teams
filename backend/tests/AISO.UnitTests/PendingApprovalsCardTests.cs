@@ -19,7 +19,6 @@ public class PendingApprovalsCardTests
                 {
                     orderId = "0000000009",
                     requestedBy = "DEV-024",
-                    salesOrg = "UE00",
                     comment = "please approve",
                     requestedAt = "2026-07-22 12:00:00Z"
                 }
@@ -33,7 +32,9 @@ public class PendingApprovalsCardTests
         Assert.Contains("Approve", json);
         Assert.Contains("Reject approval", json);
         Assert.Contains("filter_pending_approvals", json);
-        Assert.Contains("Input.ChoiceSet", json);
+        Assert.Contains("Requested by", json);
+        Assert.DoesNotContain("Sales organization", json);
+        Assert.DoesNotContain("\"id\":\"salesOrg\"", json);
     }
 
     [Fact]
@@ -49,15 +50,15 @@ public class PendingApprovalsCardTests
         var attachment = TeamsCardBuilder.BuildPendingApprovalsCard(
             approvals,
             search: "priority",
-            requester: "DEV-024",
-            salesOrg: "UE00");
+            requester: "DEV-024");
 
         var json = JsonConvert.SerializeObject(attachment.Content);
         Assert.Contains("0000000009", json);
         Assert.DoesNotContain("0000000010", json);
-        Assert.Contains("DEV-025", json);
-        Assert.Contains("US00", json);
+        Assert.Contains("DEV-025", json); // still in requester choices
         Assert.Contains("\"value\":\"priority\"", json);
+        Assert.DoesNotContain("Sales organization", json);
+        Assert.DoesNotContain("\"id\":\"salesOrg\"", json);
     }
 
     [Fact]
