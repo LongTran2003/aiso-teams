@@ -23,7 +23,10 @@ public static class ServiceCollectionExtensions
     {
         // Register all AI Functions
         services.AddSingleton<IFunction, GetSalesOrdersFunction>();
-        services.AddSingleton<IFunction, CheckOrderStatusFunction>();
+        // Concrete + IFunction so GetOrderDetail can reuse the same handler instance.
+        services.AddSingleton<CheckOrderStatusFunction>();
+        services.AddSingleton<IFunction>(sp => sp.GetRequiredService<CheckOrderStatusFunction>());
+        services.AddSingleton<IFunction, GetOrderDetailFunction>();
         services.AddSingleton<IFunction, ReleaseOrderFunction>();
         services.AddSingleton<IFunction, RejectOrderFunction>();
         services.AddSingleton<IFunction, ForwardOrderFunction>();
