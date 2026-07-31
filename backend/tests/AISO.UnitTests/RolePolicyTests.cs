@@ -9,6 +9,7 @@ public class RolePolicyTests
     [Theory]
     [InlineData("GetSalesOrders")]
     [InlineData("CheckOrderStatus")]
+    [InlineData("GetOrderDetail")]
     [InlineData("GetKpiSummary")]
     [InlineData("GetOverdueOrders")]
     [InlineData("ai_text_reply")]

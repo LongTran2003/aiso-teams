@@ -1075,6 +1075,33 @@ public class TeamsBot : TeamsActivityHandler
                     return;
                 }
 
+                // Single-order lookups (CheckOrderStatus / GetOrderDetail) → detail card + pending banner.
+                if (ordersList.Count == 1
+                    && IsOrderDetailFunction(dispatch.FunctionName))
+                {
+                    var order = ordersList[0];
+                    var pending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
+                    var detailCard = TeamsCardBuilder.BuildSalesOrderDetailCard(
+                        order,
+                        role,
+                        hasPendingApproval: pending is not null,
+                        pendingRequestedBySapUser: pending?.RequestedBySapUser,
+                        currentSapUser: sapUsername,
+                        pendingComment: pending?.Comment);
+
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        detailCard,
+                        cancellationToken);
+
+                    _logger.LogInformation(
+                        "Bot replied with sales order detail card for {Function} SO {SoNumber}",
+                        dispatch.FunctionName,
+                        order.SoNumber);
+                    return;
+                }
+
                 var card = TeamsCardBuilder.BuildSoSummaryCard(ordersList);
                 await ReplaceLoadingActivityAsync(
                     turnContext,
@@ -1083,7 +1110,9 @@ public class TeamsBot : TeamsActivityHandler
                     cancellationToken);
 
                 _logger.LogInformation(
-                    "Bot replied with Adaptive Card listing {Count} orders from CheckOrderStatus", ordersList.Count);
+                    "Bot replied with Adaptive Card listing {Count} orders from {Function}",
+                    ordersList.Count,
+                    dispatch.FunctionName);
                 return;
             }
 
@@ -1477,6 +1506,10 @@ public class TeamsBot : TeamsActivityHandler
         return d.Result.Success ? "Success" : "Failed";
     }
 
+    private static bool IsOrderDetailFunction(string? functionName) =>
+        string.Equals(functionName, "CheckOrderStatus", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(functionName, "GetOrderDetail", StringComparison.OrdinalIgnoreCase);
+
     private static async Task ReplaceLoadingActivityAsync(ITurnContext turnContext, string? loadingActivityId, Attachment? attachment, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(loadingActivityId) || attachment is null)
@@ -1538,8 +1571,20 @@ public class TeamsBot : TeamsActivityHandler
         }
 
         var lowered = message.ToLowerInvariant();
-        var isDetailRequest = lowered.Contains("detail") || lowered.Contains("chi tiết") || lowered.Contains("xem chi tiết") || lowered.Contains("show detail");
-        var mentionsOrder = lowered.Contains("order") || lowered.Contains("đơn hàng") || lowered.Contains("so") || lowered.Contains("sales order");
+        var isDetailRequest =
+            lowered.Contains("detail")
+            || lowered.Contains("chi tiết")
+            || lowered.Contains("xem chi tiết")
+            || lowered.Contains("show detail")
+            || lowered.Contains("view order")
+            || lowered.Contains("xem đơn")
+            || lowered.Contains("xem order");
+        var mentionsOrder =
+            lowered.Contains("order")
+            || lowered.Contains("đơn hàng")
+            || lowered.Contains("đơn")
+            || lowered.Contains("so")
+            || lowered.Contains("sales order");
 
         if (!isDetailRequest || !mentionsOrder)
         {

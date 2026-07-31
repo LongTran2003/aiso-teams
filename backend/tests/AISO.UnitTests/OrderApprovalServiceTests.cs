@@ -47,6 +47,37 @@ public class OrderApprovalServiceTests
     }
 
     [Fact]
+    public async Task GetPendingBySoNumber_FindsWhenUnpaddedOrPadded()
+    {
+        var service = CreateService(out var ctx);
+        await using (ctx)
+        {
+            await service.RequestReleaseAsync("13063", "DEV-249", "TV01", null);
+
+            var byShort = await service.GetPendingBySoNumberAsync("13063");
+            var byPadded = await service.GetPendingBySoNumberAsync("0000013063");
+
+            Assert.NotNull(byShort);
+            Assert.NotNull(byPadded);
+            Assert.Equal("0000013063", byShort!.SoNumber);
+            Assert.Equal(byShort.Id, byPadded!.Id);
+        }
+    }
+
+    [Fact]
+    public async Task RequestRelease_WhenAlreadyPending_DifferentPadding_Throws()
+    {
+        var service = CreateService(out var ctx);
+        await using (ctx)
+        {
+            await service.RequestReleaseAsync("0000013063", "DEV-249", "TV01", null);
+
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => service.RequestReleaseAsync("13063", "DEV-249", "TV01", null));
+        }
+    }
+
+    [Fact]
     public async Task Approve_MarksApproved_WhenSameSalesOrg()
     {
         var service = CreateService(out var ctx);
