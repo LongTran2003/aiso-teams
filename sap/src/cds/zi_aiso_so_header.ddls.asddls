@@ -32,7 +32,7 @@ define root view entity ZI_AISO_SO_HEADER
       vbak.ernam                          as CreatedBy,
       vbak.erdat                          as CreatedDate,
       vbak.gbstk                          as OverallStatus,
-      _Owner.teams_user_id                as OwnerSapUser,
+      _Owner.sap_user                as OwnerSapUser,
 
       cast( '' as abap.char( 1 ) )        as CreditStatus,
       cast( '' as abap.char( 2 ) )        as DeliveryBlock,

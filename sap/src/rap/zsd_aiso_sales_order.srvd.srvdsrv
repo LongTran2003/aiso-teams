@@ -7,4 +7,6 @@ define service ZSD_AISO_SALES_ORDER {
   expose ZI_AISO_KPI_REVENUE as KpiRevenue;
   expose ZI_AISO_SO_ITEM as SalesOrderItem;
   expose ZI_AISO_USER_ROLE as UserRole;
+  expose ZI_AISO_KPI_BY_CUSTOMER as KpiByCustomer;
+  expose ZI_AISO_KPI_BY_PRODUCT as KpiByProduct;
 }
