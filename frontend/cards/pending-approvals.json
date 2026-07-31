@@ -66,24 +66,6 @@
           ]
         },
         {
-          "type": "Input.ChoiceSet",
-          "id": "salesOrg",
-          "label": "Sales organization",
-          "style": "compact",
-          "value": "${selectedSalesOrg}",
-          "choices": [
-            {
-              "title": "All sales organizations",
-              "value": ""
-            },
-            {
-              "$data": "${salesOrgChoices}",
-              "title": "${title}",
-              "value": "${value}"
-            }
-          ]
-        },
-        {
           "type": "ActionSet",
           "actions": [
             {
@@ -133,7 +115,7 @@
                 },
                 {
                   "type": "TextBlock",
-                  "text": "By ${requestedBy} | ${salesOrg}",
+                  "text": "By ${requestedBy}",
                   "size": "Small",
                   "isSubtle": true,
                   "spacing": "None",

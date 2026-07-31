@@ -112,12 +112,10 @@ internal static class TeamsCardBuilder
     public static Attachment BuildPendingApprovalsCard(
         IReadOnlyList<OrderApprovalRequest> approvals,
         string? search = null,
-        string? requester = null,
-        string? salesOrg = null)
+        string? requester = null)
     {
         var normalizedSearch = search?.Trim() ?? string.Empty;
         var normalizedRequester = requester?.Trim() ?? string.Empty;
-        var normalizedSalesOrg = salesOrg?.Trim() ?? string.Empty;
 
         var filtered = approvals
             .Where(approval =>
@@ -126,9 +124,7 @@ internal static class TeamsCardBuilder
                  approval.RequestedBySapUser.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ||
                  (approval.Comment?.Contains(normalizedSearch, StringComparison.OrdinalIgnoreCase) ?? false)) &&
                 (string.IsNullOrEmpty(normalizedRequester) ||
-                 string.Equals(approval.RequestedBySapUser, normalizedRequester, StringComparison.OrdinalIgnoreCase)) &&
-                (string.IsNullOrEmpty(normalizedSalesOrg) ||
-                 string.Equals(approval.SalesOrg, normalizedSalesOrg, StringComparison.OrdinalIgnoreCase)))
+                 string.Equals(approval.RequestedBySapUser, normalizedRequester, StringComparison.OrdinalIgnoreCase)))
             .ToList();
 
         var data = new
@@ -136,17 +132,8 @@ internal static class TeamsCardBuilder
             count = filtered.Count,
             search = normalizedSearch,
             selectedRequester = normalizedRequester,
-            selectedSalesOrg = normalizedSalesOrg,
             requesterChoices = approvals
                 .Select(approval => approval.RequestedBySapUser)
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .OrderBy(value => value)
-                .Select(value => new { title = value, value })
-                .ToList(),
-            salesOrgChoices = approvals
-                .Select(approval => approval.SalesOrg)
-                .Where(value => !string.IsNullOrWhiteSpace(value))
-                .Select(value => value!)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .OrderBy(value => value)
                 .Select(value => new { title = value, value })
@@ -155,7 +142,6 @@ internal static class TeamsCardBuilder
             {
                 orderId = approval.SoNumber,
                 requestedBy = approval.RequestedBySapUser,
-                salesOrg = string.IsNullOrWhiteSpace(approval.SalesOrg) ? "-" : approval.SalesOrg,
                 comment = approval.Comment ?? string.Empty,
                 requestedAt = approval.RequestedAt.ToString("dd MMM yyyy HH:mm") + " UTC"
             }).ToList()
@@ -243,6 +229,8 @@ internal static class TeamsCardBuilder
             currency = order.Currency,
             approvalStatus = order.Status.ToString(),
             statusColor = StatusToColor(order.Status),
+            showApprovalHint = showActivePending ? "true" : "false",
+            approvalHint = showActivePending ? "Approval: Waiting" : string.Empty,
             hasItems = items.Count > 0 ? "true" : "false",
             showOwnedBy = hasOwner ? "true" : "false",
             ownedBySapUser = hasOwner ? owner! : string.Empty,

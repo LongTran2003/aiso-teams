@@ -90,6 +90,7 @@ public class SalesOrderDetailCardTests
         Assert.Contains("Waiting for manager approval", json);
         Assert.Contains("Release requested by DEV-100", json);
         Assert.Contains("you can't change this order until then", json);
+        Assert.Contains("Approval: Waiting", json);
         Assert.DoesNotContain("Reject / Forward", json);
         Assert.DoesNotContain("Release request pending", json);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);

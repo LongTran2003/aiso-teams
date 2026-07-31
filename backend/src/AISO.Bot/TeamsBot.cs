@@ -235,14 +235,12 @@ public class TeamsBot : TeamsActivityHandler
                         var pending = await _approvals.GetPendingAsync(salesOrgScope, cancellationToken);
                         var search = valueObj.Value<string>("search");
                         var requester = valueObj.Value<string>("requester");
-                        var salesOrg = valueObj.Value<string>("salesOrg");
 
                         await turnContext.SendActivityAsync(
                             MessageFactory.Attachment(TeamsCardBuilder.BuildPendingApprovalsCard(
                                 pending,
                                 search,
-                                requester,
-                                salesOrg)),
+                                requester)),
                             cancellationToken);
                         return;
                     }
@@ -1234,16 +1232,8 @@ public class TeamsBot : TeamsActivityHandler
                     count = pendingResponse.Count,
                     search = string.Empty,
                     selectedRequester = string.Empty,
-                    selectedSalesOrg = string.Empty,
                     requesterChoices = pendingResponse.Items
                         .Select(i => i.RequestedBy)
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .OrderBy(value => value)
-                        .Select(value => new { title = value, value })
-                        .ToList(),
-                    salesOrgChoices = pendingResponse.Items
-                        .Select(i => i.SalesOrg)
-                        .Where(value => !string.IsNullOrWhiteSpace(value))
                         .Distinct(StringComparer.OrdinalIgnoreCase)
                         .OrderBy(value => value)
                         .Select(value => new { title = value, value })
@@ -1252,7 +1242,6 @@ public class TeamsBot : TeamsActivityHandler
                     {
                         orderId = i.OrderId,
                         requestedBy = i.RequestedBy,
-                        salesOrg = string.IsNullOrWhiteSpace(i.SalesOrg) ? "-" : i.SalesOrg,
                         comment = i.Comment ?? string.Empty,
                         requestedAt = i.RequestedAt
                     }).ToList()

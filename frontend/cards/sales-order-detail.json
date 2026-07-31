@@ -45,6 +45,16 @@
                   "color": "${statusColor}",
                   "horizontalAlignment": "Right",
                   "wrap": true
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "${approvalHint}",
+                  "size": "Small",
+                  "isSubtle": true,
+                  "horizontalAlignment": "Right",
+                  "wrap": true,
+                  "spacing": "None",
+                  "$when": "${showApprovalHint == 'true'}"
                 }
               ]
             }
