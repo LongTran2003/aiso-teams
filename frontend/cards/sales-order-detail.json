@@ -64,6 +64,27 @@
     },
     {
       "type": "Container",
+      "style": "attention",
+      "spacing": "Medium",
+      "$when": "${showInvalidMaterial == 'true'}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Invalid material master data",
+          "weight": "Bolder",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "One or more items reference a material that does not exist in SAP. You can view this order, but Request release / Reject / Forward / Approve are disabled.",
+          "isSubtle": true,
+          "wrap": true,
+          "spacing": "None"
+        }
+      ]
+    },
+    {
+      "type": "Container",
       "style": "emphasis",
       "spacing": "Medium",
       "$when": "${showOwnedBy == 'true'}",

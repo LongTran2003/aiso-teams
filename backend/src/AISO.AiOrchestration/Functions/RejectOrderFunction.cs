@@ -103,6 +103,13 @@ public sealed class RejectOrderFunction : IFunction
                     "VALIDATION");
             }
 
+            if (existing.HasInvalidMaterial)
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildInvalidMaterialBlockedMessage("Reject"),
+                    "VALIDATION");
+            }
+
             if (!SalesOrderWorkflow.IsCurrentOwner(existing.OwnerSapUser, requestingSapUser)
                 && !string.IsNullOrWhiteSpace(existing.OwnerSapUser))
             {

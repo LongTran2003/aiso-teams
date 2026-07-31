@@ -203,8 +203,9 @@ internal static class TeamsCardBuilder
         var canMutateLifecycle = !SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status);
         var canReject = !SalesOrderWorkflow.BlocksReject(order.Status);
         var isOwner = SalesOrderWorkflow.IsCurrentOwner(order.OwnerSapUser, currentSapUser);
-        var canMutateWhilePending = canMutateLifecycle && !hasPendingApproval && isOwner;
-        var canRejectWhilePending = canReject && !hasPendingApproval && isOwner;
+        var materialOk = !order.HasInvalidMaterial;
+        var canMutateWhilePending = canMutateLifecycle && !hasPendingApproval && isOwner && materialOk;
+        var canRejectWhilePending = canReject && !hasPendingApproval && isOwner && materialOk;
         var items = order.Items ?? Array.Empty<SalesOrderItem>();
         var pendingBy = string.IsNullOrWhiteSpace(pendingRequestedBySapUser)
             ? "a teammate"
@@ -232,6 +233,7 @@ internal static class TeamsCardBuilder
             showApprovalHint = showActivePending ? "true" : "false",
             approvalHint = showActivePending ? "Approval: Waiting" : string.Empty,
             hasItems = items.Count > 0 ? "true" : "false",
+            showInvalidMaterial = order.HasInvalidMaterial ? "true" : "false",
             showOwnedBy = hasOwner ? "true" : "false",
             ownedBySapUser = hasOwner ? owner! : string.Empty,
             ownedByMessage = !hasOwner
@@ -251,7 +253,7 @@ internal static class TeamsCardBuilder
                 ? $"Note for manager: {noteText}"
                 : string.Empty,
             showRequestRelease = isEmployee && canMutateWhilePending ? "true" : "false",
-            showApprove = isApprover && canMutateLifecycle && showActivePending ? "true" : "false",
+            showApprove = isApprover && canMutateLifecycle && showActivePending && materialOk ? "true" : "false",
             showReject = canRejectWhilePending ? "true" : "false",
             showForward = canMutateWhilePending ? "true" : "false",
             items = items.Select(item =>

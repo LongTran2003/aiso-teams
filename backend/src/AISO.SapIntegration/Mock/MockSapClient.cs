@@ -149,6 +149,30 @@ public sealed class MockSapClient : ISapClient
                 },
             },
         },
+        new()
+        {
+            SoNumber = "0000005099",
+            CustomerId = "1000",
+            CustomerName = "Philly Bikes",
+            OrderDate = new DateOnly(2026, 6, 1),
+            NetValue = 100m,
+            Currency = "USD",
+            SalesOrg = "UE00",
+            Status = SalesOrderStatus.Open,
+            HasInvalidMaterial = true,
+            Items = new List<SalesOrderItem>
+            {
+                new()
+                {
+                    ItemNumber = "00010",
+                    Material = "BAD_MAT",
+                    Description = "Missing master",
+                    Quantity = 1m,
+                    Unit = "EA",
+                    NetValue = 100m,
+                },
+            },
+        },
     };
 
     public Task<IReadOnlyList<SalesOrder>> GetSalesOrdersAsync(SalesOrdersQuery query, CancellationToken ct = default)
@@ -171,6 +195,8 @@ public sealed class MockSapClient : ISapClient
             q = q.Where(o => o.OrderDate <= query.ToDate.Value);
         if (query.Status.HasValue)
             q = q.Where(o => o.Status == query.Status.Value);
+        if (query.ExcludeInvalidMaterials)
+            q = q.Where(o => !o.HasInvalidMaterial);
 
         var result = q.OrderByDescending(o => o.OrderDate).Take(Math.Clamp(query.Top, 1, 50)).ToList();
         return Task.FromResult<IReadOnlyList<SalesOrder>>(result);

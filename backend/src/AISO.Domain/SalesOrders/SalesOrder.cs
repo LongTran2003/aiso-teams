@@ -44,6 +44,12 @@ public sealed record SalesOrder
     /// </summary>
     public string? OwnerSapUser { get; init; }
 
+    /// <summary>
+    /// True when any item references a material missing from SAP master (MARA).
+    /// OData flag <c>HasInvalidMaterial</c> = <c>X</c> / empty.
+    /// </summary>
+    public bool HasInvalidMaterial { get; init; }
+
     /// <summary>Order line items (VBAP rows).</summary>
     public required IReadOnlyList<SalesOrderItem> Items { get; init; }
 }

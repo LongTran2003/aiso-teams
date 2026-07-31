@@ -89,6 +89,13 @@ public sealed class ForwardOrderFunction : IFunction
                     SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Forward"));
             }
 
+            if (existing.HasInvalidMaterial)
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildInvalidMaterialBlockedMessage("Forward"),
+                    "VALIDATION");
+            }
+
             var pending = await _approvals.GetPendingBySoNumberAsync(existing.SoNumber, ct);
             if (pending is not null)
             {

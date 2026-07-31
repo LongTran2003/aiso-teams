@@ -33,6 +33,8 @@ Use for manual Teams testing and demo rehearsal.
 - Release / Approve need Open (or blocked) orders.
 - Employee cannot release directly → `request release`; Manager `approve order`.
 - Reject Open = happy path; Reject Delivered / Partially Delivered = **VALIDATION** (button hidden; NL blocked before SAP).
+- List / recent orders exclude SOs with `HasInvalidMaterial = X` by default. View-by-id still works and shows a warning banner.
+- Stable demo SO (valid materials): `0000012912`.
 - Use a **fresh SO** per mutating step.
 
 ---

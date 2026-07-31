@@ -79,6 +79,13 @@ public sealed class RequestReleaseFunction : IFunction
                     SalesOrderWorkflow.BuildBlockedMessage(order.Status, "Request release"));
             }
 
+            if (order.HasInvalidMaterial)
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildInvalidMaterialBlockedMessage("Request release"),
+                    "VALIDATION");
+            }
+
             var pending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, ct);
             if (pending is not null)
             {

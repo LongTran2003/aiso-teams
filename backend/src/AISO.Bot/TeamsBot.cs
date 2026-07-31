@@ -347,6 +347,16 @@ public class TeamsBot : TeamsActivityHandler
                                     return;
                                 }
 
+                                if (order.HasInvalidMaterial)
+                                {
+                                    await turnContext.SendActivityAsync(
+                                        MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                            "VALIDATION",
+                                            SalesOrderWorkflow.BuildInvalidMaterialBlockedMessage("Request release"))),
+                                        cancellationToken);
+                                    return;
+                                }
+
                                 var existingPending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
                                 if (existingPending is not null)
                                 {
@@ -481,6 +491,16 @@ public class TeamsBot : TeamsActivityHandler
                                     MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
                                         "VALIDATION",
                                         SalesOrderWorkflow.BuildBlockedMessage(order.Status, "Request release"))),
+                                    cancellationToken);
+                                return;
+                            }
+
+                            if (order.HasInvalidMaterial)
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "VALIDATION",
+                                        SalesOrderWorkflow.BuildInvalidMaterialBlockedMessage("Request release"))),
                                     cancellationToken);
                                 return;
                             }
@@ -1413,6 +1433,16 @@ public class TeamsBot : TeamsActivityHandler
                     MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
                         "NOT_FOUND",
                         $"Sales order {salesOrderId} was not found.")),
+                    cancellationToken);
+                return false;
+            }
+
+            if (order.HasInvalidMaterial)
+            {
+                await turnContext.SendActivityAsync(
+                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                        "VALIDATION",
+                        SalesOrderWorkflow.BuildInvalidMaterialBlockedMessage(actionLabel))),
                     cancellationToken);
                 return false;
             }

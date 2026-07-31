@@ -63,6 +63,13 @@ public class SapClient : ISapClient
             ApplyStatusFilter(builder, query.Status.Value);
         }
 
+        // Default: hide SOs with missing material master (MARA) from list/KPI pickers.
+        // Empty-string filter must use FilterRaw — Filter() skips blank values.
+        if (query.ExcludeInvalidMaterials)
+        {
+            builder.FilterRaw("HasInvalidMaterial eq ''");
+        }
+
         // SalesOrder is flat (no $expand). Detail loads items via a separate SalesOrderItem request.
 
         var url = builder.Build();
@@ -988,9 +995,13 @@ public class SapClient : ISapClient
             Status = MapStatus(dto, allItemsRejected),
             SalesOrg = dto.SalesOrg ?? "UNKNOWN",
             OwnerSapUser = string.IsNullOrWhiteSpace(dto.OwnerSapUser) ? null : dto.OwnerSapUser.Trim(),
+            HasInvalidMaterial = IsSapFlagSet(dto.HasInvalidMaterial),
             Items = items ?? Array.Empty<SalesOrderItem>()
         };
     }
+
+    private static bool IsSapFlagSet(string? flag) =>
+        string.Equals(flag?.Trim(), "X", StringComparison.OrdinalIgnoreCase);
 
     private static SalesOrderItem MapItemToDomain(SapSalesOrderItemDto dto)
     {

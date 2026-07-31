@@ -279,6 +279,44 @@ public class SapClientTests
     }
 
     [Fact]
+    public async Task GetSalesOrders_ByDefault_FiltersHasInvalidMaterialEmpty()
+    {
+        var body = "{\"value\":[]}";
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        await client.GetSalesOrdersAsync(new SalesOrdersQuery { Top = 10 });
+
+        var decoded = Uri.UnescapeDataString(handler.LastRequestUri!);
+        Assert.Contains("HasInvalidMaterial eq ''", decoded);
+    }
+
+    [Fact]
+    public async Task GetSalesOrders_WhenIncludeInvalid_OmitsHasInvalidMaterialFilter()
+    {
+        var body = "{\"value\":[]}";
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        await client.GetSalesOrdersAsync(new SalesOrdersQuery
+        {
+            ExcludeInvalidMaterials = false
+        });
+
+        var decoded = Uri.UnescapeDataString(handler.LastRequestUri!);
+        Assert.DoesNotContain("HasInvalidMaterial", decoded);
+    }
+
+    [Fact]
+    public async Task GetSalesOrderById_MapsHasInvalidMaterial()
+    {
+        var body = "{\"SoNumber\":\"9\",\"Customer\":\"1000\",\"OverallStatus\":\"A\",\"HasInvalidMaterial\":\"X\"}";
+        var client = CreateClient(HttpStatusCode.OK, body, out _);
+
+        var result = await client.GetSalesOrderByIdAsync("9");
+
+        Assert.True(result!.HasInvalidMaterial);
+    }
+
+    [Fact]
     public async Task GetSalesOrders_WhenStatusOpen_FiltersOverallStatusA()
     {
         var body = "{\"value\":[]}";
