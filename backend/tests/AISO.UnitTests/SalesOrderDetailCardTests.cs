@@ -140,7 +140,7 @@ public class SalesOrderDetailCardTests
     [Theory]
     [InlineData(SalesOrderStatus.Delivered)]
     [InlineData(SalesOrderStatus.PartiallyDelivered)]
-    public void BuildSalesOrderDetailCard_WhenDelivered_StillAllowsRejectForSapErrorPath(SalesOrderStatus status)
+    public void BuildSalesOrderDetailCard_WhenDelivered_HidesReject(SalesOrderStatus status)
     {
         var order = SampleOrder(status: status) with { OwnerSapUser = "DEV-249" };
         var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(
@@ -150,7 +150,7 @@ public class SalesOrderDetailCardTests
             currentSapUser: "DEV-249");
         var json = JsonConvert.SerializeObject(attachment.Content);
 
-        Assert.Contains("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
         Assert.DoesNotContain("\"action\":\"forward_so\"", json);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
     }

@@ -7,7 +7,6 @@ public static class SalesOrderWorkflow
 {
     /// <summary>
     /// Delivery started/finished or order cancelled — release / forward no longer apply.
-    /// Reject of delivered orders is left to SAP so business errors can surface.
     /// </summary>
     public static bool BlocksReleaseRejectForward(SalesOrderStatus status) =>
         status is SalesOrderStatus.PartiallyDelivered
@@ -15,11 +14,11 @@ public static class SalesOrderWorkflow
             or SalesOrderStatus.Cancelled;
 
     /// <summary>
-    /// Reject is only blocked when the order is already cancelled.
-    /// Delivered / partially delivered may still call SAP (E2E expects SAP business errors).
+    /// Reject is blocked after delivery has started, and when already cancelled.
+    /// Avoids cryptic SAP item-change errors (e.g. "material cannot be changed") on delivered SOs.
     /// </summary>
     public static bool BlocksReject(SalesOrderStatus status) =>
-        status is SalesOrderStatus.Cancelled;
+        BlocksReleaseRejectForward(status);
 
     public static string BuildBlockedMessage(SalesOrderStatus status, string actionLabel)
     {
