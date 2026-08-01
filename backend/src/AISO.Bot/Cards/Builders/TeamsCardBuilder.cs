@@ -11,14 +11,19 @@ internal static class TeamsCardBuilder
     public static Attachment BuildWelcomeCard(string username) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("welcome.json", new { username });
 
-    public static Attachment BuildLinkSapAccountCard(string displayName, string? errorMessage = null) =>
+    public static Attachment BuildLinkSapAccountCard(
+        string displayName,
+        string? errorMessage = null,
+        string? assignedSapUserId = null) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "link-sap-account.json",
             new
             {
                 displayName,
                 hasError = string.IsNullOrWhiteSpace(errorMessage) ? "false" : "true",
-                errorMessage = errorMessage ?? string.Empty
+                errorMessage = errorMessage ?? string.Empty,
+                hasAssignedId = string.IsNullOrWhiteSpace(assignedSapUserId) ? "false" : "true",
+                assignedSapUserId = assignedSapUserId?.Trim().ToUpperInvariant() ?? string.Empty
             });
 
     public static Attachment BuildHelpCard(string? role = null) =>

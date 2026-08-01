@@ -4,15 +4,16 @@ using AISO.Bot.Services;
 using AISO.SapIntegration;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Dialogs;
+using Microsoft.Bot.Builder.Teams;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.Bot.Dialogs;
 
 /// <summary>
-/// Registration dialog: asks once for a real SAP User ID, validates format + existence
-/// against SAP <c>UserRole</c> / <c>ZAISO_USER_ROLE</c>, maps it to the Teams user, then continues.
-/// Azure AD SSO is intentionally skipped in the shared-tenant demo environment.
+/// Registration dialog: links the Teams user to an admin-assigned SAP User ID
+/// (table <c>sap_link_assignments</c>), validates existence in SAP <c>UserRole</c>,
+/// then continues. Free-form linking of arbitrary SAP IDs is not allowed.
 /// </summary>
 public class SsoDialog : ComponentDialog
 {
@@ -61,15 +62,36 @@ public class SsoDialog : ComponentDialog
             return await stepContext.EndDialogAsync(existing, cancellationToken);
         }
 
+        var email = await TryGetTeamsEmailAsync(stepContext.Context, teamsId, cancellationToken);
+        var assignment = await _userMappingService.FindLinkAssignmentAsync(teamsId, email, cancellationToken);
+        if (assignment is null)
+        {
+            var noAssignment =
+                "No SAP User ID is assigned to your Teams account yet. " +
+                "Ask your admin to add your email in sap_link_assignments, then try again.";
+            await stepContext.Context.SendActivityAsync(
+                MessageFactory.Attachment(
+                    TeamsCardBuilder.BuildLinkSapAccountCard(displayName, noAssignment)),
+                cancellationToken);
+            return await stepContext.EndDialogAsync(null, cancellationToken);
+        }
+
+        stepContext.Values["assignedSapUserId"] = assignment.SapUserId;
+        stepContext.Values["teamsEmail"] = email ?? string.Empty;
+
         var error = stepContext.Options as string;
         return await stepContext.PromptAsync(nameof(TextPrompt), new PromptOptions
         {
             Prompt = (Activity)MessageFactory.Attachment(
-                TeamsCardBuilder.BuildLinkSapAccountCard(displayName, error)),
+                TeamsCardBuilder.BuildLinkSapAccountCard(
+                    displayName,
+                    error,
+                    assignedSapUserId: assignment.SapUserId)),
             RetryPrompt = (Activity)MessageFactory.Attachment(
                 TeamsCardBuilder.BuildLinkSapAccountCard(
                     displayName,
-                    "SAP User ID cannot be empty. Example: DEV-249"))
+                    "SAP User ID cannot be empty. Type your assigned ID to confirm.",
+                    assignedSapUserId: assignment.SapUserId))
         }, cancellationToken);
     }
 
@@ -80,8 +102,17 @@ public class SsoDialog : ComponentDialog
         var teamsId = stepContext.Context.Activity.From.Id;
         var displayName = stepContext.Context.Activity.From.Name ?? "Unknown User";
         var sapUsername = (stepContext.Result as string)?.Trim().ToUpperInvariant() ?? string.Empty;
+        var email = stepContext.Values.TryGetValue("teamsEmail", out var emailObj)
+            ? emailObj as string
+            : null;
+        if (string.IsNullOrWhiteSpace(email))
+            email = await TryGetTeamsEmailAsync(stepContext.Context, teamsId, cancellationToken);
 
-        var validationError = await ValidateSapUserIdAsync(sapUsername, cancellationToken);
+        var validationError = await ValidateSapUserIdAsync(
+            teamsId,
+            email,
+            sapUsername,
+            cancellationToken);
         if (validationError is not null)
         {
             _logger.LogWarning(
@@ -96,7 +127,18 @@ public class SsoDialog : ComponentDialog
                 cancellationToken);
         }
 
-        await _userMappingService.MapUserAsync(teamsId, displayName, sapUsername, cancellationToken);
+        var assignment = await _userMappingService.FindLinkAssignmentAsync(teamsId, email, cancellationToken);
+        await _userMappingService.MapUserAsync(
+            teamsId,
+            displayName,
+            sapUsername,
+            cancellationToken,
+            role: assignment?.Role,
+            salesOrg: assignment?.SalesOrg);
+
+        if (assignment is not null)
+            await _userMappingService.BindAssignmentTeamsUserAsync(assignment, teamsId, cancellationToken);
+
         _logger.LogInformation("SsoDialog: mapped TeamsId={TeamsId} -> SapUser={SapUser}", teamsId, sapUsername);
 
         await stepContext.Context.SendActivityAsync(
@@ -111,20 +153,44 @@ public class SsoDialog : ComponentDialog
         return await stepContext.EndDialogAsync(sapUsername, cancellationToken);
     }
 
-    private async Task<string?> ValidateSapUserIdAsync(string sapUserId, CancellationToken cancellationToken)
+    private async Task<string?> ValidateSapUserIdAsync(
+        string teamsUserId,
+        string? teamsEmail,
+        string sapUserId,
+        CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(sapUserId))
-            return "SAP User ID cannot be empty. Example: DEV-249";
+            return "SAP User ID cannot be empty. Type your assigned ID to confirm.";
 
         if (sapUserId.Contains('@', StringComparison.Ordinal)
             || sapUserId.Contains(' ', StringComparison.Ordinal))
         {
-            return "That looks like an email or Teams name. Enter your SAP User ID (example: DEV-249).";
+            return "That looks like an email or Teams name. Enter your assigned SAP User ID (format: DEV-xxx).";
         }
 
         if (!SapUserIdPattern.IsMatch(sapUserId))
         {
-            return "Invalid SAP User ID format. Use 3–12 characters: letters, digits, hyphen, or underscore (example: DEV-249).";
+            return "Invalid SAP User ID format. Use 3–12 characters: letters, digits, hyphen, or underscore (format: DEV-xxx).";
+        }
+
+        var assignment = await _userMappingService.FindLinkAssignmentAsync(
+            teamsUserId,
+            teamsEmail,
+            cancellationToken);
+        if (assignment is null)
+        {
+            return "No SAP User ID is assigned to your Teams account yet. Ask your admin to provision sap_link_assignments.";
+        }
+
+        if (!string.Equals(assignment.SapUserId, sapUserId, StringComparison.OrdinalIgnoreCase))
+        {
+            return "That SAP User ID is not assigned to your Teams account. Type the ID your admin assigned (shown on the card).";
+        }
+
+        if (await _userMappingService.IsSapUserLinkedToOtherTeamsUserAsync(
+                sapUserId, teamsUserId, cancellationToken))
+        {
+            return $"SAP User ID **{sapUserId}** is already linked to another Teams account. Ask your admin for help.";
         }
 
         var exists = await _sap.SapUserExistsAsync(sapUserId, cancellationToken);
@@ -133,9 +199,28 @@ public class SsoDialog : ComponentDialog
 
         if (exists == false)
         {
-            return $"SAP User ID **{sapUserId}** was not found in AISO (ZAISO_USER_ROLE). Ask your admin to register it, or use a seeded ID such as DEV-249.";
+            return $"SAP User ID **{sapUserId}** was not found in AISO (ZAISO_USER_ROLE). Ask your admin to register it in SAP.";
         }
 
         return "Cannot verify SAP User ID right now: the SAP **UserRole** service is unavailable. Ask the SAP team to expose/publish `ZI_AISO_USER_ROLE` as `UserRole`, then try again.";
+    }
+
+    private async Task<string?> TryGetTeamsEmailAsync(
+        ITurnContext turnContext,
+        string teamsUserId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var member = await TeamsInfo.GetMemberAsync(turnContext, teamsUserId, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(member?.Email))
+                return UserMappingService.NormalizeEmail(member.Email);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SsoDialog: could not resolve Teams email for {TeamsId}", teamsUserId);
+        }
+
+        return null;
     }
 }
