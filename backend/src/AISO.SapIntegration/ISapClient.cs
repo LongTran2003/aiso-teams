@@ -132,7 +132,10 @@ public sealed record CreateSalesOrderItemDto
 /// </summary>
 public sealed record SalesOrdersQuery
 {
-    /// <summary>Either an exact customer ID (e.g. "1000") or a partial name match (e.g. "Philly").</summary>
+    /// <summary>
+    /// Exact customer ID → OData <c>Customer eq</c>;
+    /// name / partial name → <c>contains(CustomerName,'…')</c>.
+    /// </summary>
     public string? CustomerIdOrName { get; init; }
 
     /// <summary>Sales organization code (TV01, FU24, UE00, UW00, DN00, DS00).</summary>

@@ -18,8 +18,8 @@ Ghi nhanh các đầu việc còn dang dở / đã bàn với tester Thuý để
 | ID | Việc | Owner | Note |
 |---|---|---|---|
 | T1-ops | Seed `sap_link_assignments` + smoke link Thuý/Tiến/Long | Long | Bảng trống = logout/re-link sẽ bị chặn |
-| T4 | Chuẩn hoá list SO: **my = owner only** (A) | BE + AI | Cần `OwnerSapUser` đúng (`sap_user`) |
-| T5 | Search customer theo **name** (`contains` CustomerName) | BE | SAP đã có field; BE đang `Customer eq` ID |
+| T4 | Chuẩn hoá list SO: **my = owner only** (A) | BE + AI | PR #216 |
+| T5 | Search customer theo **name** (`contains` CustomerName) | BE | Branch `cursor/t5-customer-name-search` |
 | T6 | Request release NL → **confirm card** trước submit | BE | |
 | T7 | Forward multi-turn / card chọn recipient | BE (+ AI) | |
 | SAP | Expose KPI entities nếu muốn bỏ fallback; confirm OwnerSapUser | Quân | KpiByProduct/Customer CDS đã có một phần |

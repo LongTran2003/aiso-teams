@@ -228,11 +228,10 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 };
             }
 
-            var customerIdMatch = Regex.Match(text, @"(uscu_[a-z0-9]+)", RegexOptions.IgnoreCase);
-            var customerId = customerIdMatch.Success ? customerIdMatch.Groups[1].Value.ToUpperInvariant() : null;
+            var customerIdOrName = ExtractCustomerIdOrName(text);
 
-            var paramsObj = customerId != null
-                ? new { customerIdOrName = customerId }
+            var paramsObj = customerIdOrName != null
+                ? new { customerIdOrName }
                 : (object)new { };
 
             var paramsJson = JsonSerializer.Serialize(paramsObj);
@@ -250,6 +249,60 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
 
         return new DispatchResult { Handled = false, Reason = "intent unclear" };
     }
+
+    private static string? ExtractCustomerIdOrName(string text)
+    {
+        var uscu = Regex.Match(text, @"(uscu_[a-z0-9]+)", RegexOptions.IgnoreCase);
+        if (uscu.Success)
+            return uscu.Groups[1].Value.ToUpperInvariant();
+
+        var labeled = Regex.Match(
+            text,
+            @"(?:customer|khách hàng|khach hang)\s+(.+)$",
+            RegexOptions.IgnoreCase);
+        if (labeled.Success)
+        {
+            var value = CleanCustomerCapture(labeled.Groups[1].Value);
+            if (value is not null)
+                return value;
+        }
+
+        var ofMatch = Regex.Match(
+            text,
+            @"(?:orders?|đơn(?:\s+hàng)?|don(?:\s+hang)?)\s+(?:of|của|cua|for)\s+(.+)$",
+            RegexOptions.IgnoreCase);
+        if (ofMatch.Success)
+        {
+            var raw = ofMatch.Groups[1].Value.Trim();
+            if (raw.StartsWith("customer ", StringComparison.OrdinalIgnoreCase))
+                raw = raw["customer ".Length..];
+            var value = CleanCustomerCapture(raw);
+            if (value is not null)
+                return value;
+        }
+
+        return null;
+    }
+
+    private static string? CleanCustomerCapture(string raw)
+    {
+        var value = raw.Trim().TrimEnd('.', '!', '?');
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        // Avoid treating sales-org filters as customer names ("orders of TV01").
+        if (IsKnownSalesOrg(value))
+            return null;
+
+        return value;
+    }
+
+    private static readonly HashSet<string> KnownSalesOrgs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "TV01", "FU24", "UE00", "UW00", "DN00", "DS00"
+    };
+
+    private static bool IsKnownSalesOrg(string value) => KnownSalesOrgs.Contains(value.Trim());
 
     private static bool IsRequestReleaseIntent(string text) =>
         text.Contains("request release")

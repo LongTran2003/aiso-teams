@@ -40,7 +40,7 @@ public class SapClient : ISapClient
 
         if (!string.IsNullOrWhiteSpace(query.CustomerIdOrName))
         {
-            builder.Filter("Customer", "eq", query.CustomerIdOrName);
+            ApplyCustomerIdOrNameFilter(builder, query.CustomerIdOrName);
         }
 
         if (!string.IsNullOrWhiteSpace(query.SalesOrg))
@@ -658,7 +658,7 @@ public class SapClient : ISapClient
             .Top(query.Top);
 
         if (!string.IsNullOrWhiteSpace(query.CustomerIdOrName))
-            builder.Filter("Customer", "eq", query.CustomerIdOrName);
+            ApplyCustomerIdOrNameFilter(builder, query.CustomerIdOrName);
         if (query.FromDate.HasValue)
             builder.FilterRaw($"DocDate ge {query.FromDate.Value:yyyy-MM-dd}");
         if (query.ToDate.HasValue)
@@ -859,7 +859,7 @@ public class SapClient : ISapClient
             .Top(query.Top);
 
         if (!string.IsNullOrWhiteSpace(query.CustomerIdOrName))
-            builder.Filter("Customer", "eq", query.CustomerIdOrName);
+            ApplyCustomerIdOrNameFilter(builder, query.CustomerIdOrName);
         if (!string.IsNullOrWhiteSpace(query.SalesOrg))
             builder.Filter("SalesOrg", "eq", query.SalesOrg);
         if (query.DaysPastDue.HasValue)
@@ -1019,6 +1019,49 @@ public class SapClient : ISapClient
             NetValue = dto.NetValue ?? 0
         };
     }
+
+    /// <summary>
+    /// Customer ID → <c>Customer eq</c>; customer name / partial name →
+    /// <c>contains(CustomerName,'…')</c> (OData V4 / CAP).
+    /// </summary>
+    internal static void ApplyCustomerIdOrNameFilter(ODataQueryBuilder builder, string customerIdOrName)
+    {
+        var needle = customerIdOrName.Trim();
+        if (needle.Length == 0)
+            return;
+
+        if (LooksLikeCustomerId(needle))
+        {
+            builder.Filter("Customer", "eq", needle);
+            return;
+        }
+
+        var escaped = EscapeODataStringLiteral(needle);
+        builder.FilterRaw($"contains(CustomerName,'{escaped}')");
+    }
+
+    /// <summary>
+    /// Numeric KUNNR-style IDs and codes (USCU_*, CUST-*, alphanumeric with a digit)
+    /// without whitespace are treated as IDs; everything else is a name search.
+    /// </summary>
+    internal static bool LooksLikeCustomerId(string value)
+    {
+        var s = value.Trim();
+        if (s.Length == 0)
+            return false;
+        if (s.Any(char.IsWhiteSpace))
+            return false;
+        if (s.All(char.IsDigit))
+            return true;
+        if (s.StartsWith("USCU_", StringComparison.OrdinalIgnoreCase)
+            || s.StartsWith("CUST-", StringComparison.OrdinalIgnoreCase))
+            return true;
+        return s.Any(char.IsDigit)
+               && s.All(c => char.IsLetterOrDigit(c) || c is '_' or '-');
+    }
+
+    internal static string EscapeODataStringLiteral(string value) =>
+        value.Replace("'", "''", StringComparison.Ordinal);
 
     /// <summary>
     /// Maps domain status to OData filters on SAP SalesOrder fields.
