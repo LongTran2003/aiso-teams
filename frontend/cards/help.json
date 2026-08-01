@@ -41,6 +41,17 @@
         },
         {
           "type": "Action.Submit",
+          "title": "My Orders",
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "My Orders",
+              "text": "show my sales orders"
+            }
+          }
+        },
+        {
+          "type": "Action.Submit",
           "title": "Revenue KPI",
           "data": {
             "msteams": {
@@ -74,7 +85,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "• recent orders\n• show open orders\n• show orders of TV01\n• show open orders of FU24\n• show order 13122\n• show overdue orders\n• show revenue kpi\n• kpi by customer 1000\n• kpi by product MAT-01\n• request release 13122\n• reject order 13122\n• forward order 13122 to DEV-xxx\n• help · logout",
+      "text": "• recent orders\n• show my sales orders\n• show open orders\n• show orders of TV01\n• show open orders of FU24\n• show order 13122\n• show overdue orders\n• show revenue kpi\n• kpi by customer 1000\n• kpi by product MAT-01\n• request release 13122\n• reject order 13122\n• forward order 13122 to DEV-xxx\n• help · logout",
       "wrap": true,
       "spacing": "Small",
       "fontType": "Monospace",

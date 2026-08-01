@@ -215,7 +215,7 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
-        // Pattern 2: List orders — "show orders", "đơn hàng gần đây"
+        // Pattern 2: List orders — "show orders", "đơn hàng gần đây", "my sales orders"
         if (text.Contains("order") || text.Contains("đơn"))
         {
             var fn = _registry.GetByName("GetSalesOrders");
@@ -230,10 +230,22 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
 
             var customerIdMatch = Regex.Match(text, @"(uscu_[a-z0-9]+)", RegexOptions.IgnoreCase);
             var customerId = customerIdMatch.Success ? customerIdMatch.Groups[1].Value.ToUpperInvariant() : null;
+            var ownedByMe = IsMyOrdersIntent(text);
+            var statusOpen = text.Contains("open") || text.Contains("mở");
 
-            var paramsObj = customerId != null
-                ? new { customerIdOrName = customerId }
-                : (object)new { };
+            object paramsObj;
+            if (customerId != null && ownedByMe)
+                paramsObj = new { customerIdOrName = customerId, ownedByMe = true };
+            else if (customerId != null)
+                paramsObj = new { customerIdOrName = customerId };
+            else if (ownedByMe && statusOpen)
+                paramsObj = new { ownedByMe = true, status = "Open" };
+            else if (ownedByMe)
+                paramsObj = new { ownedByMe = true };
+            else if (statusOpen)
+                paramsObj = new { status = "Open" };
+            else
+                paramsObj = new { };
 
             var paramsJson = JsonSerializer.Serialize(paramsObj);
             using var doc = JsonDocument.Parse(paramsJson);
@@ -250,6 +262,15 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
 
         return new DispatchResult { Handled = false, Reason = "intent unclear" };
     }
+
+    private static bool IsMyOrdersIntent(string text) =>
+        text.Contains("my sales")
+        || text.Contains("my order")
+        || text.Contains("của tôi")
+        || text.Contains("cua toi")
+        || text.Contains("đơn hàng của tôi")
+        || text.Contains("don hang cua toi")
+        || (text.Contains("my") && (text.Contains("order") || text.Contains("orders")));
 
     private static bool IsRequestReleaseIntent(string text) =>
         text.Contains("request release")

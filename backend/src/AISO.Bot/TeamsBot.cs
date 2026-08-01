@@ -1069,7 +1069,7 @@ public class TeamsBot : TeamsActivityHandler
                     return;
                 }
 
-                var card = TeamsCardBuilder.BuildSoSummaryCard(orders);
+                var card = TeamsCardBuilder.BuildSoSummaryCard(orders, getOrdersResponse.Title);
                 await ReplaceLoadingActivityAsync(
                     turnContext,
                     loadingActivityId,

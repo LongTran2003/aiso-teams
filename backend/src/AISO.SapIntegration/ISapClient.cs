@@ -143,6 +143,12 @@ public sealed record SalesOrdersQuery
     public SalesOrderStatus? Status { get; init; }
 
     /// <summary>
+    /// When set, OData filters <c>OwnerSapUser eq '{value}'</c> (orders owned by that SAP user).
+    /// Used for "my sales orders" / "đơn của tôi".
+    /// </summary>
+    public string? OwnerSapUser { get; init; }
+
+    /// <summary>
     /// When true (default), OData filters <c>HasInvalidMaterial eq ''</c> so list/KPI
     /// paths exclude SOs with missing material master data.
     /// Set false only for admin/debug listing of dirty orders.

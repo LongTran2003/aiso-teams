@@ -56,7 +56,8 @@ Use for manual Teams testing and demo rehearsal.
 
 | # | Input examples | Expected |
 |---|---|---|
-| 2.1 | `recent orders` · `show my sales orders` · `xem danh sách đơn hàng` | SO list card |
+| 2.1 | `recent orders` · `xem danh sách đơn hàng` · `show all open orders` | SO list card titled **Sales orders** (no owner filter) |
+| 2.1b | `show my sales orders` · `đơn hàng của tôi` · `xem danh sách đơn hàng của tôi` | List titled **My sales orders**; only SOs where `OwnerSapUser` = linked SAP user |
 | 2.2 | `show orders of customer 1000` | Filtered list or empty card |
 | 2.3 | `show order 13122` · `xem chi tiết đơn 9` | Detail card (customer, value, status, items) |
 | 2.4 | `check order 5001` | Detail / status path |
