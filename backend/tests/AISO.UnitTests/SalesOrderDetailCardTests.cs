@@ -239,6 +239,28 @@ public class SalesOrderDetailCardTests
         Assert.Contains("no longer own", json);
     }
 
+    [Fact]
+    public void BuildConfirmForwardCard_IncludesAllRecipientsAndPreselect()
+    {
+        var choices = new[]
+        {
+            ("Long (DEV-249)", "DEV-249"),
+            ("Thuy (DEV-244)", "DEV-244")
+        };
+
+        var attachment = TeamsCardBuilder.BuildConfirmForwardCard(
+            "00000013122",
+            choices,
+            senderName: "Employee (DEV-024)",
+            selectedRecipient: "DEV-244");
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("DEV-249", json);
+        Assert.Contains("DEV-244", json);
+        Assert.Contains("00000013122", json);
+        Assert.Contains("forward_so_confirm", json);
+    }
+
     private static SalesOrder SampleOrder(bool withItems = false, SalesOrderStatus status = SalesOrderStatus.Blocked) =>
         new()
         {

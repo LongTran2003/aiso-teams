@@ -7,9 +7,9 @@ using Microsoft.Extensions.Logging;
 namespace AISO.AiOrchestration.Functions;
 
 /// <summary>
-/// Forwards a Sales Order to another user for review/approval.
-/// Maps to AI function schema <c>ForwardOrder</c>.
-/// Ownership is enforced by SAP <c>zaiso_so_map</c> (and by BE when <c>OwnerSapUser</c> is present).
+/// NL / AI forward: validate the sales order and return a confirm-card payload.
+/// Does <b>not</b> call SAP — that happens on Adaptive Card <c>forward_so_confirm</c>
+/// after the user picks a recipient and confirms.
 /// </summary>
 public sealed class ForwardOrderFunction : IFunction
 {
@@ -30,7 +30,10 @@ public sealed class ForwardOrderFunction : IFunction
     public string Name => "ForwardOrder";
 
     public string Description =>
-        "Forward a sales order you own to another SAP user. Transfers ownership; you will no longer own the order.";
+        "Prepare forwarding a sales order you own to another SAP user. " +
+        "Validates the order and returns a confirmation step with recipient picker — " +
+        "does not transfer ownership until the user confirms. " +
+        "Call with order_id even when the recipient is unknown; pass forward_to_user when stated.";
 
     public string ParametersJsonSchema => """
         {
@@ -42,10 +45,10 @@ public sealed class ForwardOrderFunction : IFunction
             },
             "forward_to_user": {
               "type": "string",
-              "description": "Target recipient SAP user id (e.g. DEV-300)."
+              "description": "Optional suggested recipient (SAP id, name, or email). Used to pre-select on the confirm card when it matches a linked user."
             }
           },
-          "required": ["order_id", "forward_to_user"]
+          "required": ["order_id"]
         }
         """;
 
@@ -66,14 +69,9 @@ public sealed class ForwardOrderFunction : IFunction
             return FunctionResult.Fail("Missing required parameter: order_id");
         }
 
-        if (string.IsNullOrWhiteSpace(forwardTo))
-        {
-            return FunctionResult.Fail("Missing required parameter: forward_to_user");
-        }
-
-        // Role gating is RolePolicy (Employee+). Ownership is enforced below / in SAP.
         _logger.LogInformation(
-            "ForwardOrder: orderId={OrderId}, forwardTo={ForwardTo}, sapUser={SapUser}", orderId, forwardTo, requestingSapUser);
+            "ForwardOrder confirm step: orderId={OrderId}, suggestedRecipient={ForwardTo}, sapUser={SapUser}",
+            orderId, forwardTo, requestingSapUser);
 
         try
         {
@@ -86,7 +84,8 @@ public sealed class ForwardOrderFunction : IFunction
             if (SalesOrderWorkflow.BlocksReleaseRejectForward(existing.Status))
             {
                 return FunctionResult.Fail(
-                    SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Forward"));
+                    SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Forward"),
+                    "VALIDATION");
             }
 
             if (existing.HasInvalidMaterial)
@@ -102,34 +101,31 @@ public sealed class ForwardOrderFunction : IFunction
                 return FunctionResult.Fail(
                     SalesOrderWorkflow.BuildPendingApprovalBlockedMessage(
                         "Forward",
-                        pending.RequestedBySapUser));
+                        pending.RequestedBySapUser),
+                    "VALIDATION");
             }
 
             if (!SalesOrderWorkflow.IsCurrentOwner(existing.OwnerSapUser, requestingSapUser)
                 && !string.IsNullOrWhiteSpace(existing.OwnerSapUser))
             {
                 return FunctionResult.Fail(
-                    SalesOrderWorkflow.BuildNotOwnerBlockedMessage("Forward", existing.OwnerSapUser));
+                    SalesOrderWorkflow.BuildNotOwnerBlockedMessage("Forward", existing.OwnerSapUser),
+                    "VALIDATION");
             }
 
-            var updatedOrder = await _sap.ForwardOrderAsync(orderId, forwardTo, requestingSapUser, ct);
-
-            _logger.LogInformation("AUDIT: User {User} successfully forwarded order {OrderId} to {ForwardTo}", requestingSapUser, orderId, forwardTo);
-
-            var result = new
-            {
-                order_id = updatedOrder.SoNumber,
-                action = "Forwarded",
-                forward_to_user = forwardTo,
-                message = $"Ownership of sales order {updatedOrder.SoNumber} transferred to {forwardTo}. You no longer own this order."
-            };
-
-            return FunctionResult.Ok(result);
+            return FunctionResult.Ok(new ConfirmForwardResponse(
+                existing.SoNumber,
+                string.IsNullOrWhiteSpace(forwardTo) ? null : forwardTo.Trim()));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to forward order {OrderId}", orderId);
-            return FunctionResult.Fail($"Failed to forward order in SAP: {ex.Message}");
+            _logger.LogError(ex, "Failed to prepare forward for order {OrderId}", orderId);
+            return FunctionResult.Fail($"Failed to prepare forward: {ex.Message}");
         }
     }
 }
+
+/// <summary>
+/// Payload telling the bot to show <c>confirm-forward</c> before calling SAP.
+/// </summary>
+public sealed record ConfirmForwardResponse(string SoNumber, string? SuggestedRecipient = null);

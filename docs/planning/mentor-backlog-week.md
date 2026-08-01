@@ -18,10 +18,10 @@ Ghi nhanh các đầu việc còn dang dở / đã bàn với tester Thuý để
 | ID | Việc | Owner | Note |
 |---|---|---|---|
 | T1-ops | Seed `sap_link_assignments` + smoke link Thuý/Tiến/Long | Long | Bảng trống = logout/re-link sẽ bị chặn |
-| T4 | Chuẩn hoá list SO: **my = owner only** (A) | BE + AI | PR #216 |
-| T5 | Search customer theo **name** (`contains` CustomerName) | BE | PR #217 |
-| T6 | Request release NL → **confirm card** trước submit | BE | Branch `cursor/t6-request-release-confirm-card` |
-| T7 | Forward multi-turn / card chọn recipient | BE (+ AI) | |
+| T4 | Chuẩn hoá list SO: **my = owner only** (A) | BE + AI | Done (#216) |
+| T5 | Search customer theo **name** (`contains` CustomerName) | BE | Done (#217) |
+| T6 | Request release NL → **confirm card** trước submit | BE | Done (#218) |
+| T7 | Forward multi-turn / card chọn recipient | BE (+ AI) | Branch `cursor/t7-forward-confirm-recipient-card` |
 | SAP | Expose KPI entities nếu muốn bỏ fallback; confirm OwnerSapUser | Quân | KpiByProduct/Customer CDS đã có một phần |
 | Auth | Fiori-like login | — | **Tạm bỏ** — bàn lại GV (ý Long ghi nhầm trong PDF Thuý) |
 | — | PO reference tiếng Việt | — | Không bug — data SAP |

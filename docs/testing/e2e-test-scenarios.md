@@ -111,9 +111,11 @@ Use for manual Teams testing and demo rehearsal.
 
 | # | Input | Expected |
 |---|---|---|
-| 6.1 | Forward → recipient → Send | Success forwarded; recipient = SAP User ID |
-| 6.2 | Display name on card | SAP User ID (e.g. `DEV-249`), not Teams display confusion |
+| 6.1 | `forward order 13122` (no recipient) | **Confirm** card with recipient ChoiceSet (not SAP yet) |
+| 6.1b | Confirm → pick recipient → **Send** | Success forwarded; recipient = SAP User ID |
+| 6.2 | `forward order 13122 to DEV-024` | Confirm card; DEV-024 pre-selected when linked |
 | 6.3 | Cancel confirm | No forward |
+| 6.4 | Display names on picker | Title shows `Name (DEV-xxx)`; value = SAP User ID |
 
 ---
 

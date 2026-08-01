@@ -139,8 +139,9 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
-        // Pattern: Forward Order
-        if ((text.Contains("forward") || text.Contains("chuyển")) && (text.Contains("đơn") || text.Contains("order")))
+        // Pattern: Forward Order — show confirm card (recipient optional in NL)
+        if ((text.Contains("forward") || text.Contains("chuyển") || text.Contains("bàn giao") || text.Contains("ban giao"))
+            && (text.Contains("đơn") || text.Contains("order") || OrderIdPattern().IsMatch(text)))
         {
             var fn = _registry.GetByName("ForwardOrder");
             if (fn is not null)
@@ -148,10 +149,16 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 var orderMatch = OrderIdPattern().Match(text);
                 var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
 
-                var toMatch = Regex.Match(text, @"(?:to|cho)\s+([^\s]+)");
-                var forwardTo = toMatch.Success ? toMatch.Groups[1].Value : "manager@aiso.com";
+                var toMatch = Regex.Match(
+                    text,
+                    @"(?:to|cho|tới|toi)\s+(DEV-\d+|[\w.\-]+@[\w.\-]+|[^\s,]+(?:\s+[^\s,]+){0,3})",
+                    RegexOptions.IgnoreCase);
+                var forwardTo = toMatch.Success ? toMatch.Groups[1].Value.Trim().TrimEnd('.', '!', '?') : null;
 
-                var paramsObj = new { order_id = orderId, forward_to_user = forwardTo };
+                object paramsObj = string.IsNullOrWhiteSpace(forwardTo)
+                    ? new { order_id = orderId }
+                    : new { order_id = orderId, forward_to_user = forwardTo };
+
                 var paramsJson = JsonSerializer.Serialize(paramsObj);
                 using var doc = JsonDocument.Parse(paramsJson);
                 var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);

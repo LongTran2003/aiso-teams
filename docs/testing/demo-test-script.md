@@ -144,7 +144,8 @@ Dùng **Employee hoặc Manager** tùy ownership.
 | # | Hành động | Kỳ vọng | Pass |
 |---|---|---|---|
 | W1 | `Reject order <SO_C Open>` → chọn reason → Confirm | Success, số SO đúng | [ ] |
-| W2 | `Forward order <SO…>` → chọn recipient → Send | Message hiện **SAP User ID** người nhận | [ ] |
+| W2 | `Forward order <SO…>` (chưa nói recipient) | Card confirm + **ChoiceSet** recipients | [ ] |
+| W2b | Chọn recipient → **Send** | Success; message hiện **SAP User ID** người nhận | [ ] |
 | W3 | Reject order đã Delivered (NL hoặc card) | VALIDATION: not allowed after delivery; không còn thẻ SAP_ERROR “material cannot be changed” | [ ] |
 | W4 | `logout` | Đăng xuất OK | [ ] |
 

@@ -175,11 +175,32 @@ internal static class TeamsCardBuilder
     public static Attachment BuildKpiByProductCard(object data) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("kpi-by-product.json", data);
 
-    public static Attachment BuildConfirmForwardCard(string salesOrderNumber, IEnumerable<(string Title, string Value)>? choices = null, string? senderName = null)
+    public static Attachment BuildConfirmForwardCard(
+        string salesOrderNumber,
+        IEnumerable<(string Title, string Value)>? choices = null,
+        string? senderName = null,
+        string? selectedRecipient = null)
     {
-        var recipientChoice = (choices ?? Array.Empty<(string Title, string Value)>())
+        var recipientChoices = (choices ?? Array.Empty<(string Title, string Value)>())
             .Select(choice => new { title = choice.Title, value = choice.Value })
-            .FirstOrDefault();
+            .ToList();
+
+        if (recipientChoices.Count == 0)
+        {
+            recipientChoices.Add(new { title = "No recipient available", value = string.Empty });
+        }
+
+        var selected = string.IsNullOrWhiteSpace(selectedRecipient)
+            ? string.Empty
+            : selectedRecipient.Trim();
+
+        // Pre-select only when the suggestion matches a choice value (SAP User ID).
+        if (!string.IsNullOrEmpty(selected)
+            && !recipientChoices.Any(c =>
+                string.Equals(c.value, selected, StringComparison.OrdinalIgnoreCase)))
+        {
+            selected = string.Empty;
+        }
 
         return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "confirm-forward.json",
@@ -187,7 +208,8 @@ internal static class TeamsCardBuilder
             {
                 salesOrderNumber,
                 senderName = senderName ?? "Unknown user",
-                recipientChoice = recipientChoice ?? new { title = "No recipient available", value = string.Empty }
+                selectedRecipient = selected,
+                recipientChoices
             });
     }
 
