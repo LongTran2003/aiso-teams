@@ -317,6 +317,23 @@ public class SapClientTests
     }
 
     [Fact]
+    public async Task GetSalesOrders_WhenOwnerSapUser_FiltersOwnerEq()
+    {
+        var body = "{\"value\":[]}";
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        await client.GetSalesOrdersAsync(new SalesOrdersQuery
+        {
+            OwnerSapUser = "DEV-249",
+            Top = 10
+        });
+
+        Assert.NotNull(handler.LastRequestUri);
+        var decoded = Uri.UnescapeDataString(handler.LastRequestUri!);
+        Assert.Contains("OwnerSapUser eq 'DEV-249'", decoded);
+    }
+
+    [Fact]
     public async Task GetSalesOrders_WhenStatusOpen_FiltersOverallStatusA()
     {
         var body = "{\"value\":[]}";
