@@ -37,7 +37,8 @@
       "id": "comment",
       "label": "Note for manager",
       "placeholder": "Optional context for the approver…",
-      "isMultiline": true
+      "isMultiline": true,
+      "value": "${comment}"
     }
   ],
   "actions": [

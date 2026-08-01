@@ -1351,6 +1351,22 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
+            if (result.Payload is AISO.AiOrchestration.Functions.ConfirmRequestReleaseResponse confirmRelease)
+            {
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildConfirmRequestReleaseCard(
+                        confirmRelease.SoNumber,
+                        confirmRelease.Comment),
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with confirm-request-release card for SO {SoNumber}",
+                    confirmRelease.SoNumber);
+                return;
+            }
+
             // Workflow action results (Release, Reject, Forward) — show a success card when applicable
             if (result.Payload is not null)
             {
