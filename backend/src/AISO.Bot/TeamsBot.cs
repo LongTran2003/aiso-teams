@@ -902,7 +902,7 @@ public class TeamsBot : TeamsActivityHandler
             _logger.LogInformation(
                 "Bot received message: {UserMessage}", userMessage);
 
-            if (string.Equals(normalizedMessage, "help", StringComparison.OrdinalIgnoreCase))
+            if (IsHelpIntent(normalizedMessage))
             {
                 var currentRole = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
                 var roleName = currentRole switch
@@ -1528,6 +1528,19 @@ public class TeamsBot : TeamsActivityHandler
     private static bool IsOrderDetailFunction(string? functionName) =>
         string.Equals(functionName, "CheckOrderStatus", StringComparison.OrdinalIgnoreCase)
         || string.Equals(functionName, "GetOrderDetail", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// EN/VI phrases that should open the Help Adaptive Card (not the AI function dump).
+    /// </summary>
+    private static bool IsHelpIntent(string message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return false;
+
+        var t = message.Trim().ToLowerInvariant();
+        return t is "help" or "hướng dẫn" or "huong dan" or "trợ giúp" or "tro giup"
+            or "hướng dẫn sử dụng" or "huong dan su dung" or "guide" or "commands";
+    }
 
     private static async Task ReplaceLoadingActivityAsync(ITurnContext turnContext, string? loadingActivityId, Attachment? attachment, CancellationToken cancellationToken)
     {
