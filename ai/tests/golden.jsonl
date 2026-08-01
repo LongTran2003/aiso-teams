@@ -121,6 +121,9 @@
 {"query": "Từ chối đơn hàng này vì hết hàng.", "expected_function": null, "expected_args": {}, "tier": 1}
 {"query": "recent orders", "expected_function": "GetSalesOrders", "expected_args": {}, "tier": 1}
 {"query": "xem đơn hàng gần đây", "expected_function": "GetSalesOrders", "expected_args": {}, "tier": 1}
+{"query": "show my sales orders", "expected_function": "GetSalesOrders", "expected_args": {"ownedByMe": true}, "tier": 1}
+{"query": "xem danh sách đơn hàng của tôi", "expected_function": "GetSalesOrders", "expected_args": {"ownedByMe": true}, "tier": 1}
+{"query": "đơn hàng của tôi", "expected_function": "GetSalesOrders", "expected_args": {"ownedByMe": true}, "tier": 1}
 {"query": "show open orders of TV01", "expected_function": "GetSalesOrders", "expected_args": {"status": "Open", "salesOrg": "TV01"}, "tier": 1}
 {"query": "hiển thị đơn hàng mở của TV01", "expected_function": "GetSalesOrders", "expected_args": {"status": "Open", "salesOrg": "TV01"}, "tier": 1}
 {"query": "show open orders of FU24", "expected_function": "GetSalesOrders", "expected_args": {"status": "Open", "salesOrg": "FU24"}, "tier": 1}

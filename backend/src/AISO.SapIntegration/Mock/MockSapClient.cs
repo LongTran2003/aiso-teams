@@ -26,6 +26,7 @@ public sealed class MockSapClient : ISapClient
             Currency = "USD",
             SalesOrg = "UE00",
             Status = SalesOrderStatus.Open,
+            OwnerSapUser = "DEV-249",
             Items = new List<SalesOrderItem>
             {
                 new()
@@ -58,6 +59,7 @@ public sealed class MockSapClient : ISapClient
             Currency = "USD",
             SalesOrg = "UE00",
             Status = SalesOrderStatus.Delivered,
+            OwnerSapUser = "DEV-024",
             Items = new List<SalesOrderItem>
             {
                 new()
@@ -127,6 +129,7 @@ public sealed class MockSapClient : ISapClient
             Currency = "USD",
             SalesOrg = "UW00",
             Status = SalesOrderStatus.Open,
+            OwnerSapUser = "DEV-249",
             Items = new List<SalesOrderItem>
             {
                 new()
@@ -180,7 +183,7 @@ public sealed class MockSapClient : ISapClient
         _logger?.LogDebug("MockSapClient.GetSalesOrdersAsync: customer={Customer}, salesOrg={SalesOrg}, top={Top}",
             query.CustomerIdOrName, query.SalesOrg, query.Top);
 
-        IEnumerable<SalesOrder> q = SeedData;
+        IEnumerable<SalesOrder> q = SeedData.Select(WithOwnerOverlay);
         if (!string.IsNullOrWhiteSpace(query.CustomerIdOrName))
         {
             var needle = query.CustomerIdOrName;
@@ -195,6 +198,11 @@ public sealed class MockSapClient : ISapClient
             q = q.Where(o => o.OrderDate <= query.ToDate.Value);
         if (query.Status.HasValue)
             q = q.Where(o => o.Status == query.Status.Value);
+        if (!string.IsNullOrWhiteSpace(query.OwnerSapUser))
+        {
+            var owner = query.OwnerSapUser.Trim();
+            q = q.Where(o => string.Equals(o.OwnerSapUser, owner, StringComparison.OrdinalIgnoreCase));
+        }
         if (query.ExcludeInvalidMaterials)
             q = q.Where(o => !o.HasInvalidMaterial);
 
@@ -209,9 +217,13 @@ public sealed class MockSapClient : ISapClient
         if (order is null)
             return Task.FromResult<SalesOrder?>(null);
 
-        _owners.TryGetValue(soNumber, out var owner);
-        return Task.FromResult<SalesOrder?>(order with { OwnerSapUser = owner });
+        return Task.FromResult<SalesOrder?>(WithOwnerOverlay(order));
     }
+
+    private SalesOrder WithOwnerOverlay(SalesOrder order) =>
+        _owners.TryGetValue(order.SoNumber, out var owner)
+            ? order with { OwnerSapUser = owner }
+            : order;
 
     public Task<SalesOrder> CreateSalesOrderAsync(CreateSalesOrderDto dto, CancellationToken ct = default)
     {

@@ -12,7 +12,7 @@
           "items": [
             {
               "type": "TextBlock",
-              "text": "Sales orders",
+              "text": "${title}",
               "size": "Large",
               "weight": "Bolder",
               "wrap": true

@@ -94,7 +94,7 @@ Nói ngắn: *Bot MS Teams → AI → .NET BE → SAP S/4. Hôm nay demo phân q
 | # | Hành động / câu lệnh | Kỳ vọng | Pass |
 |---|---|---|---|
 | E1 | `hi` → login SAP ID Employee | Map OK | [ ] |
-| E2 | `Show my sales orders` | List / card orders | [ ] |
+| E2 | `Show my sales orders` | Card **My sales orders** — chỉ đơn `OwnerSapUser` = user đã link | [ ] |
 | E3 | `Show detail of order <SO_A>` | Chi tiết đúng số SO | [ ] |
 | E4 | `Show KPI summary` | **Thẻ KPI** (không chỉ text success) | [ ] |
 | E5 | `Approve order <SO_A>` / `Release order <SO_A>` | **`NOT_AUTHORIZED`** — Employee không release trực tiếp | [ ] |

@@ -57,7 +57,8 @@ Use for manual Teams testing and demo rehearsal.
 | # | Input examples | Expected |
 |---|---|---|
 | 2.1 | `recent orders` · `show my sales orders` · `xem danh sách đơn hàng` | SO list card |
-| 2.2 | `show orders of customer 1000` | Filtered list or empty card |
+| 2.2 | `show orders of customer 1000` | Filtered by Customer ID (`Customer eq`) or empty card |
+| 2.2b | `Tìm đơn của Philly Bikes` · `show orders of Philly Bikes` | Filtered by name (`contains(CustomerName,…)`) or empty card |
 | 2.3 | `show order 13122` · `xem chi tiết đơn 9` | Detail card (customer, value, status, items) |
 | 2.4 | `check order 5001` | Detail / status path |
 | 2.5 | Unknown SO (`show order 9999999999`) | **Not found** error card (not plain text crash) |

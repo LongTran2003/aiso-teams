@@ -23,8 +23,10 @@ public sealed class GetSalesOrdersFunction : IFunction
 
     public string Description =>
         "Retrieve sales orders. Supports filtering by customer (ID or partial name), " +
-        "sales organization (TV01/FU24/UE00/UW00/DN00/DS00), date range, and status. " +
-        "Returns the most recent orders matching the filter.";
+        "sales organization, date range, status, and ownership. " +
+        "For 'my sales orders' / 'đơn của tôi' / 'đơn hàng của tôi', set ownedByMe=true " +
+        "(filters OwnerSapUser to the requesting SAP user). " +
+        "For 'recent orders' / 'show open orders' / 'all open orders' without 'my', leave ownedByMe unset.";
 
     public string ParametersJsonSchema => """
         {
@@ -32,7 +34,7 @@ public sealed class GetSalesOrdersFunction : IFunction
           "properties": {
             "customerIdOrName": {
               "type": "string",
-              "description": "Customer ID (e.g. '1000') or partial customer name (e.g. 'Philly')."
+              "description": "Customer ID (exact eq on Customer, e.g. '1000') or partial customer name (contains on CustomerName, e.g. 'Philly Bikes')."
             },
             "salesOrg": {
               "type": "string",
@@ -45,6 +47,10 @@ public sealed class GetSalesOrdersFunction : IFunction
               "type": "string",
               "enum": ["Open", "Blocked", "PartiallyDelivered", "Delivered", "Invoiced", "Cancelled"]
             },
+            "ownedByMe": {
+              "type": "boolean",
+              "description": "When true, only return orders owned by the requesting SAP user (OwnerSapUser). Use for 'my orders' / 'của tôi'."
+            },
             "top": { "type": "integer", "default": 10, "minimum": 1, "maximum": 50 }
           },
           "additionalProperties": false
@@ -53,7 +59,10 @@ public sealed class GetSalesOrdersFunction : IFunction
 
     public async Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
     {
-        // Support both BE param names and AI team param names
+        var ownedByMe = GetBool(parameters, "ownedByMe")
+                     ?? GetBool(parameters, "mine_only")
+                     ?? GetBool(parameters, "owned_by_me");
+
         var query = new SalesOrdersQuery
         {
             CustomerIdOrName = GetString(parameters, "customerIdOrName")
@@ -64,21 +73,23 @@ public sealed class GetSalesOrdersFunction : IFunction
             ToDate = GetDate(parameters, "toDate")
                   ?? GetDate(parameters, "date_to"),
             Status = GetEnum<SalesOrderStatus>(parameters, "status"),
+            OwnerSapUser = ownedByMe == true
+                ? requestingSapUser
+                : GetString(parameters, "ownerSapUser") ?? GetString(parameters, "owner_sap_user"),
             Top = GetInt(parameters, "top") ?? 10
         };
 
         _logger.LogInformation(
             "Executing getSalesOrders: customer={Customer}, salesOrg={SalesOrg}, " +
-            "from={FromDate}, to={ToDate}, status={Status}, top={Top}",
+            "from={FromDate}, to={ToDate}, status={Status}, owner={Owner}, top={Top}",
             query.CustomerIdOrName, query.SalesOrg, query.FromDate, query.ToDate,
-            query.Status, query.Top);
+            query.Status, query.OwnerSapUser, query.Top);
 
         var orders = await _sap.GetSalesOrdersAsync(query, ct);
 
         _logger.LogInformation(
             "getSalesOrders returned {Count} orders", orders.Count);
 
-        // Generate a professional QuickChart.io URL for the FE
         string? chartUrl = null;
         if (orders.Any())
         {
@@ -107,12 +118,12 @@ public sealed class GetSalesOrdersFunction : IFunction
             }
             """;
 
-            // Remove whitespace to shorten URL
             chartConfig = System.Text.RegularExpressions.Regex.Replace(chartConfig, @"\s+", "");
             chartUrl = $"https://quickchart.io/chart?c={Uri.EscapeDataString(chartConfig)}";
         }
 
-        var response = new GetSalesOrdersResponse(orders, chartUrl);
+        var title = ownedByMe == true ? "My sales orders" : "Sales orders";
+        var response = new GetSalesOrdersResponse(orders, chartUrl, title);
 
         return FunctionResult.Ok(response);
     }
@@ -121,6 +132,19 @@ public sealed class GetSalesOrdersFunction : IFunction
         el.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.String
             ? p.GetString()
             : null;
+
+    private static bool? GetBool(JsonElement el, string name)
+    {
+        if (!el.TryGetProperty(name, out var p))
+            return null;
+        return p.ValueKind switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            JsonValueKind.String when bool.TryParse(p.GetString(), out var b) => b,
+            _ => null
+        };
+    }
 
     private static int? GetInt(JsonElement el, string name) =>
         el.TryGetProperty(name, out var p) && p.ValueKind == JsonValueKind.Number
@@ -143,5 +167,7 @@ public sealed class GetSalesOrdersFunction : IFunction
     }
 }
 
-public record GetSalesOrdersResponse(IReadOnlyList<SalesOrder> Orders, string? ChartUrl);
-
+public record GetSalesOrdersResponse(
+    IReadOnlyList<SalesOrder> Orders,
+    string? ChartUrl,
+    string Title = "Sales orders");
