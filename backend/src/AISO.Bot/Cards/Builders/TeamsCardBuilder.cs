@@ -386,10 +386,13 @@ internal static class TeamsCardBuilder
         return true;
     }
 
-    public static Attachment BuildSoSummaryCard(IReadOnlyList<SalesOrder> orders)
+    public static Attachment BuildSoSummaryCard(
+        IReadOnlyList<SalesOrder> orders,
+        string? title = null)
     {
         var data = new
         {
+            title = string.IsNullOrWhiteSpace(title) ? "Sales orders" : title.Trim(),
             count = orders.Count,
             orders = orders.Select(o => new
             {

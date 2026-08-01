@@ -1,6 +1,6 @@
 {
   "name": "GetSalesOrders",
-  "description": "Retrieve sales orders list from SAP based on optional filters. All params optional. Do NOT use for pending approvals / approval inbox — use GetPendingApprovals instead.",
+  "description": "Retrieve sales orders list from SAP based on optional filters. All params optional. For phrases like 'my sales orders', 'show my orders', 'đơn của tôi', 'xem danh sách đơn hàng của tôi' set ownedByMe=true. For 'recent orders', 'show open orders', 'show all open orders' without 'my'/'của tôi', do NOT set ownedByMe. Do NOT use for pending approvals — use GetPendingApprovals instead.",
   "parameters": {
     "type": "object",
     "properties": {
@@ -27,6 +27,10 @@
         "type": ["string", "null"],
         "enum": ["TV01", "FU24", "UE00", "UW00", "DN00", "DS00", null],
         "description": "Sales organization code filter."
+      },
+      "ownedByMe": {
+        "type": ["boolean", "null"],
+        "description": "True = only orders owned by the requesting SAP user (OwnerSapUser). Use for my/của tôi."
       },
       "top": {
         "type": ["integer", "null"],

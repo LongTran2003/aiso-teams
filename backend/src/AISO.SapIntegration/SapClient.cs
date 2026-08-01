@@ -63,6 +63,11 @@ public class SapClient : ISapClient
             ApplyStatusFilter(builder, query.Status.Value);
         }
 
+        if (!string.IsNullOrWhiteSpace(query.OwnerSapUser))
+        {
+            builder.Filter("OwnerSapUser", "eq", query.OwnerSapUser.Trim());
+        }
+
         // Default: hide SOs with missing material master (MARA) from list/KPI pickers.
         // Empty-string filter must use FilterRaw — Filter() skips blank values.
         if (query.ExcludeInvalidMaterials)

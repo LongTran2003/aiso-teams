@@ -215,7 +215,7 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
-        // Pattern 2: List orders — "show orders", "đơn hàng gần đây"
+        // Pattern 2: List orders — "show orders", "đơn hàng gần đây", "my sales orders"
         if (text.Contains("order") || text.Contains("đơn"))
         {
             var fn = _registry.GetByName("GetSalesOrders");
