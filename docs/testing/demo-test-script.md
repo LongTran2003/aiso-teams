@@ -15,21 +15,31 @@ Liên quan: [#157](https://github.com/LongTran2003/aiso-teams/issues/157) · [#1
 |---|---|---|---|
 | P1 | Merge + deploy BE/Bot bản RBAC (`feature/be-rbac-role-gating`) | BE | [ ] |
 | P2 | Deploy AI (có schema `RequestRelease`, `ApproveOrder`, …) | AI | [ ] |
-| P3 | Chạy migration Postgres trên Azure (`Role`, `SalesOrg`, `order_approvals`) | BE | [ ] |
+| P3 | Chạy migration Postgres (`Role`, `SalesOrg`, `order_approvals`, **`sap_link_assignments`**) | BE | [ ] |
 | P4 | Smoke: bot online, login OK | BE | [ ] |
 
-### 0.2 Seed 3 tài khoản test (Postgres `user_mappings`)
+### 0.2 Seed tài khoản test (Postgres)
 
-| Role | Teams user (người demo) | `SapUserId` (ví dụ) | `Role` | `SalesOrg` |
-|---|---|---|---|---|
-| **Employee** | Vu Ngoc Tien | `DEV-024` | `Employee` | khớp VKORG order (vd `TV01`) |
-| **Manager** | Tran Long | `DEV-249` | `Manager` | **cùng VKORG order** (vd `TV01`) |
-| **Admin** | Người C / cùng máy khác | `DEV-xxx` | `Admin` | `null` |
+**Bước A — gán SAP ID trước khi tester link** (`sap_link_assignments`):
 
-> Sau login lần đầu, cập nhật cột `Role` / `SalesOrg` trong DB (Phase B chưa có UI gán role).
-> **Quan trọng:** `SalesOrg` Manager phải khớp `order_approvals.SalesOrg` (lấy từ SAP VKORG của SO). Sai org → `Show pending approvals` ra empty dù đã RequestRelease. Không giả định `UE00` — check SO thật (vd hiện tại thường `TV01`).
+| Role | Teams email | `SapUserId` | `SalesOrg` |
+|---|---|---|---|
+| **Employee** | email Teams của Thuý / Tiến | `DEV-024` | `TV01` (khớp VKORG SO) |
+| **Manager** | email Teams của Long | `DEV-249` | `TV01` |
+| **Admin** | email Teams Admin | `DEV-xxx` | `null` |
 
-SQL gợi ý:
+```sql
+INSERT INTO public.sap_link_assignments
+  ("Id", "SapUserId", "TeamsEmail", "TeamsUserId", "Role", "SalesOrg", "CreatedAt", "UpdatedAt")
+VALUES
+  (gen_random_uuid(), 'DEV-024', 'lethuy@aisoteam.onmicrosoft.com', NULL, 'Employee', 'TV01', NOW(), NOW()),
+  (gen_random_uuid(), 'DEV-249', 'your-manager@aisoteam.onmicrosoft.com', NULL, 'Manager', 'TV01', NOW(), NOW());
+-- Adjust emails to real M365 accounts. One SapUserId and one email each (unique indexes).
+```
+
+> Bot **chỉ** cho link đúng SAP ID đã gán cho email/Teams user đó — không gắn ID người khác.
+
+**Bước B — sau khi đã link**, có thể chỉnh lại role/org trên `user_mappings` nếu cần:
 
 ```sql
 -- Kiểm tra VKORG đang pending
@@ -42,12 +52,15 @@ WHERE "SapUserId" = 'DEV-024';
 UPDATE public.user_mappings
 SET "Role" = 'Manager', "SalesOrg" = 'TV01', "UpdatedAt" = NOW()
 WHERE "SapUserId" = 'DEV-249';
-
-UPDATE public.user_mappings
-SET "Role" = 'Admin', "SalesOrg" = NULL, "UpdatedAt" = NOW()
-WHERE "SapUserId" = 'DEV-xxx';
 ```
 
+| Role | Teams user (người demo) | `SapUserId` (ví dụ) | `Role` | `SalesOrg` |
+|---|---|---|---|---|
+| **Employee** | Le Thi Thanh Thuy / Vu Ngoc Tien | `DEV-024` | `Employee` | khớp VKORG order (vd `TV01`) |
+| **Manager** | Tran Long | `DEV-249` | `Manager` | **cùng VKORG order** (vd `TV01`) |
+| **Admin** | Người C / cùng máy khác | `DEV-xxx` | `Admin` | `null` |
+
+> **Quan trọng:** `SalesOrg` Manager phải khớp `order_approvals.SalesOrg` (lấy từ SAP VKORG của SO). Sai org → `Show pending approvals` ra empty dù đã RequestRelease.
 ### 0.3 Dữ liệu SAP
 
 | # | Cần có | Ghi chú |

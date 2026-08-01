@@ -28,17 +28,25 @@
     },
     {
       "type": "TextBlock",
-      "text": "Enter your **SAP User ID** exactly as registered in SAP (table ZAISO_USER_ROLE). This is not your Teams name or email.",
+      "text": "Enter the **SAP User ID** your admin assigned to this Teams account. You cannot link someone else's ID.",
       "wrap": true,
       "spacing": "Medium"
     },
     {
       "type": "FactSet",
       "facts": [
-        { "title": "Example", "value": "DEV-249" },
-        { "title": "Also valid", "value": "DEV-024" }
+        { "title": "Your assigned ID", "value": "${assignedSapUserId}" }
       ],
-      "spacing": "Small"
+      "spacing": "Small",
+      "$when": "${hasAssignedId == 'true'}"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Format", "value": "DEV-xxx (letters, digits, hyphen)" }
+      ],
+      "spacing": "Small",
+      "$when": "${hasAssignedId != 'true'}"
     },
     {
       "type": "TextBlock",
@@ -50,7 +58,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "Type your SAP User ID in the chat box below, then press Enter.",
+      "text": "Type your assigned SAP User ID in the chat box below, then press Enter.",
       "size": "Small",
       "isSubtle": true,
       "wrap": true,

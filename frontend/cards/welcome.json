@@ -33,7 +33,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "Link your **SAP User ID** once to review orders, request release, and run KPIs. Use the same ID as in SAP (for example `DEV-249`), not your Teams display name.",
+      "text": "Link your **SAP User ID** once to review orders, request release, and run KPIs. Your admin assigns the ID in advance — use that ID (format `DEV-xxx`), not your Teams display name.",
       "wrap": true,
       "spacing": "Small"
     },

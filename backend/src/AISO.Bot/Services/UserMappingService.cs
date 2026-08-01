@@ -1,7 +1,3 @@
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using AISO.Domain.Users;
 using AISO.Persistence;
 using AISO.Persistence.Entities;
@@ -79,8 +75,48 @@ public class UserMappingService
         return string.IsNullOrWhiteSpace(mapping?.DisplayName) ? mapping?.SapUserId : mapping.DisplayName;
     }
 
-    public async Task MapUserAsync(string teamsUserId, string displayName, string sapUserId, CancellationToken cancellationToken = default)
+    /// <summary>
+    /// Finds the admin assignment for this Teams identity (by Teams user id or email).
+    /// </summary>
+    public async Task<SapLinkAssignment?> FindLinkAssignmentAsync(
+        string teamsUserId,
+        string? teamsEmail,
+        CancellationToken cancellationToken = default)
     {
+        var byTeamsId = await _dbContext.SapLinkAssignments
+            .FirstOrDefaultAsync(a => a.TeamsUserId == teamsUserId, cancellationToken);
+        if (byTeamsId is not null)
+            return byTeamsId;
+
+        if (string.IsNullOrWhiteSpace(teamsEmail))
+            return null;
+
+        var email = NormalizeEmail(teamsEmail);
+        return await _dbContext.SapLinkAssignments
+            .FirstOrDefaultAsync(a => a.TeamsEmail == email, cancellationToken);
+    }
+
+    public async Task<bool> IsSapUserLinkedToOtherTeamsUserAsync(
+        string sapUserId,
+        string teamsUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = sapUserId.Trim().ToUpperInvariant();
+        return await _dbContext.UserMappings.AnyAsync(
+            u => u.SapUserId == normalized
+                 && u.TeamsUserId != teamsUserId,
+            cancellationToken);
+    }
+
+    public async Task MapUserAsync(
+        string teamsUserId,
+        string displayName,
+        string sapUserId,
+        CancellationToken cancellationToken = default,
+        UserRole? role = null,
+        string? salesOrg = null)
+    {
+        var normalizedSap = sapUserId.Trim().ToUpperInvariant();
         var mapping = await _dbContext.UserMappings
             .Where(u => u.TeamsUserId == teamsUserId)
             .FirstOrDefaultAsync(cancellationToken);
@@ -91,7 +127,9 @@ public class UserMappingService
             {
                 TeamsUserId = teamsUserId,
                 DisplayName = displayName,
-                SapUserId = sapUserId,
+                SapUserId = normalizedSap,
+                Role = role ?? UserRole.Employee,
+                SalesOrg = NormalizeSalesOrg(salesOrg),
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -100,10 +138,28 @@ public class UserMappingService
         else
         {
             mapping.DisplayName = displayName;
-            mapping.SapUserId = sapUserId;
+            mapping.SapUserId = normalizedSap;
             mapping.UpdatedAt = DateTimeOffset.UtcNow;
+            if (role.HasValue)
+                mapping.Role = role.Value;
+            if (salesOrg is not null || role.HasValue)
+                mapping.SalesOrg = NormalizeSalesOrg(salesOrg);
         }
 
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>Bind Teams user id onto the assignment after a successful link.</summary>
+    public async Task BindAssignmentTeamsUserAsync(
+        SapLinkAssignment assignment,
+        string teamsUserId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.Equals(assignment.TeamsUserId, teamsUserId, StringComparison.Ordinal))
+            return;
+
+        assignment.TeamsUserId = teamsUserId;
+        assignment.UpdatedAt = DateTimeOffset.UtcNow;
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -119,4 +175,9 @@ public class UserMappingService
             await _dbContext.SaveChangesAsync(cancellationToken);
         }
     }
+
+    public static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
+
+    private static string? NormalizeSalesOrg(string? salesOrg) =>
+        string.IsNullOrWhiteSpace(salesOrg) ? null : salesOrg.Trim().ToUpperInvariant();
 }
