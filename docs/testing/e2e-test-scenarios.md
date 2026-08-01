@@ -45,7 +45,7 @@ Use for manual Teams testing and demo rehearsal.
 |---|---|---|
 | 1.1 | `hi` (unlinked) | Login / link SAP User ID flow |
 | 1.2 | Valid SAP ID (e.g. `DEV-249`) | Welcome + linked message in EN |
-| 1.3 | `help` | Help card: 3 shortcuts + EN example list for role |
+| 1.3 | `help` / `hướng dẫn` / `trợ giúp` | Help card: role flow steps + 3 shortcuts + short EN samples (no AI function dump) |
 | 1.4 | `logout` / `đăng xuất` | Text: `Signed out of your SAP account. Type hi to sign in again.` |
 | 1.5 | Business command while unlinked | Login required (not crash) |
 | 1.6 | `cancel` / `thoát` mid-flow | Text: `Cancelled the current flow. You can start again.` |
