@@ -34,7 +34,7 @@ public sealed class GetSalesOrdersFunction : IFunction
           "properties": {
             "customerIdOrName": {
               "type": "string",
-              "description": "Customer ID (e.g. '1000') or partial customer name (e.g. 'Philly')."
+              "description": "Customer ID (exact eq on Customer, e.g. '1000') or partial customer name (contains on CustomerName, e.g. 'Philly Bikes')."
             },
             "salesOrg": {
               "type": "string",

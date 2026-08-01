@@ -317,20 +317,65 @@ public class SapClientTests
     }
 
     [Fact]
-    public async Task GetSalesOrders_WhenOwnerSapUser_FiltersOwnerEq()
+    public async Task GetSalesOrders_WhenCustomerId_FiltersCustomerEq()
     {
         var body = "{\"value\":[]}";
         var client = CreateClient(HttpStatusCode.OK, body, out var handler);
 
         await client.GetSalesOrdersAsync(new SalesOrdersQuery
         {
-            OwnerSapUser = "DEV-249",
+            CustomerIdOrName = "1000",
             Top = 10
         });
 
-        Assert.NotNull(handler.LastRequestUri);
         var decoded = Uri.UnescapeDataString(handler.LastRequestUri!);
-        Assert.Contains("OwnerSapUser eq 'DEV-249'", decoded);
+        Assert.Contains("Customer eq '1000'", decoded);
+        Assert.DoesNotContain("contains(CustomerName", decoded);
+    }
+
+    [Fact]
+    public async Task GetSalesOrders_WhenCustomerName_FiltersContainsCustomerName()
+    {
+        var body = "{\"value\":[]}";
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        await client.GetSalesOrdersAsync(new SalesOrdersQuery
+        {
+            CustomerIdOrName = "Philly Bikes",
+            Top = 10
+        });
+
+        var decoded = Uri.UnescapeDataString(handler.LastRequestUri!);
+        Assert.Contains("contains(CustomerName,'Philly Bikes')", decoded);
+        Assert.DoesNotContain("Customer eq", decoded);
+    }
+
+    [Fact]
+    public async Task GetSalesOrders_WhenCustomerNameHasQuote_EscapesODataLiteral()
+    {
+        var body = "{\"value\":[]}";
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        await client.GetSalesOrdersAsync(new SalesOrdersQuery
+        {
+            CustomerIdOrName = "O'Brien Cycles"
+        });
+
+        var decoded = Uri.UnescapeDataString(handler.LastRequestUri!);
+        Assert.Contains("contains(CustomerName,'O''Brien Cycles')", decoded);
+    }
+
+    [Theory]
+    [InlineData("1000", true)]
+    [InlineData("0000100001", true)]
+    [InlineData("USCU_ABC1", true)]
+    [InlineData("CUST-5002", true)]
+    [InlineData("Philly Bikes", false)]
+    [InlineData("Philly", false)]
+    [InlineData("Sunrise Corp", false)]
+    public void LooksLikeCustomerId_ClassifiesIdVsName(string value, bool expectedId)
+    {
+        Assert.Equal(expectedId, SapClient.LooksLikeCustomerId(value));
     }
 
     [Fact]

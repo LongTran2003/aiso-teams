@@ -6,7 +6,7 @@
     "properties": {
       "customerIdOrName": {
         "type": ["string", "null"],
-        "description": "Customer ID or partial customer name (e.g. 'Philly Bikes')."
+        "description": "Customer ID (exact match on Customer, e.g. '1000') or partial customer name (contains on CustomerName, e.g. 'Philly Bikes')."
       },
       "fromDate": {
         "type": ["string", "null"],
