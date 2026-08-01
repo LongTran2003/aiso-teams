@@ -5,23 +5,83 @@
   "body": [
     {
       "type": "TextBlock",
-      "text": "SUPPORTED COMMANDS",
+      "text": "How to use AISO",
       "weight": "Bolder",
-      "size": "Medium",
-      "color": "Accent"
+      "size": "Large",
+      "wrap": true
     },
     {
       "type": "TextBlock",
-      "text": "Type a sample below in English (natural phrasing also works). Use the shortcuts for common actions.",
+      "text": "New here? Follow the flow for your role, then use a shortcut or type a short English command.",
       "wrap": true,
-      "spacing": "Medium"
+      "isSubtle": true,
+      "spacing": "Small"
+    },
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "spacing": "Medium",
+      "$when": "${role == 'Employee'}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Employee flow (release request)",
+          "weight": "Bolder",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "1. Show your orders (list or open orders)\n2. Open **View details** on the order you own\n3. Tap **Request release** → confirm\n4. Wait for a Manager — status stays Open with **Approval: Waiting**\n5. Optional: **Reject** or **Forward** only on orders you own",
+          "wrap": true,
+          "spacing": "Small"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "spacing": "Medium",
+      "$when": "${role == 'Manager'}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Manager flow (approve release)",
+          "weight": "Bolder",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "1. Open **Pending approvals**\n2. Review the order → **View details** if needed\n3. **Approve** (releases in SAP) or **Reject approval** (keeps order, clears pending)\n4. You can also browse orders / KPIs anytime",
+          "wrap": true,
+          "spacing": "Small"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "style": "emphasis",
+      "spacing": "Medium",
+      "$when": "${role == 'Admin'}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Admin flow",
+          "weight": "Bolder",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "1. Use pending approvals like a Manager when needed\n2. **View audit log** for who did what\n3. Force release / force cancel only for emergencies",
+          "wrap": true,
+          "spacing": "Small"
+        }
+      ]
     },
     {
       "type": "TextBlock",
-      "text": "Commands for Employee",
+      "text": "Shortcuts",
       "weight": "Bolder",
       "spacing": "Medium",
-      "color": "Good",
       "$when": "${role == 'Employee'}"
     },
     {
@@ -30,11 +90,11 @@
       "actions": [
         {
           "type": "Action.Submit",
-          "title": "Recent Orders",
+          "title": "Recent orders",
           "data": {
             "msteams": {
               "type": "messageBack",
-              "displayText": "Recent Orders",
+              "displayText": "Recent orders",
               "text": "recent orders"
             }
           }
@@ -63,11 +123,11 @@
         },
         {
           "type": "Action.Submit",
-          "title": "Request Release",
+          "title": "Request release",
           "data": {
             "msteams": {
               "type": "messageBack",
-              "displayText": "Request Release",
+              "displayText": "Request release",
               "text": "request release"
             }
           }
@@ -97,7 +157,6 @@
       "text": "Commands for Manager",
       "weight": "Bolder",
       "spacing": "Medium",
-      "color": "Attention",
       "$when": "${role == 'Manager'}"
     },
     {
@@ -106,33 +165,33 @@
       "actions": [
         {
           "type": "Action.Submit",
-          "title": "Pending Approvals",
+          "title": "Pending approvals",
           "data": {
             "msteams": {
               "type": "messageBack",
-              "displayText": "Pending Approvals",
+              "displayText": "Pending approvals",
               "text": "show pending approvals"
             }
           }
         },
         {
           "type": "Action.Submit",
-          "title": "Approve Order",
+          "title": "Approve order",
           "data": {
             "msteams": {
               "type": "messageBack",
-              "displayText": "Approve Order",
+              "displayText": "Approve order",
               "text": "approve order"
             }
           }
         },
         {
           "type": "Action.Submit",
-          "title": "Reject Approval",
+          "title": "Reject approval",
           "data": {
             "msteams": {
               "type": "messageBack",
-              "displayText": "Reject Approval",
+              "displayText": "Reject approval",
               "text": "reject approval"
             }
           }
@@ -142,27 +201,9 @@
     },
     {
       "type": "TextBlock",
-      "text": "Example commands",
+      "text": "Shortcuts",
       "weight": "Bolder",
       "spacing": "Medium",
-      "size": "Small",
-      "$when": "${role == 'Manager'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "• show pending approvals\n• approve order 13122\n• reject approval 13122\n• release order 13122\n• recent orders\n• show open orders of TV01\n• show order 13122\n• show overdue orders\n• show revenue kpi\n• help · logout",
-      "wrap": true,
-      "spacing": "Small",
-      "fontType": "Monospace",
-      "size": "Small",
-      "$when": "${role == 'Manager'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "Commands for Admin",
-      "weight": "Bolder",
-      "spacing": "Medium",
-      "color": "Accent",
       "$when": "${role == 'Admin'}"
     },
     {
@@ -171,22 +212,22 @@
       "actions": [
         {
           "type": "Action.Submit",
-          "title": "View Audit Log",
+          "title": "View audit log",
           "data": {
             "msteams": {
               "type": "messageBack",
-              "displayText": "View Audit Log",
+              "displayText": "View audit log",
               "text": "view audit log"
             }
           }
         },
         {
           "type": "Action.Submit",
-          "title": "Manage Approval Flow",
+          "title": "Pending approvals",
           "data": {
             "msteams": {
               "type": "messageBack",
-              "displayText": "Manage Approval Flow",
+              "displayText": "Pending approvals",
               "text": "show pending approvals"
             }
           }
@@ -207,7 +248,39 @@
     },
     {
       "type": "TextBlock",
-      "text": "Example commands",
+      "text": "Try saying (English)",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "size": "Small",
+      "$when": "${role == 'Employee'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "• recent orders · show order 13122\n• request release 13122 · reject order 13122\n• forward order 13122 to DEV-xxx\n• show revenue kpi · logout",
+      "wrap": true,
+      "spacing": "Small",
+      "size": "Small",
+      "$when": "${role == 'Employee'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Try saying (English)",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "size": "Small",
+      "$when": "${role == 'Manager'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "• show pending approvals\n• approve order 13122 · reject approval 13122\n• show order 13122 · show revenue kpi · logout",
+      "wrap": true,
+      "spacing": "Small",
+      "size": "Small",
+      "$when": "${role == 'Manager'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Try saying (English)",
       "weight": "Bolder",
       "spacing": "Medium",
       "size": "Small",
@@ -215,16 +288,15 @@
     },
     {
       "type": "TextBlock",
-      "text": "• view audit log\n• show pending approvals\n• force release 13122\n• force cancel 13122\n• recent orders\n• show open orders of TV01\n• show order 13122\n• show revenue kpi\n• help · logout",
+      "text": "• view audit log · show pending approvals\n• force release 13122 · show order 13122 · logout",
       "wrap": true,
       "spacing": "Small",
-      "fontType": "Monospace",
       "size": "Small",
       "$when": "${role == 'Admin'}"
     },
     {
       "type": "TextBlock",
-      "text": "Tip: Prefer one language per message (e.g. show open orders of TV01). Avoid mixing English and Vietnamese in the same line.",
+      "text": "Tip: Prefer one language per message. Vietnamese like hướng dẫn / trợ giúp also opens this card.",
       "wrap": true,
       "isSubtle": true,
       "size": "Small",
