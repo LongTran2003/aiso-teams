@@ -283,10 +283,12 @@ public class TeamsBot : TeamsActivityHandler
                             return;
                         }
 
-                        var recipientChoices = await _userMappingService.GetForwardRecipientChoicesAsync(cancellationToken);
+                        var recipientChoices = await _userMappingService.GetForwardRecipientChoicesAsync(
+                            cancellationToken,
+                            excludeSapUserId: linkedSapForGate);
 
                         var senderDisplayName = await _userMappingService.GetDisplayNameAsync(teamsUserId, cancellationToken);
-                        var senderSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        var senderSapUsername = linkedSapForGate;
                         var senderName = !string.IsNullOrWhiteSpace(senderDisplayName)
                             ? senderDisplayName
                             : turnContext.Activity.From?.Name ?? "Unknown user";
@@ -1368,6 +1370,39 @@ public class TeamsBot : TeamsActivityHandler
             }
 
             // Workflow action results (Release, Reject, Forward) — show a success card when applicable
+            if (result.Payload is AISO.AiOrchestration.Functions.ConfirmForwardResponse confirmForward)
+            {
+                var recipientChoices = await _userMappingService.GetForwardRecipientChoicesAsync(
+                    cancellationToken,
+                    excludeSapUserId: sapUsername);
+
+                var senderDisplayName = await _userMappingService.GetDisplayNameAsync(teamsUserId, cancellationToken);
+                var senderName = !string.IsNullOrWhiteSpace(senderDisplayName)
+                    ? senderDisplayName
+                    : turnContext.Activity.From?.Name ?? "Unknown user";
+
+                if (!string.IsNullOrWhiteSpace(sapUsername)
+                    && !string.Equals(senderName, sapUsername, StringComparison.OrdinalIgnoreCase))
+                {
+                    senderName = $"{senderName} ({sapUsername})";
+                }
+
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildConfirmForwardCard(
+                        confirmForward.SoNumber,
+                        recipientChoices,
+                        senderName,
+                        confirmForward.SuggestedRecipient),
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with confirm-forward card for SO {SoNumber}",
+                    confirmForward.SoNumber);
+                return;
+            }
+
             if (result.Payload is not null)
             {
                 var json = System.Text.Json.JsonSerializer.Serialize(result.Payload);

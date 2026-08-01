@@ -33,7 +33,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "Select a recipient and add an optional note.",
+      "text": "Select a recipient and add an optional note. Ownership transfers only after you tap Send.",
       "wrap": true,
       "isSubtle": true,
       "spacing": "Small"
@@ -45,10 +45,12 @@
       "isRequired": true,
       "errorMessage": "Please select a recipient",
       "style": "compact",
+      "value": "${selectedRecipient}",
       "choices": [
         {
-          "title": "${recipientChoice.title}",
-          "value": "${recipientChoice.value}"
+          "$data": "${recipientChoices}",
+          "title": "${title}",
+          "value": "${value}"
         }
       ]
     },

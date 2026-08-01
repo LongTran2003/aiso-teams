@@ -92,6 +92,20 @@ public class UserMappingServiceTests
     }
 
     [Fact]
+    public async Task GetForwardRecipientChoices_ExcludesCurrentUser()
+    {
+        using var ctx = NewContext();
+        var service = new UserMappingService(ctx);
+        await service.MapUserAsync("teams-1", "Long", "DEV-249");
+        await service.MapUserAsync("teams-2", "Thuy", "DEV-244");
+
+        var choices = await service.GetForwardRecipientChoicesAsync(excludeSapUserId: "DEV-249");
+
+        var choice = Assert.Single(choices);
+        Assert.Equal("DEV-244", choice.Value);
+    }
+
+    [Fact]
     public async Task GetDisplayName_WhenDisplayNameBlank_FallsBackToSapId()
     {
         using var ctx = NewContext();

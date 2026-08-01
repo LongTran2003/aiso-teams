@@ -23,7 +23,9 @@ public class UserMappingService
         return mapping?.SapUserId;
     }
 
-    public async Task<IReadOnlyList<(string Title, string Value)>> GetForwardRecipientChoicesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<(string Title, string Value)>> GetForwardRecipientChoicesAsync(
+        CancellationToken cancellationToken = default,
+        string? excludeSapUserId = null)
     {
         var mappings = await _dbContext.UserMappings
             .Where(u => !string.IsNullOrWhiteSpace(u.SapUserId))
@@ -34,13 +36,21 @@ public class UserMappingService
 
         // Value is the SAP User ID: it is the canonical order owner stored in
         // zaiso_so_map and fits SAP's 50-char field (Teams IDs are too long).
-        return mappings
+        IEnumerable<(string Title, string Value)> choices = mappings
             .Select(mapping => (
                 Title: string.IsNullOrWhiteSpace(mapping.DisplayName)
                     ? mapping.SapUserId!
                     : $"{mapping.DisplayName} ({mapping.SapUserId})",
-                Value: mapping.SapUserId!))
-            .ToList();
+                Value: mapping.SapUserId!));
+
+        if (!string.IsNullOrWhiteSpace(excludeSapUserId))
+        {
+            var exclude = excludeSapUserId.Trim();
+            choices = choices.Where(c =>
+                !string.Equals(c.Value, exclude, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return choices.ToList();
     }
 
     /// <summary>
