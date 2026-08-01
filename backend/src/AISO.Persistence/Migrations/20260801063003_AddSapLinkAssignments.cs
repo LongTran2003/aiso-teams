@@ -30,13 +30,6 @@ namespace AISO.Persistence.Migrations
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_user_mappings_SapUserId",
-                table: "user_mappings",
-                column: "SapUserId",
-                unique: true,
-                filter: "\"SapUserId\" IS NOT NULL");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_sap_link_assignments_SapUserId",
                 table: "sap_link_assignments",
                 column: "SapUserId",
@@ -62,10 +55,6 @@ namespace AISO.Persistence.Migrations
         {
             migrationBuilder.DropTable(
                 name: "sap_link_assignments");
-
-            migrationBuilder.DropIndex(
-                name: "IX_user_mappings_SapUserId",
-                table: "user_mappings");
         }
     }
 }

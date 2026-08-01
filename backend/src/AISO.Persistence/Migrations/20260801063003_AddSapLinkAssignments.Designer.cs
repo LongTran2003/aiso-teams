@@ -214,10 +214,6 @@ namespace AISO.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SapUserId")
-                        .IsUnique()
-                        .HasFilter("\"SapUserId\" IS NOT NULL");
-
                     b.HasIndex("TeamsUserId")
                         .IsUnique();
 

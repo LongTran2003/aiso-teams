@@ -25,9 +25,8 @@ public class AppDbContext : DbContext
             b.Property(x => x.Role).HasConversion<string>().HasMaxLength(16).IsRequired();
             b.Property(x => x.SalesOrg).HasMaxLength(8);
             b.HasIndex(x => x.TeamsUserId).IsUnique();
-            b.HasIndex(x => x.SapUserId)
-                .IsUnique()
-                .HasFilter("\"SapUserId\" IS NOT NULL");
+            // SapUserId uniqueness is enforced in link dialog (allow-list + app check).
+            // DB unique index is skipped: demo DB may already contain duplicate links.
         });
 
         // AuditLog
