@@ -7,7 +7,9 @@ using Microsoft.Extensions.Logging;
 namespace AISO.AiOrchestration.Functions;
 
 /// <summary>
-/// Maker step: Employee submits a sales order for Manager approval (does not call SAP release).
+/// Maker step (NL / AI): validate the sales order and return a confirm-card payload.
+/// Does <b>not</b> create the approval row — that happens on Adaptive Card
+/// <c>request_release_confirm</c> after the user confirms.
 /// </summary>
 public sealed class RequestReleaseFunction : IFunction
 {
@@ -28,8 +30,9 @@ public sealed class RequestReleaseFunction : IFunction
     public string Name => "RequestRelease";
 
     public string Description =>
-        "Submit a sales order for release approval (maker-checker). " +
-        "Does not release the order; a Manager must ApproveOrder afterwards.";
+        "Prepare a release-approval request for a sales order (maker-checker). " +
+        "Validates the order and returns a confirmation step — does not submit until the user confirms. " +
+        "A Manager must ApproveOrder after the employee confirms.";
 
     public string ParametersJsonSchema => """
         {
@@ -73,10 +76,19 @@ public sealed class RequestReleaseFunction : IFunction
                 return FunctionResult.Fail($"Sales order {orderId} was not found in SAP.");
             }
 
+            if (!SalesOrderWorkflow.IsCurrentOwner(order.OwnerSapUser, requestingSapUser)
+                && !string.IsNullOrWhiteSpace(order.OwnerSapUser))
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildNotOwnerBlockedMessage("Request release", order.OwnerSapUser),
+                    "VALIDATION");
+            }
+
             if (SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status))
             {
                 return FunctionResult.Fail(
-                    SalesOrderWorkflow.BuildBlockedMessage(order.Status, "Request release"));
+                    SalesOrderWorkflow.BuildBlockedMessage(order.Status, "Request release"),
+                    "VALIDATION");
             }
 
             if (order.HasInvalidMaterial)
@@ -92,37 +104,27 @@ public sealed class RequestReleaseFunction : IFunction
                 return FunctionResult.Fail(
                     SalesOrderWorkflow.BuildPendingApprovalBlockedMessage(
                         "Request release",
-                        pending.RequestedBySapUser));
+                        pending.RequestedBySapUser),
+                    "VALIDATION");
             }
 
-            var request = await _approvals.RequestReleaseAsync(
-                order.SoNumber,
-                requestingSapUser,
-                order.SalesOrg,
-                comment,
-                ct);
-
             _logger.LogInformation(
-                "RequestRelease: so={SoNumber} by={User} salesOrg={SalesOrg}",
-                request.SoNumber, requestingSapUser, request.SalesOrg);
+                "RequestRelease confirm step: so={SoNumber} by={User} (not submitted yet)",
+                order.SoNumber, requestingSapUser);
 
-            return FunctionResult.Ok(new
-            {
-                order_id = request.SoNumber,
-                action = "ReleaseRequested",
-                sales_org = request.SalesOrg,
-                comment,
-                message = $"Sales order {request.SoNumber} was submitted for release approval. Waiting for a Manager to approve — the order is not released yet."
-            });
-        }
-        catch (InvalidOperationException ex)
-        {
-            return FunctionResult.Fail(ex.Message);
+            return FunctionResult.Ok(new ConfirmRequestReleaseResponse(
+                order.SoNumber,
+                string.IsNullOrWhiteSpace(comment) ? null : comment.Trim()));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to request release for {OrderId}", orderId);
-            return FunctionResult.Fail($"Failed to request release: {ex.Message}");
+            _logger.LogError(ex, "Failed to prepare request release for {OrderId}", orderId);
+            return FunctionResult.Fail($"Failed to prepare request release: {ex.Message}");
         }
     }
 }
+
+/// <summary>
+/// Payload telling the bot to show <c>confirm-request-release</c> before writing to Postgres.
+/// </summary>
+public sealed record ConfirmRequestReleaseResponse(string SoNumber, string? Comment = null);

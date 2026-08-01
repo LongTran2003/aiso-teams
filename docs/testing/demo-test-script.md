@@ -98,7 +98,8 @@ Nói ngắn: *Bot MS Teams → AI → .NET BE → SAP S/4. Hôm nay demo phân q
 | E3 | `Show detail of order <SO_A>` | Chi tiết đúng số SO | [ ] |
 | E4 | `Show KPI summary` | **Thẻ KPI** (không chỉ text success) | [ ] |
 | E5 | `Approve order <SO_A>` / `Release order <SO_A>` | **`NOT_AUTHORIZED`** — Employee không release trực tiếp | [ ] |
-| E6 | `Request release for order <SO_A>` *hoặc* bấm Confirm Release trên card | Success **`ReleaseRequested`**; order **chưa** released trên SAP | [ ] |
+| E6 | `Request release for order <SO_A>` | Card **confirm** (chưa tạo pending) | [ ] |
+| E6b | Bấm **Submit for approval** trên card | Success **`ReleaseRequested`**; order **chưa** released trên SAP | [ ] |
 | E7 | `Request release for order <SO_A>` lần 2 | Lỗi: đã có pending request | [ ] |
 | E8 | `Show pending approvals` | **`NOT_AUTHORIZED`** (Manager+) | [ ] |
 | E9 | `View audit log` | **`NOT_AUTHORIZED`** (Admin) | [ ] |

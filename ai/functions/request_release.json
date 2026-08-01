@@ -1,6 +1,6 @@
 {
   "name": "RequestRelease",
-  "description": "Submit a sales order for release approval (maker step). Does not release the order; a Manager must ApproveOrder afterwards. ALWAYS use this for 'request release', 'request release for order', 'submit for approval', 'yêu cầu duyệt', 'xin duyệt'. Never map those phrases to ReleaseOrder.",
+  "description": "Prepare a release-approval request (maker step). Bot shows a confirm card; approval is created only after the user confirms. Does not release the order — a Manager must ApproveOrder afterwards. ALWAYS use for 'request release', 'submit for approval', 'yêu cầu duyệt', 'xin duyệt'. Never map those phrases to ReleaseOrder.",
   "parameters": {
     "type": "object",
     "properties": {

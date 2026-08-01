@@ -102,8 +102,16 @@ internal static class TeamsCardBuilder
     public static Attachment BuildConfirmReleaseCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-release.json", new { salesOrderNumber });
 
-    public static Attachment BuildConfirmRequestReleaseCard(string salesOrderNumber) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-request-release.json", new { salesOrderNumber });
+    public static Attachment BuildConfirmRequestReleaseCard(
+        string salesOrderNumber,
+        string? comment = null) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "confirm-request-release.json",
+            new
+            {
+                salesOrderNumber,
+                comment = comment ?? string.Empty
+            });
 
     public static Attachment BuildConfirmApproveCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-approve.json", new { salesOrderNumber });

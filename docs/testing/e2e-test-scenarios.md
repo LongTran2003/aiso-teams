@@ -81,7 +81,9 @@ Use for manual Teams testing and demo rehearsal.
 | # | Role | Input | Expected |
 |---|---|---|---|
 | 4.1 | Employee | `release order <SO>` | **Not authorized** card |
-| 4.2 | Employee | `request release 13122` / confirm on card | Success **Release requested** |
+| 4.2 | Employee | `request release 13122` | **Confirm** card first (not yet submitted) |
+| 4.2b | Employee | Confirm → **Submit for approval** | Success **Release requested**; SO still not released in SAP |
+| 4.2c | Employee | Confirm → **Cancel** | No pending row created |
 | 4.3 | Employee | `show pending approvals` | Not authorized |
 | 4.4 | Manager | `show pending approvals` | Pending list (correct VKORG) |
 | 4.5 | Manager | `approve order <SO>` | Approved & released; SO number correct |
