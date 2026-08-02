@@ -45,6 +45,7 @@ public class ForwardOrderFunctionTests
         var payload = Assert.IsType<ConfirmForwardResponse>(result.Payload);
         Assert.Equal("0000005001", payload.SoNumber);
         Assert.Null(payload.SuggestedRecipient);
+        Assert.False(string.IsNullOrWhiteSpace(payload.SalesOrg));
     }
 
     [Fact]

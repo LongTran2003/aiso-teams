@@ -115,7 +115,8 @@ public sealed class ForwardOrderFunction : IFunction
 
             return FunctionResult.Ok(new ConfirmForwardResponse(
                 existing.SoNumber,
-                string.IsNullOrWhiteSpace(forwardTo) ? null : forwardTo.Trim()));
+                string.IsNullOrWhiteSpace(forwardTo) ? null : forwardTo.Trim(),
+                string.IsNullOrWhiteSpace(existing.SalesOrg) ? null : existing.SalesOrg.Trim()));
         }
         catch (Exception ex)
         {
@@ -128,4 +129,7 @@ public sealed class ForwardOrderFunction : IFunction
 /// <summary>
 /// Payload telling the bot to show <c>confirm-forward</c> before calling SAP.
 /// </summary>
-public sealed record ConfirmForwardResponse(string SoNumber, string? SuggestedRecipient = null);
+public sealed record ConfirmForwardResponse(
+    string SoNumber,
+    string? SuggestedRecipient = null,
+    string? SalesOrg = null);
