@@ -462,7 +462,7 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
   LOOP AT keys INTO DATA(ls_key).
     DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
 
-    SELECT SINGLE teams_user_id FROM zaiso_so_map
+    SELECT SINGLE sap_user FROM zaiso_so_map
       INTO @DATA(lv_owner)
       WHERE so_number = @lv_so_number.
 
@@ -574,7 +574,7 @@ ENDMETHOD.
   LOOP AT keys INTO DATA(ls_key).
     lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
 
-      SELECT SINGLE teams_user_id FROM zaiso_so_map
+      SELECT SINGLE sap_user FROM zaiso_so_map
         INTO @DATA(lv_owner)
         WHERE so_number = @lv_so_number.
 
@@ -693,7 +693,7 @@ ENDMETHOD.
   LOOP AT keys INTO DATA(ls_key).
     DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
 
-    SELECT SINGLE teams_user_id FROM zaiso_so_map
+    SELECT SINGLE sap_user FROM zaiso_so_map
       INTO @DATA(lv_owner)
       WHERE so_number = @lv_so_number.
 
@@ -771,7 +771,7 @@ ENDMETHOD.
     DATA(ls_param) = ls_key-%param.
     lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
 
-    SELECT SINGLE teams_user_id FROM zaiso_so_map
+    SELECT SINGLE sap_user FROM zaiso_so_map
       INTO @DATA(lv_owner)
       WHERE so_number = @lv_so_number.
 
@@ -789,9 +789,9 @@ ENDMETHOD.
     ENDIF.
 
     APPEND VALUE #(
-      mandt         = sy-mandt
-      so_number     = lv_so_number
-      teams_user_id = ls_param-new_teams_user
+      mandt     = sy-mandt
+      so_number = lv_so_number
+      sap_user  = ls_param-new_teams_user
     ) TO lcl_buffer=>gt_so_map_db.
 
     CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
