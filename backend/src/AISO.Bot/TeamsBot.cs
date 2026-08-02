@@ -283,9 +283,11 @@ public class TeamsBot : TeamsActivityHandler
                             return;
                         }
 
+                        var orderForRecipients = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
                         var recipientChoices = await _userMappingService.GetForwardRecipientChoicesAsync(
                             cancellationToken,
-                            excludeSapUserId: linkedSapForGate);
+                            excludeSapUserId: linkedSapForGate,
+                            salesOrgFromOrder: orderForRecipients?.SalesOrg);
 
                         var senderDisplayName = await _userMappingService.GetDisplayNameAsync(teamsUserId, cancellationToken);
                         var senderSapUsername = linkedSapForGate;
@@ -1374,7 +1376,8 @@ public class TeamsBot : TeamsActivityHandler
             {
                 var recipientChoices = await _userMappingService.GetForwardRecipientChoicesAsync(
                     cancellationToken,
-                    excludeSapUserId: sapUsername);
+                    excludeSapUserId: sapUsername,
+                    salesOrgFromOrder: confirmForward.SalesOrg);
 
                 var senderDisplayName = await _userMappingService.GetDisplayNameAsync(teamsUserId, cancellationToken);
                 var senderName = !string.IsNullOrWhiteSpace(senderDisplayName)

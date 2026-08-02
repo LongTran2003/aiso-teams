@@ -23,25 +23,32 @@ public class UserMappingService
         return mapping?.SapUserId;
     }
 
+    /// <summary>
+    /// Linked SAP users for the forward recipient picker.
+    /// When <paramref name="salesOrgFromOrder"/> is set, prefers users in that VKORG
+    /// (or users with no SalesOrg scoped yet). Falls back to all linked users if none match.
+    /// </summary>
     public async Task<IReadOnlyList<(string Title, string Value)>> GetForwardRecipientChoicesAsync(
         CancellationToken cancellationToken = default,
-        string? excludeSapUserId = null)
+        string? excludeSapUserId = null,
+        string? salesOrgFromOrder = null)
     {
         var mappings = await _dbContext.UserMappings
             .Where(u => !string.IsNullOrWhiteSpace(u.SapUserId))
             .OrderBy(u => u.DisplayName)
             .ThenBy(u => u.SapUserId)
-            .Select(u => new { u.DisplayName, u.SapUserId })
+            .Select(u => new { u.DisplayName, u.SapUserId, u.SalesOrg })
             .ToListAsync(cancellationToken);
 
         // Value is the SAP User ID: it is the canonical order owner stored in
         // zaiso_so_map and fits SAP's 50-char field (Teams IDs are too long).
-        IEnumerable<(string Title, string Value)> choices = mappings
+        IEnumerable<(string Title, string Value, string? SalesOrg)> choices = mappings
             .Select(mapping => (
                 Title: string.IsNullOrWhiteSpace(mapping.DisplayName)
                     ? mapping.SapUserId!
                     : $"{mapping.DisplayName} ({mapping.SapUserId})",
-                Value: mapping.SapUserId!));
+                Value: mapping.SapUserId!,
+                SalesOrg: mapping.SalesOrg));
 
         if (!string.IsNullOrWhiteSpace(excludeSapUserId))
         {
@@ -50,7 +57,24 @@ public class UserMappingService
                 !string.Equals(c.Value, exclude, StringComparison.OrdinalIgnoreCase));
         }
 
-        return choices.ToList();
+        var all = choices.ToList();
+        if (string.IsNullOrWhiteSpace(salesOrgFromOrder) || all.Count == 0)
+        {
+            return all.Select(c => (c.Title, c.Value)).ToList();
+        }
+
+        var org = salesOrgFromOrder.Trim();
+        var scoped = all
+            .Where(c =>
+                string.IsNullOrWhiteSpace(c.SalesOrg)
+                || string.Equals(c.SalesOrg, org, StringComparison.OrdinalIgnoreCase))
+            .Select(c => (c.Title, c.Value))
+            .ToList();
+
+        // Prefer same VKORG; if nothing matches (mis-seeded demo data), keep the full list.
+        return scoped.Count > 0
+            ? scoped
+            : all.Select(c => (c.Title, c.Value)).ToList();
     }
 
     /// <summary>

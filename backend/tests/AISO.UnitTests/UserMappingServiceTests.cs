@@ -106,6 +106,56 @@ public class UserMappingServiceTests
     }
 
     [Fact]
+    public async Task GetForwardRecipientChoices_FiltersByOrderSalesOrg()
+    {
+        using var ctx = NewContext();
+        var service = new UserMappingService(ctx);
+        await service.MapUserAsync("teams-1", "Long", "DEV-249", role: UserRole.Employee, salesOrg: "TV01");
+        await service.MapUserAsync("teams-2", "Thuy", "DEV-244", role: UserRole.Employee, salesOrg: "TV01");
+        await service.MapUserAsync("teams-3", "Tien", "DEV-024", role: UserRole.Manager, salesOrg: "FU24");
+
+        var choices = await service.GetForwardRecipientChoicesAsync(
+            excludeSapUserId: "DEV-249",
+            salesOrgFromOrder: "TV01");
+
+        var choice = Assert.Single(choices);
+        Assert.Equal("DEV-244", choice.Value);
+    }
+
+    [Fact]
+    public async Task GetForwardRecipientChoices_IncludesUnscopedUsersForOrderOrg()
+    {
+        using var ctx = NewContext();
+        var service = new UserMappingService(ctx);
+        await service.MapUserAsync("teams-1", "Long", "DEV-249", role: UserRole.Employee, salesOrg: "TV01");
+        await service.MapUserAsync("teams-2", "Thuy", "DEV-244", role: UserRole.Employee, salesOrg: null);
+        await service.MapUserAsync("teams-3", "Tien", "DEV-024", role: UserRole.Manager, salesOrg: "FU24");
+
+        var choices = await service.GetForwardRecipientChoicesAsync(
+            excludeSapUserId: "DEV-249",
+            salesOrgFromOrder: "TV01");
+
+        Assert.Equal(new[] { "DEV-244" }, choices.Select(c => c.Value).ToArray());
+    }
+
+    [Fact]
+    public async Task GetForwardRecipientChoices_WhenNoOrgMatch_FallsBackToAllExceptSelf()
+    {
+        using var ctx = NewContext();
+        var service = new UserMappingService(ctx);
+        await service.MapUserAsync("teams-1", "Long", "DEV-249", role: UserRole.Employee, salesOrg: "TV01");
+        await service.MapUserAsync("teams-3", "Tien", "DEV-024", role: UserRole.Manager, salesOrg: "FU24");
+
+        // Only self matches TV01 → after exclude, scoped empty → fallback keeps FU24 manager.
+        var choices = await service.GetForwardRecipientChoicesAsync(
+            excludeSapUserId: "DEV-249",
+            salesOrgFromOrder: "TV01");
+
+        var choice = Assert.Single(choices);
+        Assert.Equal("DEV-024", choice.Value);
+    }
+
+    [Fact]
     public async Task GetDisplayName_WhenDisplayNameBlank_FallsBackToSapId()
     {
         using var ctx = NewContext();
