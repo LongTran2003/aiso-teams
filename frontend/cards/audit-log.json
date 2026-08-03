@@ -29,8 +29,8 @@
             { "title": "When", "value": "${timestamp}" },
             { "title": "Action", "value": "${action}" },
             { "title": "Status", "value": "${status}" },
-            { "title": "User", "value": "${teamsUserId}" },
-            { "title": "Duration", "value": "${durationMs}" }
+            { "title": "User", "value": "${user}" },
+            { "title": "Duration", "value": "${duration}" }
           ]
         },
         {

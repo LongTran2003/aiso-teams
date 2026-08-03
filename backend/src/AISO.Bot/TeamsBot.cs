@@ -1424,17 +1424,26 @@ public class TeamsBot : TeamsActivityHandler
                     return;
                 }
 
+                var userLabels = await _userMappingService.GetAuditUserLabelsAsync(
+                    auditResponse.Items.Select(i => i.TeamsUserId),
+                    cancellationToken);
+
                 var auditCard = TeamsCardBuilder.BuildAuditLogCard(new
                 {
                     count = auditResponse.Count,
-                    items = auditResponse.Items.Select(i => new
+                    items = auditResponse.Items.Select(i =>
                     {
-                        timestamp = i.Timestamp,
-                        action = i.Action,
-                        status = i.Status,
-                        teamsUserId = i.TeamsUserId,
-                        durationMs = i.DurationMs,
-                        error = i.Error ?? string.Empty
+                        userLabels.TryGetValue(i.TeamsUserId, out var label);
+                        return new
+                        {
+                            timestamp = i.Timestamp,
+                            action = Domain.Auditing.AuditLogDisplay.FriendlyAction(i.Action),
+                            status = i.Status,
+                            user = label
+                                ?? Domain.Auditing.AuditLogDisplay.FormatUserLabel(null, null, i.TeamsUserId),
+                            duration = Domain.Auditing.AuditLogDisplay.FormatDuration(i.DurationMs),
+                            error = i.Error ?? string.Empty
+                        };
                     }).ToList()
                 });
 
