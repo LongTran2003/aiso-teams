@@ -51,6 +51,8 @@ public class RolePolicyTests
     [InlineData("ForceRelease")]
     [InlineData("ForceCancel")]
     [InlineData("ViewAuditLog")]
+    [InlineData("ListBotUsers")]
+    [InlineData("ManageBotUser")]
     public void OverrideActions_AreAdminOnly(string function)
     {
         Assert.Equal(UserRole.Admin, RolePolicy.RequiredRole(function));

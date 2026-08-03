@@ -1,0 +1,93 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Manage bot user",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "${displayName} (${sapUserId})",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Changes apply to bot RBAC (Postgres). SAP ZAISO_USER_ROLE is separate.",
+      "wrap": true,
+      "spacing": "Medium",
+      "isSubtle": true
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "role",
+      "label": "Role",
+      "style": "compact",
+      "isRequired": true,
+      "value": "${role}",
+      "choices": [
+        { "title": "Employee", "value": "Employee" },
+        { "title": "Manager", "value": "Manager" },
+        { "title": "Admin", "value": "Admin" }
+      ]
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "salesOrg",
+      "label": "Sales org (VKORG)",
+      "style": "compact",
+      "value": "${salesOrg}",
+      "choices": [
+        { "title": "(none)", "value": "" },
+        { "title": "TV01", "value": "TV01" },
+        { "title": "FU24", "value": "FU24" },
+        { "title": "UE00", "value": "UE00" },
+        { "title": "UW00", "value": "UW00" },
+        { "title": "DN00", "value": "DN00" },
+        { "title": "DS00", "value": "DS00" }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Save",
+      "style": "positive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Save bot user ${sapUserId}",
+          "text": "save bot user ${sapUserId}"
+        },
+        "action": "manage_bot_user_confirm",
+        "sapUserId": "${sapUserId}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}

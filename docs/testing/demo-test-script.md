@@ -131,9 +131,10 @@ Nói ngắn: *Bot MS Teams → AI → .NET BE → SAP S/4. Hôm nay demo phân q
 
 | # | Hành động / câu lệnh | Kỳ vọng | Pass |
 |---|---|---|---|
-| A1 | `View audit log` | Danh sách audit gần đây (Denied / Success / …) | [ ] |
-| A2 | `Show pending approvals` | Thấy pending (Admin = all orgs) | [ ] |
-| A3 | (Tuỳ chọn) Approve 1 pending ngoài VKORG | Thành công (Admin bypass scope) | [ ] |
+| A1 | `List users` | Card danh sách linked users; nút **Manage** | [ ] |
+| A2 | `Manage user <SAP_ID>` → đổi Role/SalesOrg → **Save** | Success `User access updated` | [ ] |
+| A3 | `View audit log` | Danh sách audit gần đây (Denied / Success / …) | [ ] |
+| A4 | (Tuỳ chọn) `Force release <SO>` có reason | Success; override ownership | [ ] |
 
 ---
 

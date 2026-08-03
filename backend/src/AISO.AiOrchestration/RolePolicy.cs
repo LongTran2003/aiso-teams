@@ -26,6 +26,8 @@ public static class RolePolicy
             ["ForceRelease"] = UserRole.Admin,
             ["ForceCancel"] = UserRole.Admin,
             ["ViewAuditLog"] = UserRole.Admin,
+            ["ListBotUsers"] = UserRole.Admin,
+            ["ManageBotUser"] = UserRole.Admin,
         };
 
     /// <summary>The minimum role required for a given function (Employee if unlisted).</summary>

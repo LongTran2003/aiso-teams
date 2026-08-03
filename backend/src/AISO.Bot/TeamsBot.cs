@@ -32,6 +32,7 @@ public class TeamsBot : TeamsActivityHandler
     private readonly UserState _userState;
     private readonly SsoDialog _dialog;
     private readonly UserMappingService _userMappingService;
+    private readonly IBotUserAdminService _botUserAdmin;
 
     public TeamsBot(
         IFunctionDispatcher dispatcher,
@@ -42,7 +43,8 @@ public class TeamsBot : TeamsActivityHandler
         ConversationState conversationState,
         UserState userState,
         SsoDialog dialog,
-        UserMappingService userMappingService)
+        UserMappingService userMappingService,
+        IBotUserAdminService botUserAdmin)
     {
         _dispatcher = dispatcher;
         _sap = sap;
@@ -53,6 +55,7 @@ public class TeamsBot : TeamsActivityHandler
         _userState = userState;
         _dialog = dialog;
         _userMappingService = userMappingService;
+        _botUserAdmin = botUserAdmin;
     }
 
     public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default)
@@ -242,6 +245,133 @@ public class TeamsBot : TeamsActivityHandler
                                 search,
                                 requester)),
                             cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "manage_bot_user", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        if (role != UserRole.Admin)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
+                                    "Only administrators can manage bot users.",
+                                    role.ToString(),
+                                    "Admin")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var sapUserId = valueObj.TryGetValue("sapUserId", StringComparison.OrdinalIgnoreCase, out var sapToken)
+                            ? sapToken.ToString()
+                            : null;
+                        if (string.IsNullOrWhiteSpace(sapUserId))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "VALIDATION",
+                                    "Missing SAP user id.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var user = await _botUserAdmin.GetBySapUserIdAsync(sapUserId, cancellationToken);
+                        if (user is null)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_FOUND",
+                                    $"No linked Teams user found for SAP ID {sapUserId}.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildManageBotUserCard(user)),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "manage_bot_user_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        if (role != UserRole.Admin)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
+                                    "Only administrators can manage bot users.",
+                                    role.ToString(),
+                                    "Admin")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var sapUserId = valueObj.TryGetValue("sapUserId", StringComparison.OrdinalIgnoreCase, out var sapToken)
+                            ? sapToken.ToString()
+                            : null;
+                        var newRoleRaw = valueObj.Value<string>("role");
+                        var newSalesOrg = valueObj.Value<string>("salesOrg");
+
+                        if (string.IsNullOrWhiteSpace(sapUserId)
+                            || !Enum.TryParse<UserRole>(newRoleRaw, ignoreCase: true, out var newRole))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "VALIDATION",
+                                    "Role is required (Employee, Manager, or Admin).")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        try
+                        {
+                            var updated = await _botUserAdmin.UpdateAccessAsync(
+                                sapUserId,
+                                newRole,
+                                newSalesOrg,
+                                cancellationToken);
+
+                            await _audit.LogAsync(new AuditEntry
+                            {
+                                TeamsUserId = teamsUserId,
+                                ConversationId = conversationId,
+                                Action = "ManageBotUser",
+                                ParametersJson = JsonConvert.SerializeObject(new
+                                {
+                                    sap_user_id = updated.SapUserId,
+                                    role = updated.Role.ToString(),
+                                    sales_org = updated.SalesOrg
+                                }),
+                                ResultStatus = "Success"
+                            }, cancellationToken);
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(
+                                    updated.SapUserId,
+                                    "UserAccessUpdated",
+                                    $"{updated.Role}" + (string.IsNullOrWhiteSpace(updated.SalesOrg)
+                                        ? ""
+                                        : $" / {updated.SalesOrg}"))),
+                                cancellationToken);
+                        }
+                        catch (InvalidOperationException invEx)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "VALIDATION",
+                                    invEx.Message)),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Failed to update bot user {SapUserId}", sapUserId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "ACTION_FAILED",
+                                    ex.Message)),
+                                cancellationToken);
+                        }
+
                         return;
                     }
 
@@ -1315,6 +1445,44 @@ public class TeamsBot : TeamsActivityHandler
                     cancellationToken);
 
                 _logger.LogInformation("Bot replied with audit log card ({Count})", auditResponse.Count);
+                return;
+            }
+
+            if (result.Payload is AISO.AiOrchestration.Functions.ListBotUsersResponse listUsersResponse)
+            {
+                if (listUsersResponse.Users.Count == 0)
+                {
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        TeamsCardBuilder.BuildEmptyCard(),
+                        cancellationToken);
+                    return;
+                }
+
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildBotUsersCard(listUsersResponse.Users),
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with bot-users card ({Count})",
+                    listUsersResponse.Users.Count);
+                return;
+            }
+
+            if (result.Payload is AISO.AiOrchestration.Functions.ManageBotUserResponse manageUserResponse)
+            {
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildManageBotUserCard(manageUserResponse.User),
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with manage-bot-user card for {SapUserId}",
+                    manageUserResponse.User.SapUserId);
                 return;
             }
 

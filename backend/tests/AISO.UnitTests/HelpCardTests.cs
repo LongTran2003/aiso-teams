@@ -9,7 +9,7 @@ public class HelpCardTests
     [Theory]
     [InlineData("Employee", "Employee flow", "Request release", "recent orders")]
     [InlineData("Manager", "Manager flow", "Pending approvals", "approve order")]
-    [InlineData("Admin", "Admin flow", "View audit log", "force release")]
+    [InlineData("Admin", "Admin flow", "List users", "manage user")]
     public void BuildHelpCard_ShowsRoleFlowAndShortcuts_NotFunctionSchemas(
         string role,
         string flowTitle,

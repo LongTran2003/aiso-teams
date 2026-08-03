@@ -166,6 +166,35 @@ internal static class TeamsCardBuilder
     public static Attachment BuildAuditLogCard(object data) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("audit-log.json", data);
 
+    public static Attachment BuildBotUsersCard(IReadOnlyList<BotUserSummary> users)
+    {
+        var data = new
+        {
+            count = users.Count,
+            users = users.Select(u => new
+            {
+                sapUserId = u.SapUserId,
+                displayName = u.DisplayName,
+                role = u.Role.ToString(),
+                salesOrgLabel = string.IsNullOrWhiteSpace(u.SalesOrg) ? "no sales org" : u.SalesOrg
+            }).ToList()
+        };
+        return CardTemplateFileLoader.BuildAdaptiveCardAttachment("bot-users.json", data);
+    }
+
+    public static Attachment BuildManageBotUserCard(BotUserSummary user)
+    {
+        return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "manage-bot-user.json",
+            new
+            {
+                sapUserId = user.SapUserId,
+                displayName = user.DisplayName,
+                role = user.Role.ToString(),
+                salesOrg = user.SalesOrg ?? string.Empty
+            });
+    }
+
     public static Attachment BuildOverdueOrdersCard(object data) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("overdue-orders.json", data);
 
@@ -486,6 +515,13 @@ internal static class TeamsCardBuilder
                     ? "Ownership was transferred. You no longer own this order."
                     : $"Ownership transferred to {detail.Trim()}. You no longer own this order.",
                 "Forwarded",
+                false),
+            "UserAccessUpdated" => (
+                "User access updated",
+                string.IsNullOrWhiteSpace(detail)
+                    ? "Bot role / sales org was updated for this SAP user."
+                    : $"Access is now {detail.Trim()}. Changes apply on the next command for that user.",
+                "Bot RBAC updated",
                 false),
             _ => (
                 "Action completed",
