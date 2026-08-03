@@ -1,0 +1,137 @@
+using AISO.Domain.Users;
+using AISO.Persistence.Entities;
+using Microsoft.EntityFrameworkCore;
+
+namespace AISO.Persistence.Users;
+
+public sealed class BotUserAdminService : IBotUserAdminService
+{
+    private static readonly HashSet<string> KnownSalesOrgs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "TV01", "FU24", "UE00", "UW00", "DN00", "DS00"
+    };
+
+    private readonly IDbContextFactory<AppDbContext> _dbFactory;
+
+    public BotUserAdminService(IDbContextFactory<AppDbContext> dbFactory)
+    {
+        _dbFactory = dbFactory;
+    }
+
+    public async Task<IReadOnlyList<BotUserSummary>> ListLinkedUsersAsync(CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+        var mappings = await db.UserMappings
+            .Where(u => !string.IsNullOrWhiteSpace(u.SapUserId))
+            .OrderBy(u => u.DisplayName)
+            .ThenBy(u => u.SapUserId)
+            .ToListAsync(ct);
+
+        var sapIds = mappings
+            .Select(m => m.SapUserId!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var assigned = await db.SapLinkAssignments
+            .Where(a => sapIds.Contains(a.SapUserId))
+            .Select(a => a.SapUserId)
+            .ToListAsync(ct);
+
+        var assignedSet = assigned.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        return mappings
+            .Select(m => ToSummary(m, assignedSet.Contains(m.SapUserId!)))
+            .ToList();
+    }
+
+    public async Task<BotUserSummary?> GetBySapUserIdAsync(string sapUserId, CancellationToken ct = default)
+    {
+        var normalized = NormalizeSap(sapUserId);
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+        var mapping = await db.UserMappings
+            .FirstOrDefaultAsync(u => u.SapUserId == normalized, ct);
+        if (mapping is null)
+            return null;
+
+        var hasAssignment = await db.SapLinkAssignments
+            .AnyAsync(a => a.SapUserId == normalized, ct);
+
+        return ToSummary(mapping, hasAssignment);
+    }
+
+    public async Task<BotUserSummary> UpdateAccessAsync(
+        string sapUserId,
+        UserRole role,
+        string? salesOrg,
+        CancellationToken ct = default)
+    {
+        var normalized = NormalizeSap(sapUserId);
+        var org = NormalizeSalesOrg(salesOrg, role);
+
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+        var mapping = await db.UserMappings
+            .FirstOrDefaultAsync(u => u.SapUserId == normalized, ct)
+            ?? throw new InvalidOperationException(
+                $"No linked Teams user found for SAP ID {normalized}. User must link the bot first.");
+
+        mapping.Role = role;
+        mapping.SalesOrg = org;
+        mapping.UpdatedAt = DateTimeOffset.UtcNow;
+
+        var assignment = await db.SapLinkAssignments
+            .FirstOrDefaultAsync(a => a.SapUserId == normalized, ct);
+        if (assignment is not null)
+        {
+            assignment.Role = role;
+            assignment.SalesOrg = org;
+            assignment.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        await db.SaveChangesAsync(ct);
+
+        return ToSummary(mapping, assignment is not null);
+    }
+
+    private static BotUserSummary ToSummary(UserMapping mapping, bool hasAssignment) =>
+        new(
+            mapping.SapUserId ?? string.Empty,
+            string.IsNullOrWhiteSpace(mapping.DisplayName)
+                ? mapping.SapUserId ?? string.Empty
+                : mapping.DisplayName,
+            mapping.Role,
+            mapping.SalesOrg,
+            hasAssignment);
+
+    private static string NormalizeSap(string sapUserId) =>
+        sapUserId.Trim().ToUpperInvariant();
+
+    /// <summary>
+    /// Admin → SalesOrg cleared. Manager should have an org; empty clears and lets Admin fix later.
+    /// Unknown org codes are rejected.
+    /// </summary>
+    internal static string? NormalizeSalesOrg(string? salesOrg, UserRole role)
+    {
+        if (role == UserRole.Admin)
+            return null;
+
+        if (string.IsNullOrWhiteSpace(salesOrg)
+            || string.Equals(salesOrg.Trim(), "(none)", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(salesOrg.Trim(), "none", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(salesOrg.Trim(), "-", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        var org = salesOrg.Trim().ToUpperInvariant();
+        if (!KnownSalesOrgs.Contains(org))
+        {
+            throw new InvalidOperationException(
+                $"Unknown sales org '{salesOrg}'. Use TV01, FU24, UE00, UW00, DN00, DS00, or leave empty.");
+        }
+
+        return org;
+    }
+}

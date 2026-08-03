@@ -1,0 +1,15 @@
+{
+  "name": "ManageBotUser",
+  "description": "Admin only: open the manage-user card to change Role and/or SalesOrg for a linked SAP user. Use for 'manage user DEV-249', 'set role DEV-xxx', 'set sales org DEV-xxx'. Does not save until the Admin confirms on the card. Requires sap_user_id.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "sap_user_id": {
+        "type": "string",
+        "description": "SAP user id to manage (e.g. DEV-249)."
+      }
+    },
+    "required": ["sap_user_id"],
+    "additionalProperties": false
+  }
+}

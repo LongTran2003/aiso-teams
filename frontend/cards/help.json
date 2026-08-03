@@ -71,7 +71,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "1. Use pending approvals like a Manager when needed\n2. **View audit log** for who did what\n3. Force release / force cancel only for emergencies",
+          "text": "1. **List users** → Manage to set Role / SalesOrg (confirm card)\n2. **View audit log** for who did what\n3. Force release / force cancel only for emergencies",
           "wrap": true,
           "spacing": "Small"
         }
@@ -212,6 +212,17 @@
       "actions": [
         {
           "type": "Action.Submit",
+          "title": "List users",
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "List users",
+              "text": "list users"
+            }
+          }
+        },
+        {
+          "type": "Action.Submit",
           "title": "View audit log",
           "data": {
             "msteams": {
@@ -223,23 +234,12 @@
         },
         {
           "type": "Action.Submit",
-          "title": "Pending approvals",
+          "title": "Force release",
           "data": {
             "msteams": {
               "type": "messageBack",
-              "displayText": "Pending approvals",
-              "text": "show pending approvals"
-            }
-          }
-        },
-        {
-          "type": "Action.Submit",
-          "title": "Revenue KPI",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "Revenue KPI",
-              "text": "show revenue kpi"
+              "displayText": "Force release",
+              "text": "force release"
             }
           }
         }
@@ -288,7 +288,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "• view audit log · show pending approvals\n• force release 13122 · show order 13122 · logout",
+      "text": "• list users · manage user DEV-xxx\n• view audit log · force release 13122 · logout",
       "wrap": true,
       "spacing": "Small",
       "size": "Small",

@@ -46,6 +46,50 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
     {
         var text = userMessage.Trim().ToLowerInvariant();
 
+        // Admin: list / manage bot users (before generic "show … order")
+        var manageUserMatch = Regex.Match(
+            text,
+            @"(?:manage\s+user|set\s+role|set\s+sales\s*org)\s+([a-z0-9_-]+)",
+            RegexOptions.IgnoreCase);
+        if (manageUserMatch.Success)
+        {
+            var fn = _registry.GetByName("ManageBotUser");
+            if (fn is not null)
+            {
+                var sapId = manageUserMatch.Groups[1].Value.ToUpperInvariant();
+                var paramsJson = JsonSerializer.Serialize(new { sap_user_id = sapId });
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult
+                {
+                    Handled = true,
+                    FunctionName = fn.Name,
+                    Result = result,
+                    ParametersJson = paramsJson
+                };
+            }
+        }
+
+        if (text.Contains("list user") || text.Contains("show user") || text.Contains("bot user")
+            || text.Contains("manage users") || text.Contains("danh sách user") || text.Contains("danh sach user")
+            || text.Trim() is "manage user")
+        {
+            var listFn = _registry.GetByName("ListBotUsers");
+            if (listFn is not null)
+            {
+                var paramsJson = "{}";
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await listFn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult
+                {
+                    Handled = true,
+                    FunctionName = listFn.Name,
+                    Result = result,
+                    ParametersJson = paramsJson
+                };
+            }
+        }
+
         // Pattern 1: Check specific order — "kiểm tra đơn hàng 5001" or "check order 5001" or "show sales order 5001"
         if (text.Contains("kiểm tra") || text.Contains("check") || text.Contains("show"))
         {

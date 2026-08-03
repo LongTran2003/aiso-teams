@@ -1,0 +1,10 @@
+{
+  "name": "ListBotUsers",
+  "description": "Admin only: list linked Teams↔SAP bot users with Role and SalesOrg. Use for 'list users', 'show users', 'manage users', 'danh sách user'.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": [],
+    "additionalProperties": false
+  }
+}

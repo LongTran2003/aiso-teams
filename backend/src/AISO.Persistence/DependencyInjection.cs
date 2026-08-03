@@ -37,6 +37,7 @@ public static class DependencyInjection
         // Maker-checker approval store (singleton-safe via DbContextFactory).
         services.AddSingleton<IOrderApprovalService, OrderApprovalService>();
         services.AddSingleton<IUserScopeLookup, UserScopeLookup>();
+        services.AddSingleton<IBotUserAdminService, BotUserAdminService>();
         services.AddSingleton<IAuditQuery, EfAuditQuery>();
 
         return services;
