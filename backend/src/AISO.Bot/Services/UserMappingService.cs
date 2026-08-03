@@ -1,3 +1,4 @@
+using AISO.Domain.Auditing;
 using AISO.Domain.Users;
 using AISO.Persistence;
 using AISO.Persistence.Entities;
@@ -107,6 +108,39 @@ public class UserMappingService
             .FirstOrDefaultAsync(cancellationToken);
 
         return string.IsNullOrWhiteSpace(mapping?.DisplayName) ? mapping?.SapUserId : mapping.DisplayName;
+    }
+
+    /// <summary>
+    /// Batch labels for audit card: "Display Name (SAP-ID)" keyed by Teams user id.
+    /// </summary>
+    public async Task<IReadOnlyDictionary<string, string>> GetAuditUserLabelsAsync(
+        IEnumerable<string> teamsUserIds,
+        CancellationToken cancellationToken = default)
+    {
+        var ids = teamsUserIds
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        if (ids.Count == 0)
+            return new Dictionary<string, string>(StringComparer.Ordinal);
+
+        var mappings = await _dbContext.UserMappings
+            .AsNoTracking()
+            .Where(u => ids.Contains(u.TeamsUserId))
+            .Select(u => new { u.TeamsUserId, u.DisplayName, u.SapUserId })
+            .ToListAsync(cancellationToken);
+
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var mapping in mappings)
+        {
+            result[mapping.TeamsUserId] = AuditLogDisplay.FormatUserLabel(
+                mapping.DisplayName,
+                mapping.SapUserId,
+                mapping.TeamsUserId);
+        }
+
+        return result;
     }
 
     /// <summary>

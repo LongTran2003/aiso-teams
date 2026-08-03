@@ -56,7 +56,7 @@ public sealed class ViewAuditLogFunction : IFunction
                 e.TeamsUserId,
                 e.Action,
                 e.ResultStatus,
-                e.DurationMs?.ToString() ?? "-",
+                e.DurationMs,
                 e.ErrorMessage ?? string.Empty)).ToList()));
     }
 }
@@ -67,7 +67,7 @@ public sealed record AuditLogItem(
     string TeamsUserId,
     string Action,
     string Status,
-    string DurationMs,
+    int? DurationMs,
     string Error);
 
 public sealed record ViewAuditLogResponse(
