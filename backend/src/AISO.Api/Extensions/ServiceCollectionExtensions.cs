@@ -62,9 +62,13 @@ public static class ServiceCollectionExtensions
         var useKeywordFallback = configuration
             .GetValue<bool>("AiService:UseKeywordFallback", false);
 
+        // Always register keyword dispatcher (AI mode uses it for Admin Help shortcuts).
+        services.AddSingleton<KeywordFunctionDispatcher>();
+
         if (useKeywordFallback)
         {
-            services.AddSingleton<IFunctionDispatcher, KeywordFunctionDispatcher>();
+            services.AddSingleton<IFunctionDispatcher>(sp =>
+                sp.GetRequiredService<KeywordFunctionDispatcher>());
         }
         else
         {
