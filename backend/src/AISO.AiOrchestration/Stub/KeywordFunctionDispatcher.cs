@@ -46,6 +46,27 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
     {
         var text = userMessage.Trim().ToLowerInvariant();
 
+        // Admin: audit log (Help shortcut "view audit log")
+        if (text.Contains("audit log") || text.Contains("auditlog") || text.Contains("getauditlog")
+            || text.Contains("view audit") || text.Contains("show audit")
+            || text.Contains("nhật ký audit") || text.Contains("nhat ky audit"))
+        {
+            var auditFn = _registry.GetByName("ViewAuditLog");
+            if (auditFn is not null)
+            {
+                var paramsJson = "{}";
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await auditFn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult
+                {
+                    Handled = true,
+                    FunctionName = auditFn.Name,
+                    Result = result,
+                    ParametersJson = paramsJson
+                };
+            }
+        }
+
         // Admin: list / manage bot users (before generic "show … order")
         var manageUserMatch = Regex.Match(
             text,

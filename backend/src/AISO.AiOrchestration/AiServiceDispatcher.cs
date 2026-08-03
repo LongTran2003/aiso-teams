@@ -1,5 +1,6 @@
 using System.Text.Json;
 using AISO.AiOrchestration.Services;
+using AISO.AiOrchestration.Stub;
 using AISO.Domain.Users;
 using Microsoft.Extensions.Logging;
 
@@ -23,15 +24,18 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
 {
     private readonly AiServiceClient _aiClient;
     private readonly IFunctionRegistry _registry;
+    private readonly KeywordFunctionDispatcher _keyword;
     private readonly ILogger<AiServiceDispatcher> _logger;
 
     public AiServiceDispatcher(
         AiServiceClient aiClient,
         IFunctionRegistry registry,
+        KeywordFunctionDispatcher keyword,
         ILogger<AiServiceDispatcher> logger)
     {
         _aiClient = aiClient;
         _registry = registry;
+        _keyword = keyword;
         _logger = logger;
     }
 
@@ -41,6 +45,19 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
         UserRole role,
         CancellationToken ct = default)
     {
+        // Help shortcuts / exact Admin commands must not depend on LLM tool calling.
+        if (IsDeterministicShortcut(userMessage))
+        {
+            var shortcut = await _keyword.DispatchAsync(userMessage, requestingSapUser, role, ct);
+            if (shortcut.Handled)
+            {
+                _logger.LogInformation(
+                    "Using keyword shortcut for deterministic admin/ops intent → {Function}",
+                    shortcut.FunctionName);
+                return shortcut;
+            }
+        }
+
         AiOrchestratorResponse aiResponse;
 
         try
@@ -76,26 +93,27 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
         // Process the first tool call (primary intent).
         // Multi-tool-call support can be added later.
         var toolCall = aiResponse.ToolCalls[0];
+        var requestedName = NormalizeFunctionAlias(toolCall.FunctionName);
 
         _logger.LogInformation(
             "AI selected function {FunctionName} with {ArgCount} arguments",
-            toolCall.FunctionName, toolCall.Arguments.Count);
+            requestedName, toolCall.Arguments.Count);
 
         // Look up the function in our registry
-        var function = _registry.GetByName(toolCall.FunctionName);
+        var function = _registry.GetByName(requestedName);
         if (function is null)
         {
             _logger.LogWarning(
                 "AI requested function '{FunctionName}' which is not registered in BE. " +
                 "Available: [{Available}]",
-                toolCall.FunctionName,
+                requestedName,
                 string.Join(", ", _registry.All.Select(f => f.Name)));
 
             return new DispatchResult
             {
                 Handled = false,
-                FunctionName = toolCall.FunctionName,
-                Reason = $"Function '{toolCall.FunctionName}' is not registered. " +
+                FunctionName = requestedName,
+                Reason = $"Function '{requestedName}' is not registered. " +
                          "Check AI function schemas match BE function names."
             };
         }
@@ -166,6 +184,38 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
             };
         }
     }
+
+    /// <summary>
+    /// Exact Help / Admin shortcuts where LLM hallucinations (e.g. text "GetAuditLog") are common.
+    /// </summary>
+    public static bool IsDeterministicShortcut(string userMessage)
+    {
+        var text = userMessage.Trim().ToLowerInvariant();
+        return text.Contains("audit log")
+               || text.Contains("auditlog")
+               || text.Contains("getauditlog")
+               || text.Contains("view audit")
+               || text.Contains("show audit")
+               || text.Contains("list user")
+               || text.Contains("show user")
+               || text.Contains("bot user")
+               || text.Contains("manage user")
+               || text.Contains("manage users")
+               || text.Contains("set role")
+               || text.Contains("set sales org")
+               || text.Contains("danh sách user")
+               || text.Contains("danh sach user")
+               || text.Contains("nhật ký audit")
+               || text.Contains("nhat ky audit");
+    }
+
+    /// <summary>Common LLM / API misnomers for registered BE functions.</summary>
+    public static string NormalizeFunctionAlias(string functionName) =>
+        functionName.Trim() switch
+        {
+            var n when n.Equals("GetAuditLog", StringComparison.OrdinalIgnoreCase) => "ViewAuditLog",
+            var n when n.Equals("GetAuditLogs", StringComparison.OrdinalIgnoreCase) => "ViewAuditLog",
+            var n when n.Equals("AuditLog", StringComparison.OrdinalIgnoreCase) => "ViewAuditLog",
+            _ => functionName
+        };
 }
-
-
