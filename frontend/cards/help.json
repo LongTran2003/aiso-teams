@@ -71,7 +71,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "1. **List users** → Manage to set Role / SalesOrg (confirm card)\n2. **View audit log** for who did what\n3. Force release / force cancel only for emergencies"
+          "text": "1. **List users** → Manage to set Role / SalesOrg (confirm card)\n2. **View audit log** for who did what\n3. Force release / force cancel only for emergencies",
           "wrap": true,
           "spacing": "Small"
         }
