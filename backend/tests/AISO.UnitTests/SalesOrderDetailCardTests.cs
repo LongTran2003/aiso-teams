@@ -262,7 +262,7 @@ public class SalesOrderDetailCardTests
     }
 
     [Fact]
-    public void BuildSalesOrderDetailCard_WithApprovedJourney_ShowsApproverAndDate()
+    public void BuildSalesOrderDetailCard_WithApprovedJourney_ShowsReleasedUxAndHidesMutations()
     {
         var approval = new AISO.Domain.Approvals.OrderApprovalRequest
         {
@@ -288,6 +288,12 @@ public class SalesOrderDetailCardTests
         Assert.Contains("DEV-024", json);
         Assert.Contains("Approved", json);
         Assert.Contains("DEV-249", json);
+        Assert.Contains("Open (Released)", json);
+        Assert.Contains("Delivery block cleared", json);
+        Assert.Contains("Released — ready for delivery", json);
+        Assert.DoesNotContain("\"action\":\"release_so\"", json);
+        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"forward_so\"", json);
     }
 
     [Fact]

@@ -269,8 +269,6 @@ internal static class TeamsCardBuilder
         var canReject = !SalesOrderWorkflow.BlocksReject(order.Status);
         var isOwner = SalesOrderWorkflow.IsCurrentOwner(order.OwnerSapUser, currentSapUser);
         var materialOk = !order.HasInvalidMaterial;
-        var canMutateWhilePending = canMutateLifecycle && !hasPendingApproval && isOwner && materialOk;
-        var canRejectWhilePending = canReject && !hasPendingApproval && isOwner && materialOk;
         var items = order.Items ?? Array.Empty<SalesOrderItem>();
         var pendingBy = string.IsNullOrWhiteSpace(pendingRequestedBySapUser)
             ? "a teammate"
@@ -287,12 +285,32 @@ internal static class TeamsCardBuilder
             or SalesOrderStatus.PartiallyDelivered
             or SalesOrderStatus.Delivered
             or SalesOrderStatus.Invoiced;
-        // After approve, SAP usually clears delivery block → Open (or later statuses).
+        // Latest decision already Approved (no pending) → treat as post-release lifecycle.
+        var releaseApproved = approval?.Status == ApprovalStatus.Approved && !showActivePending;
+        var showReleasedUx = releaseApproved && orderLooksReleased;
+
+        // After approve: view-only for release/reject/forward (owner must not re-request by habit).
+        var canMutateWhilePending = canMutateLifecycle
+            && !hasPendingApproval
+            && !releaseApproved
+            && isOwner
+            && materialOk;
+        var canRejectWhilePending = canReject
+            && !hasPendingApproval
+            && !releaseApproved
+            && isOwner
+            && materialOk;
+
         var journey = ApprovalJourney.Build(
             approval,
-            orderLooksReleased: approval?.Status == ApprovalStatus.Approved && orderLooksReleased
-                && !showActivePending);
+            orderLooksReleased: showReleasedUx);
         var showJourney = journey.Count > 0 ? "true" : "false";
+
+        var (statusLabel, statusColor, showHint, hint) = ResolveStatusPresentation(
+            order.Status,
+            showActivePending,
+            showReleasedUx,
+            releaseApproved && !orderLooksReleased);
 
         return BuildSalesOrderDetailCard(new
         {
@@ -304,10 +322,10 @@ internal static class TeamsCardBuilder
             requestedDeliveryDate = order.RequestedDeliveryDate?.ToString("dd MMM yyyy") ?? "N/A",
             netAmount = $"{order.NetValue:N0}",
             currency = order.Currency,
-            approvalStatus = order.Status.ToString(),
-            statusColor = StatusToColor(order.Status),
-            showApprovalHint = showActivePending ? "true" : "false",
-            approvalHint = showActivePending ? "Approval: Waiting" : string.Empty,
+            approvalStatus = statusLabel,
+            statusColor,
+            showApprovalHint = showHint ? "true" : "false",
+            approvalHint = hint,
             hasItems = items.Count > 0 ? "true" : "false",
             showInvalidMaterial = order.HasInvalidMaterial ? "true" : "false",
             showOwnedBy = hasOwner ? "true" : "false",
@@ -327,6 +345,11 @@ internal static class TeamsCardBuilder
                 : string.Empty,
             pendingManagerNote = showActivePending && isApprover
                 ? $"Note for manager: {noteText}"
+                : string.Empty,
+            showReleasedBanner = showReleasedUx ? "true" : "false",
+            releasedBannerTitle = showReleasedUx ? "Released — ready for delivery" : string.Empty,
+            releasedBannerMessage = showReleasedUx
+                ? "Manager already approved. Open means the delivery block was cleared in SAP (not that the order is stuck)."
                 : string.Empty,
             showApprovalJourney = showJourney,
             journeySteps = journey.Select(s => new { title = s.Title, detail = s.Detail }).ToList(),
@@ -356,6 +379,32 @@ internal static class TeamsCardBuilder
                 };
             }).ToList()
         });
+    }
+
+    /// <summary>
+    /// Header status + hint: keep domain Status, but make post-approve Open read as released.
+    /// </summary>
+    internal static (string Label, string Color, bool ShowHint, string Hint) ResolveStatusPresentation(
+        SalesOrderStatus status,
+        bool showActivePending,
+        bool showReleasedUx,
+        bool approvedButStillBlocked)
+    {
+        if (showActivePending)
+            return (status.ToString(), StatusToColor(status), true, "Approval: Waiting");
+
+        if (showReleasedUx)
+        {
+            var label = status == SalesOrderStatus.Open
+                ? "Open (Released)"
+                : $"{status} (Released)";
+            return (label, "Good", true, "Delivery block cleared");
+        }
+
+        if (approvedButStillBlocked)
+            return (status.ToString(), StatusToColor(status), true, "Approved — SAP block may remain");
+
+        return (status.ToString(), StatusToColor(status), false, string.Empty);
     }
 
     private static string TrimItemNumber(string itemNumber)

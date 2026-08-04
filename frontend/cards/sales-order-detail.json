@@ -85,6 +85,27 @@
     },
     {
       "type": "Container",
+      "style": "good",
+      "spacing": "Medium",
+      "$when": "${showReleasedBanner == 'true'}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "${releasedBannerTitle}",
+          "weight": "Bolder",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "${releasedBannerMessage}",
+          "isSubtle": true,
+          "wrap": true,
+          "spacing": "None"
+        }
+      ]
+    },
+    {
+      "type": "Container",
       "style": "emphasis",
       "spacing": "Medium",
       "$when": "${showOwnedBy == 'true'}",
