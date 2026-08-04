@@ -42,7 +42,13 @@ public static class ApprovalJourney
             {
                 steps.Add(new(
                     "3. Released in SAP",
-                    "Order is no longer waiting for release approval"));
+                    "Delivery block cleared. Status Open = released & ready for delivery (not stuck)."));
+            }
+            else
+            {
+                steps.Add(new(
+                    "3. Approved — check SAP",
+                    "Approval recorded, but bot still sees a delivery block. Ask SAP teammate to verify LIFSK."));
             }
 
             return steps;

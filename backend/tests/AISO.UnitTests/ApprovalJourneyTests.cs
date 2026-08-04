@@ -49,6 +49,27 @@ public class ApprovalJourneyTests
         Assert.Contains("DEV-249", steps[1].Detail);
         Assert.Contains("Approved", steps[1].Title);
         Assert.Contains("Released in SAP", steps[2].Title);
+        Assert.Contains("Delivery block cleared", steps[2].Detail);
+    }
+
+    [Fact]
+    public void Build_WhenApprovedButStillBlocked_ShowsCheckSapStep()
+    {
+        var steps = ApprovalJourney.Build(
+            new OrderApprovalRequest
+            {
+                Id = Guid.NewGuid(),
+                SoNumber = "0000000001",
+                RequestedBySapUser = "DEV-024",
+                Status = ApprovalStatus.Approved,
+                DecidedBySapUser = "DEV-249",
+                RequestedAt = new DateTimeOffset(2026, 8, 4, 3, 0, 0, TimeSpan.Zero),
+                DecidedAt = new DateTimeOffset(2026, 8, 4, 4, 0, 0, TimeSpan.Zero)
+            },
+            orderLooksReleased: false);
+
+        Assert.Equal(3, steps.Count);
+        Assert.Contains("check SAP", steps[2].Title, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
