@@ -260,7 +260,8 @@ internal static class TeamsCardBuilder
         bool hasPendingApproval = false,
         string? pendingRequestedBySapUser = null,
         string? currentSapUser = null,
-        string? pendingComment = null)
+        string? pendingComment = null,
+        OrderApprovalRequest? approval = null)
     {
         var isEmployee = role is null or UserRole.Employee;
         var isApprover = role is UserRole.Manager or UserRole.Admin;
@@ -281,6 +282,17 @@ internal static class TeamsCardBuilder
         var noteText = string.IsNullOrWhiteSpace(pendingComment)
             ? "N/A"
             : pendingComment.Trim();
+
+        var orderLooksReleased = order.Status is SalesOrderStatus.Open
+            or SalesOrderStatus.PartiallyDelivered
+            or SalesOrderStatus.Delivered
+            or SalesOrderStatus.Invoiced;
+        // After approve, SAP usually clears delivery block → Open (or later statuses).
+        var journey = ApprovalJourney.Build(
+            approval,
+            orderLooksReleased: approval?.Status == ApprovalStatus.Approved && orderLooksReleased
+                && !showActivePending);
+        var showJourney = journey.Count > 0 ? "true" : "false";
 
         return BuildSalesOrderDetailCard(new
         {
@@ -316,6 +328,8 @@ internal static class TeamsCardBuilder
             pendingManagerNote = showActivePending && isApprover
                 ? $"Note for manager: {noteText}"
                 : string.Empty,
+            showApprovalJourney = showJourney,
+            journeySteps = journey.Select(s => new { title = s.Title, detail = s.Detail }).ToList(),
             showRequestRelease = isEmployee && canMutateWhilePending ? "true" : "false",
             showApprove = isApprover && canMutateLifecycle && showActivePending && materialOk ? "true" : "false",
             showReject = canRejectWhilePending ? "true" : "false",

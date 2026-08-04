@@ -71,6 +71,22 @@ public sealed class OrderApprovalService : IOrderApprovalService
         return entity is null ? null : ToRequest(entity);
     }
 
+    public async Task<OrderApprovalRequest?> GetLatestBySoNumberAsync(
+        string soNumber,
+        CancellationToken ct = default)
+    {
+        var padded = PadSoNumber(soNumber);
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+        var entity = await db.OrderApprovals
+            .AsNoTracking()
+            .Where(a => a.SoNumber == padded)
+            .OrderByDescending(a => a.RequestedAt)
+            .FirstOrDefaultAsync(ct);
+
+        return entity is null ? null : ToRequest(entity);
+    }
+
     public async Task<IReadOnlyList<OrderApprovalRequest>> GetPendingAsync(
         string? salesOrgFilter,
         CancellationToken ct = default)

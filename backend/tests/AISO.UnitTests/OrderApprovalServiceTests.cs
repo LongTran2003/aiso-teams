@@ -136,6 +136,25 @@ public class OrderApprovalServiceTests
         }
     }
 
+    [Fact]
+    public async Task GetLatestBySoNumber_ReturnsMostRecentRequest()
+    {
+        var service = CreateService(out var ctx);
+        await using (ctx)
+        {
+            await service.RequestReleaseAsync("11", "A", "TV01", null);
+            var approved = await service.ApproveAsync("11", "MGR", "TV01", isAdmin: false, comment: null);
+            Assert.Equal(ApprovalStatus.Approved, approved.Status);
+
+            await service.RequestReleaseAsync("11", "B", "TV01", "again");
+            var latest = await service.GetLatestBySoNumberAsync("11");
+
+            Assert.NotNull(latest);
+            Assert.Equal(ApprovalStatus.Pending, latest!.Status);
+            Assert.Equal("B", latest.RequestedBySapUser);
+        }
+    }
+
     private sealed class TestDbContextFactory : IDbContextFactory<AppDbContext>
     {
         private readonly DbContextOptions<AppDbContext> _options;

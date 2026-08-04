@@ -139,15 +139,12 @@ public class TeamsBot : TeamsActivityHandler
 
                             var roleForDetail = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
                             var linkedSapForDetail = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
-                            var pending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
                             await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(
+                                MessageFactory.Attachment(await BuildSalesOrderDetailAttachmentAsync(
                                     order,
                                     roleForDetail,
-                                    hasPendingApproval: pending is not null,
-                                    pendingRequestedBySapUser: pending?.RequestedBySapUser,
-                                    currentSapUser: linkedSapForDetail,
-                                    pendingComment: pending?.Comment)),
+                                    linkedSapForDetail,
+                                    cancellationToken)),
                                 cancellationToken);
                         }
                         catch (SapODataException sapEx)
@@ -1232,14 +1229,11 @@ public class TeamsBot : TeamsActivityHandler
                     && IsOrderDetailFunction(dispatch.FunctionName))
                 {
                     var order = ordersList[0];
-                    var pending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
-                    var detailCard = TeamsCardBuilder.BuildSalesOrderDetailCard(
+                    var detailCard = await BuildSalesOrderDetailAttachmentAsync(
                         order,
                         role,
-                        hasPendingApproval: pending is not null,
-                        pendingRequestedBySapUser: pending?.RequestedBySapUser,
-                        currentSapUser: sapUsername,
-                        pendingComment: pending?.Comment);
+                        sapUsername,
+                        cancellationToken);
 
                     await ReplaceLoadingActivityAsync(
                         turnContext,
@@ -1871,16 +1865,34 @@ public class TeamsBot : TeamsActivityHandler
         var teamsUserId = turnContext.Activity.From?.Id ?? "anonymous";
         var roleForDetail = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
         var linkedSapForDetail = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
-        var pending = await _approvals.GetPendingBySoNumberAsync(order.SoNumber, cancellationToken);
         await turnContext.SendActivityAsync(
-            MessageFactory.Attachment(TeamsCardBuilder.BuildSalesOrderDetailCard(
+            MessageFactory.Attachment(await BuildSalesOrderDetailAttachmentAsync(
                 order,
                 roleForDetail,
-                hasPendingApproval: pending is not null,
-                pendingRequestedBySapUser: pending?.RequestedBySapUser,
-                currentSapUser: linkedSapForDetail,
-                pendingComment: pending?.Comment)),
+                linkedSapForDetail,
+                cancellationToken)),
             cancellationToken);
         return true;
+    }
+
+    private async Task<Attachment> BuildSalesOrderDetailAttachmentAsync(
+        Domain.SalesOrders.SalesOrder order,
+        UserRole role,
+        string? currentSapUser,
+        CancellationToken cancellationToken)
+    {
+        var latest = await _approvals.GetLatestBySoNumberAsync(order.SoNumber, cancellationToken);
+        var pending = latest is { Status: ApprovalStatus.Pending }
+            ? latest
+            : null;
+
+        return TeamsCardBuilder.BuildSalesOrderDetailCard(
+            order,
+            role,
+            hasPendingApproval: pending is not null,
+            pendingRequestedBySapUser: pending?.RequestedBySapUser ?? latest?.RequestedBySapUser,
+            currentSapUser: currentSapUser,
+            pendingComment: pending?.Comment,
+            approval: latest);
     }
 }

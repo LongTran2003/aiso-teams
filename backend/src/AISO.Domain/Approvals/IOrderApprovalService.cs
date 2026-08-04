@@ -17,6 +17,13 @@ public interface IOrderApprovalService
         string soNumber,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Latest approval row for an SO (pending or decided), for journey/timeline UI.
+    /// </summary>
+    Task<OrderApprovalRequest?> GetLatestBySoNumberAsync(
+        string soNumber,
+        CancellationToken ct = default);
+
     Task<IReadOnlyList<OrderApprovalRequest>> GetPendingAsync(
         string? salesOrgFilter,
         CancellationToken ct = default);

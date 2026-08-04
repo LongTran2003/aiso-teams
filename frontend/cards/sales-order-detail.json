@@ -153,6 +153,50 @@
       ]
     },
     {
+      "type": "Container",
+      "spacing": "Medium",
+      "style": "emphasis",
+      "$when": "${showApprovalJourney == 'true'}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Approval journey",
+          "weight": "Bolder",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Release request trail (who / when).",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        },
+        {
+          "type": "Container",
+          "spacing": "Small",
+          "$data": "${journeySteps}",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "${title}",
+              "weight": "Bolder",
+              "wrap": true,
+              "spacing": "Small"
+            },
+            {
+              "type": "TextBlock",
+              "text": "${detail}",
+              "size": "Small",
+              "isSubtle": true,
+              "wrap": true,
+              "spacing": "None"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "type": "FactSet",
       "spacing": "Medium",
       "facts": [

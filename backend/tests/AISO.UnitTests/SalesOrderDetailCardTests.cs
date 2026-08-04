@@ -261,6 +261,60 @@ public class SalesOrderDetailCardTests
         Assert.Contains("forward_so_confirm", json);
     }
 
+    [Fact]
+    public void BuildSalesOrderDetailCard_WithApprovedJourney_ShowsApproverAndDate()
+    {
+        var approval = new AISO.Domain.Approvals.OrderApprovalRequest
+        {
+            Id = Guid.NewGuid(),
+            SoNumber = "0000000009",
+            RequestedBySapUser = "DEV-024",
+            Status = AISO.Domain.Approvals.ApprovalStatus.Approved,
+            DecidedBySapUser = "DEV-249",
+            RequestedAt = new DateTimeOffset(2026, 8, 4, 3, 0, 0, TimeSpan.Zero),
+            DecidedAt = new DateTimeOffset(2026, 8, 4, 4, 0, 0, TimeSpan.Zero)
+        };
+
+        var order = SampleOrder(status: SalesOrderStatus.Open) with { OwnerSapUser = "DEV-024" };
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(
+            order,
+            UserRole.Employee,
+            currentSapUser: "DEV-024",
+            approval: approval);
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Approval journey", json);
+        Assert.Contains("Release requested", json);
+        Assert.Contains("DEV-024", json);
+        Assert.Contains("Approved", json);
+        Assert.Contains("DEV-249", json);
+    }
+
+    [Fact]
+    public void BuildSalesOrderDetailCard_WithPendingJourney_ShowsWaitingStep()
+    {
+        var approval = new AISO.Domain.Approvals.OrderApprovalRequest
+        {
+            Id = Guid.NewGuid(),
+            SoNumber = "0000000009",
+            RequestedBySapUser = "DEV-024",
+            Status = AISO.Domain.Approvals.ApprovalStatus.Pending,
+            RequestedAt = new DateTimeOffset(2026, 8, 4, 3, 0, 0, TimeSpan.Zero)
+        };
+
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(
+            SampleOrder(),
+            UserRole.Employee,
+            hasPendingApproval: true,
+            pendingRequestedBySapUser: "DEV-024",
+            approval: approval);
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Approval journey", json);
+        Assert.Contains("Manager approval", json);
+        Assert.Contains("Waiting", json);
+    }
+
     private static SalesOrder SampleOrder(bool withItems = false, SalesOrderStatus status = SalesOrderStatus.Blocked) =>
         new()
         {
