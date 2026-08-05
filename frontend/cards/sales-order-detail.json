@@ -100,7 +100,8 @@
           "text": "${releasedBannerMessage}",
           "isSubtle": true,
           "wrap": true,
-          "spacing": "None"
+          "spacing": "None",
+          "$when": "${releasedBannerMessage != ''}"
         }
       ]
     },

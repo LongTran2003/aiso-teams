@@ -248,10 +248,9 @@ public class SapClientTests
         var result = await client.ApproveOrderAsync("9", "DEV-249");
 
         Assert.Equal("0000000009", result.SoNumber);
-        Assert.NotNull(handler.LastRequestUri);
-        Assert.Contains("approveOrder", handler.LastRequestUri!);
-        Assert.Contains("REQUESTING_TEAMS_USER", handler.LastRequestBody ?? "");
-        Assert.Contains("DEV-249", handler.LastRequestBody ?? "");
+        Assert.Contains(handler.RequestUris, u => u.Contains("approveOrder", StringComparison.Ordinal));
+        Assert.Contains("REQUESTING_TEAMS_USER", handler.RequestBodies[0] ?? "");
+        Assert.Contains("DEV-249", handler.RequestBodies[0] ?? "");
     }
 
     [Fact]
@@ -262,9 +261,9 @@ public class SapClientTests
         var result = await client.ForceReleaseAsync("42", "DEV-001", "emergency unlock");
 
         Assert.Equal("0000000042", result.SoNumber);
-        Assert.Contains("forceRelease", handler.LastRequestUri!);
-        Assert.Contains("OVERRIDE_REASON", handler.LastRequestBody ?? "");
-        Assert.Contains("emergency unlock", handler.LastRequestBody ?? "");
+        Assert.Contains(handler.RequestUris, u => u.Contains("forceRelease", StringComparison.Ordinal));
+        Assert.Contains("OVERRIDE_REASON", handler.RequestBodies[0] ?? "");
+        Assert.Contains("emergency unlock", handler.RequestBodies[0] ?? "");
     }
 
     [Fact]
@@ -488,6 +487,7 @@ public class SapClientTests
         public string? LastRequestUri { get; private set; }
         public string? LastRequestBody { get; private set; }
         public List<string> RequestUris { get; } = new();
+        public List<string?> RequestBodies { get; } = new();
 
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
@@ -498,6 +498,7 @@ public class SapClientTests
             LastRequestBody = request.Content is null
                 ? null
                 : await request.Content.ReadAsStringAsync(cancellationToken);
+            RequestBodies.Add(LastRequestBody);
 
             var (status, body) = _responses.Count > 0
                 ? _responses.Dequeue()

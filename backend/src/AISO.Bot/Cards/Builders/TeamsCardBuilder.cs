@@ -347,10 +347,8 @@ internal static class TeamsCardBuilder
                 ? $"Note for manager: {noteText}"
                 : string.Empty,
             showReleasedBanner = showReleasedUx ? "true" : "false",
-            releasedBannerTitle = showReleasedUx ? "Released — ready for delivery" : string.Empty,
-            releasedBannerMessage = showReleasedUx
-                ? "Manager already approved. Open means the delivery block was cleared in SAP (not that the order is stuck)."
-                : string.Empty,
+            releasedBannerTitle = showReleasedUx ? "Đơn đã duyệt — chờ vận chuyển" : string.Empty,
+            releasedBannerMessage = string.Empty,
             showApprovalJourney = showJourney,
             journeySteps = journey.Select(s => new { title = s.Title, detail = s.Detail }).ToList(),
             showRequestRelease = isEmployee && canMutateWhilePending ? "true" : "false",
@@ -398,7 +396,7 @@ internal static class TeamsCardBuilder
             var label = status == SalesOrderStatus.Open
                 ? "Open (Released)"
                 : $"{status} (Released)";
-            return (label, "Good", true, "Delivery block cleared");
+            return (label, "Good", true, "Đã duyệt");
         }
 
         if (approvedButStillBlocked)

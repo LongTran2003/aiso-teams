@@ -49,7 +49,7 @@ public class ApprovalJourneyTests
         Assert.Contains("DEV-249", steps[1].Detail);
         Assert.Contains("Approved", steps[1].Title);
         Assert.Contains("Released in SAP", steps[2].Title);
-        Assert.Contains("Delivery block cleared", steps[2].Detail);
+        Assert.Contains("chờ vận chuyển", steps[2].Detail);
     }
 
     [Fact]
