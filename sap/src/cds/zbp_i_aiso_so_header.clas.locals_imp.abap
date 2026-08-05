@@ -65,54 +65,99 @@ ENDCLASS.
 
 CLASS lhc_SalesOrder IMPLEMENTATION.
 
-    METHOD approveorder.
-    DATA: lv_timestamp TYPE c LENGTH 14,
-          lv_audit_id  TYPE sysuuid_c32.
+   METHOD approveorder.
+  DATA: lv_timestamp TYPE c LENGTH 14,
+        lv_audit_id  TYPE sysuuid_c32.
 
-    LOOP AT keys INTO DATA(ls_key).
-      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
-      DATA(lv_requesting_user) = ls_key-%param-requesting_teams_user.
-      DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
+  LOOP AT keys INTO DATA(ls_key).
+    DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+    DATA(lv_requesting_user) = ls_key-%param-requesting_teams_user.
+    DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
 
-      IF lv_role <> 'MANAGER' AND lv_role <> 'ADMIN'.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unauthorized )
-          TO failed-salesorder.
+    IF lv_role <> 'MANAGER' AND lv_role <> 'ADMIN'.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+        TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message(
+                         id       = '00'
+                         number   = '001'
+                         severity = if_abap_behv_message=>severity-error
+                         v1       = 'Only Manager/Admin can approve' ) )
+        TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
 
-        APPEND VALUE #( %tky = ls_key-%tky
-                         %msg = new_message(
-                           id       = '00'
-                           number   = '001'
-                           severity = if_abap_behv_message=>severity-error
-                           v1       = 'Only Manager/Admin can approve' ) )
-          TO reported-salesorder.
+    " --- Validate item & material trước khi release thật (tránh ATP dump) ---
+    SELECT posnr, matnr FROM vbap
+      INTO TABLE @DATA(lt_posnr)
+      WHERE vbeln = @lv_so_number.
 
-        CONTINUE.
+    IF lt_posnr IS INITIAL.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-not_found )
+        TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Sales order items not found' ) )
+        TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    DATA(lv_has_invalid_material) = abap_false.
+    LOOP AT lt_posnr INTO DATA(ls_check_item).
+      SELECT SINGLE matnr FROM mara
+        INTO @DATA(lv_matnr_exists)
+        WHERE matnr = @ls_check_item-matnr.
+      IF sy-subrc <> 0.
+        lv_has_invalid_material = abap_true.
+        EXIT.
       ENDIF.
-
-      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
-
-      TRY.
-          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
-        CATCH cx_uuid_error.
-          CLEAR lv_audit_id.
-      ENDTRY.
-
-      APPEND VALUE #(
-        mandt       = sy-mandt
-        audit_id    = lv_audit_id
-        sap_user    = lv_requesting_user
-        actor_role  = lv_role
-        action_type = 'APPROVE_SO'
-        so_number   = lv_so_number
-        status      = 'SUCCESS'
-        created_at  = lv_timestamp
-      ) TO lcl_buffer=>gt_audit_db.
-
-      APPEND VALUE #( %tky     = ls_key-%tky
-                      SoNumber = lv_so_number ) TO result.
     ENDLOOP.
-  ENDMETHOD.
+
+    IF lv_has_invalid_material = abap_true.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+        TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Order has invalid material master data' ) )
+        TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+    " --- End validate ---
+
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
+
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = lv_requesting_user
+      actor_role  = lv_role
+      action_type = 'APPROVE_SO'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
+
+    " --- QUAN TRỌNG: buffer RELEASE thật, để save() gọi BAPI clear delivery block ---
+    APPEND VALUE #( so_number   = lv_so_number
+                     action_type = 'RELEASE' ) TO lcl_buffer=>gt_release_reject.
+
+    APPEND VALUE #( %tky     = ls_key-%tky
+                    SoNumber = lv_so_number ) TO result.
+  ENDLOOP.
+ENDMETHOD.
 
     METHOD rejectapproval.
     DATA: lv_timestamp TYPE c LENGTH 14,
@@ -690,6 +735,9 @@ ENDMETHOD.
   ENDMETHOD.
 
   METHOD releaseorder.
+  DATA: lv_timestamp TYPE c LENGTH 14,
+        lv_audit_id  TYPE sysuuid_c32.
+
   LOOP AT keys INTO DATA(ls_key).
     DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
 
@@ -710,7 +758,7 @@ ENDMETHOD.
       CONTINUE.
     ENDIF.
 
-    " --- Validate material master tồn tại (tránh ATP dump) ---
+    " --- Validate item & material sớm để fail-fast trước khi vào approval flow ---
     SELECT vbeln, matnr FROM vbap
       INTO TABLE @DATA(lt_check_items)
       WHERE vbeln = @lv_so_number.
@@ -753,9 +801,25 @@ ENDMETHOD.
     ENDIF.
     " --- End validate ---
 
-    " Chỉ buffer, KHÔNG gọi BAPI ở đây
-    APPEND VALUE #( so_number   = lv_so_number
-                     action_type = 'RELEASE' ) TO lcl_buffer=>gt_release_reject.
+    " CHỈ ghi log "đã yêu cầu release" — KHÔNG buffer RELEASE thật nữa.
+    " Việc release thật (clear delivery block) đã chuyển sang approveOrder().
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
+
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = ls_key-%param-requesting_teams_user
+      action_type = 'RELEASE_REQUESTED'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
 
     APPEND VALUE #( %tky     = ls_key-%tky
                      SoNumber = lv_so_number ) TO result.
