@@ -538,7 +538,8 @@ public class TeamsBot : TeamsActivityHandler
                                     return;
                                 }
 
-                                var updated = await _sap.ReleaseOrderAsync(pending.SoNumber, linkedSapUsername, cancellationToken);
+                                // SAP: only approveOrder buffers real RELEASE (clear LIFSK); releaseOrder is audit-only.
+                                var updated = await _sap.ApproveOrderAsync(pending.SoNumber, linkedSapUsername, cancellationToken);
                                 await _approvals.ApproveAsync(
                                     pending.SoNumber,
                                     linkedSapUsername,
@@ -553,7 +554,8 @@ public class TeamsBot : TeamsActivityHandler
                                 return;
                             }
 
-                            var updatedOrder = await _sap.ReleaseOrderAsync(salesOrderId, linkedSapUsername, cancellationToken);
+                            // Manager direct release (no pending): still must call approveOrder to clear delivery block.
+                            var updatedOrder = await _sap.ApproveOrderAsync(salesOrderId, linkedSapUsername, cancellationToken);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(updatedOrder.SoNumber, "Released")),
                                 cancellationToken);
@@ -741,7 +743,8 @@ public class TeamsBot : TeamsActivityHandler
                                 return;
                             }
 
-                            var updated = await _sap.ReleaseOrderAsync(pending.SoNumber, linkedSapUsername, cancellationToken);
+                            // SAP: approveOrder clears delivery block; releaseOrder no longer does.
+                            var updated = await _sap.ApproveOrderAsync(pending.SoNumber, linkedSapUsername, cancellationToken);
                             await _approvals.ApproveAsync(
                                 pending.SoNumber,
                                 linkedSapUsername,
