@@ -413,12 +413,17 @@ public class SapClient : ISapClient
                 throw new InvalidOperationException($"Failed to deserialize SAP action {actionName}.");
 
             // Action responses are often sparse (NetValue/items missing). Re-read full SO.
+            // Mock/tests may return the same sparse body for GET — always keep the requested SoNumber.
             var refreshed = await GetSalesOrderByIdAsync(formattedSo, ct);
             if (refreshed is not null)
-                return refreshed;
+            {
+                return refreshed.SoNumber is "UNKNOWN" || string.IsNullOrWhiteSpace(refreshed.SoNumber)
+                    ? refreshed with { SoNumber = formattedSo }
+                    : refreshed;
+            }
 
             var order = MapToDomain(result);
-            return order.SoNumber is "UNKNOWN"
+            return order.SoNumber is "UNKNOWN" || string.IsNullOrWhiteSpace(order.SoNumber)
                 ? order with { SoNumber = formattedSo }
                 : order;
         }
