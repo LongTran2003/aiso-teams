@@ -412,6 +412,11 @@ public class SapClient : ISapClient
             if (result == null)
                 throw new InvalidOperationException($"Failed to deserialize SAP action {actionName}.");
 
+            // Action responses are often sparse (NetValue/items missing). Re-read full SO.
+            var refreshed = await GetSalesOrderByIdAsync(formattedSo, ct);
+            if (refreshed is not null)
+                return refreshed;
+
             var order = MapToDomain(result);
             return order.SoNumber is "UNKNOWN"
                 ? order with { SoNumber = formattedSo }
@@ -984,6 +989,13 @@ public class SapClient : ISapClient
         IReadOnlyList<SalesOrderItem>? items = null,
         bool allItemsRejected = false)
     {
+        var mappedItems = items ?? Array.Empty<SalesOrderItem>();
+        var headerNet = dto.NetValue ?? 0;
+        // Some SAP action/GET payloads omit header NetValue after release; prefer item sum.
+        var netValue = headerNet > 0
+            ? headerNet
+            : mappedItems.Sum(i => i.NetValue);
+
         return new SalesOrder
         {
             SoNumber = FormatSoNumber(dto.SoNumber),
@@ -995,13 +1007,13 @@ public class SapClient : ISapClient
                 : null,
             Division = dto.Division,
             OrderDate = DateOnly.TryParse(dto.DocDate, out var date) ? date : DateOnly.MinValue,
-            NetValue = dto.NetValue ?? 0,
+            NetValue = netValue,
             Currency = string.IsNullOrEmpty(dto.Currency) ? "USD" : dto.Currency,
             Status = MapStatus(dto, allItemsRejected),
             SalesOrg = dto.SalesOrg ?? "UNKNOWN",
             OwnerSapUser = string.IsNullOrWhiteSpace(dto.OwnerSapUser) ? null : dto.OwnerSapUser.Trim(),
             HasInvalidMaterial = IsSapFlagSet(dto.HasInvalidMaterial),
-            Items = items ?? Array.Empty<SalesOrderItem>()
+            Items = mappedItems
         };
     }
 

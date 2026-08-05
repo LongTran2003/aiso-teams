@@ -289,8 +289,10 @@ public class SalesOrderDetailCardTests
         Assert.Contains("Approved", json);
         Assert.Contains("DEV-249", json);
         Assert.Contains("Open (Released)", json);
-        Assert.Contains("Delivery block cleared", json);
-        Assert.Contains("Released — ready for delivery", json);
+        Assert.Contains("Đã duyệt", json);
+        Assert.Contains("Đơn đã duyệt — chờ vận chuyển", json);
+        Assert.DoesNotContain("delivery block was cleared", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("not that the order is stuck", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
         Assert.DoesNotContain("\"action\":\"reject_so\"", json);
         Assert.DoesNotContain("\"action\":\"forward_so\"", json);
