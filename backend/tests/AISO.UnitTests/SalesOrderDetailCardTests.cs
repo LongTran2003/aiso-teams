@@ -323,6 +323,35 @@ public class SalesOrderDetailCardTests
         Assert.Contains("Waiting", json);
     }
 
+    [Fact]
+    public void BuildSoSummaryCard_WhenApprovedOpen_ShowsOpenReleasedLabel()
+    {
+        var approval = new AISO.Domain.Approvals.OrderApprovalRequest
+        {
+            Id = Guid.NewGuid(),
+            SoNumber = "0000000009",
+            RequestedBySapUser = "DEV-024",
+            Status = AISO.Domain.Approvals.ApprovalStatus.Approved,
+            DecidedBySapUser = "DEV-249",
+            RequestedAt = new DateTimeOffset(2026, 8, 4, 3, 0, 0, TimeSpan.Zero),
+            DecidedAt = new DateTimeOffset(2026, 8, 4, 4, 0, 0, TimeSpan.Zero)
+        };
+
+        var order = SampleOrder(status: SalesOrderStatus.Open);
+        var attachment = TeamsCardBuilder.BuildSoSummaryCard(
+            new[] { order },
+            title: "Recent orders",
+            latestApprovalsBySo: new Dictionary<string, AISO.Domain.Approvals.OrderApprovalRequest?>
+            {
+                [order.SoNumber] = approval
+            });
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Open (Released)", json);
+        Assert.Contains("Đã duyệt", json);
+        Assert.DoesNotContain("\"status\":\"Open\"", json);
+    }
+
     private static SalesOrder SampleOrder(bool withItems = false, SalesOrderStatus status = SalesOrderStatus.Blocked) =>
         new()
         {

@@ -508,21 +508,45 @@ internal static class TeamsCardBuilder
 
     public static Attachment BuildSoSummaryCard(
         IReadOnlyList<SalesOrder> orders,
-        string? title = null)
+        string? title = null,
+        IReadOnlyDictionary<string, OrderApprovalRequest?>? latestApprovalsBySo = null)
     {
         var data = new
         {
             title = string.IsNullOrWhiteSpace(title) ? "Sales orders" : title.Trim(),
             count = orders.Count,
-            orders = orders.Select(o => new
+            orders = orders.Select(o =>
             {
-                soNumber = o.SoNumber,
-                customerName = string.IsNullOrWhiteSpace(o.CustomerName) ? "N/A" : o.CustomerName,
-                orderDate = o.OrderDate.ToString("dd MMM yyyy"),
-                formattedValue = $"{o.NetValue:N0} {o.Currency}",
-                status = o.Status.ToString(),
-                statusColor = StatusToColor(o.Status),
-                salesOrg = o.SalesOrg
+                OrderApprovalRequest? approval = null;
+                latestApprovalsBySo?.TryGetValue(o.SoNumber, out approval);
+
+                var showActivePending = approval?.Status == ApprovalStatus.Pending
+                    && SalesOrderWorkflow.ShowsPendingApprovalBanner(o.Status);
+                var orderLooksReleased = o.Status is SalesOrderStatus.Open
+                    or SalesOrderStatus.PartiallyDelivered
+                    or SalesOrderStatus.Delivered
+                    or SalesOrderStatus.Invoiced;
+                var releaseApproved = approval?.Status == ApprovalStatus.Approved && !showActivePending;
+                var showReleasedUx = releaseApproved && orderLooksReleased;
+
+                var (statusLabel, statusColor, showHint, hint) = ResolveStatusPresentation(
+                    o.Status,
+                    showActivePending,
+                    showReleasedUx,
+                    releaseApproved && !orderLooksReleased);
+
+                return new
+                {
+                    soNumber = o.SoNumber,
+                    customerName = string.IsNullOrWhiteSpace(o.CustomerName) ? "N/A" : o.CustomerName,
+                    orderDate = o.OrderDate.ToString("dd MMM yyyy"),
+                    formattedValue = $"{o.NetValue:N0} {o.Currency}",
+                    status = statusLabel,
+                    statusColor,
+                    showStatusHint = showHint ? "true" : "false",
+                    statusHint = hint,
+                    salesOrg = o.SalesOrg
+                };
             }).ToList()
         };
 

@@ -1200,7 +1200,8 @@ public class TeamsBot : TeamsActivityHandler
                     return;
                 }
 
-                var card = TeamsCardBuilder.BuildSoSummaryCard(orders, getOrdersResponse.Title);
+                var latestBySo = await GetLatestApprovalsBySoAsync(orders, cancellationToken);
+                var card = TeamsCardBuilder.BuildSoSummaryCard(orders, getOrdersResponse.Title, latestBySo);
                 await ReplaceLoadingActivityAsync(
                     turnContext,
                     loadingActivityId,
@@ -1248,7 +1249,8 @@ public class TeamsBot : TeamsActivityHandler
                     return;
                 }
 
-                var card = TeamsCardBuilder.BuildSoSummaryCard(ordersList);
+                var latestBySo = await GetLatestApprovalsBySoAsync(ordersList, cancellationToken);
+                var card = TeamsCardBuilder.BuildSoSummaryCard(ordersList, latestApprovalsBySo: latestBySo);
                 await ReplaceLoadingActivityAsync(
                     turnContext,
                     loadingActivityId,
@@ -1894,5 +1896,21 @@ public class TeamsBot : TeamsActivityHandler
             currentSapUser: currentSapUser,
             pendingComment: pending?.Comment,
             approval: latest);
+    }
+
+    private async Task<IReadOnlyDictionary<string, OrderApprovalRequest?>> GetLatestApprovalsBySoAsync(
+        IReadOnlyList<Domain.SalesOrders.SalesOrder> orders,
+        CancellationToken cancellationToken)
+    {
+        var pairs = await Task.WhenAll(orders.Select(async order =>
+        {
+            var latest = await _approvals.GetLatestBySoNumberAsync(order.SoNumber, cancellationToken);
+            return (order.SoNumber, latest);
+        }));
+
+        return pairs.ToDictionary(
+            p => p.SoNumber,
+            p => p.latest,
+            StringComparer.OrdinalIgnoreCase);
     }
 }
