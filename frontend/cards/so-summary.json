@@ -89,6 +89,16 @@
                   "horizontalAlignment": "Right",
                   "spacing": "None",
                   "wrap": true
+                },
+                {
+                  "type": "TextBlock",
+                  "text": "${statusHint}",
+                  "size": "Small",
+                  "isSubtle": true,
+                  "horizontalAlignment": "Right",
+                  "spacing": "None",
+                  "wrap": true,
+                  "$when": "${showStatusHint == 'true'}"
                 }
               ]
             }
