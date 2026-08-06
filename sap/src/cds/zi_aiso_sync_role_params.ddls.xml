@@ -3,10 +3,10 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <DDLS>
-    <DDLNAME>ZI_AISO_USER_ROLE</DDLNAME>
+    <DDLNAME>ZI_AISO_SYNC_ROLE_PARAMS</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
-    <DDTEXT>AISO User Role - Interface</DDTEXT>
-    <SOURCE_TYPE>W</SOURCE_TYPE>
+    <DDTEXT>Parameters for User Role Sync Action</DDTEXT>
+    <SOURCE_TYPE>A</SOURCE_TYPE>
    </DDLS>
   </asx:values>
  </asx:abap>

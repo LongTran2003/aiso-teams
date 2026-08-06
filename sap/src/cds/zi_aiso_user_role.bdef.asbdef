@@ -1,0 +1,19 @@
+managed implementation in class zbp_i_aiso_user_role unique;
+strict(2);
+
+define behavior for ZI_AISO_USER_ROLE alias UserRole
+persistent table zaiso_user_role
+lock master
+authorization master ( global )
+{
+  mapping for zaiso_user_role
+    {
+      SapUser   = sap_user;
+      UserRole  = role;
+      SalesOrg  = vkorg;
+      ValidFrom = valid_from;
+      ValidTo   = valid_to;
+    }
+
+  static action syncUserRole parameter ZI_AISO_SYNC_ROLE_PARAMS;
+}
