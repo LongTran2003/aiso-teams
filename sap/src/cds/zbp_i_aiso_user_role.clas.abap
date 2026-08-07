@@ -1,0 +1,5 @@
+CLASS zbp_i_aiso_user_role DEFINITION PUBLIC ABSTRACT FINAL FOR BEHAVIOR OF zi_aiso_user_role.
+ENDCLASS.
+
+CLASS zbp_i_aiso_user_role IMPLEMENTATION.
+ENDCLASS.
