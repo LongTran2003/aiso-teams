@@ -266,7 +266,23 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
                || text.Contains("cancel order")
                || text.Contains("cancel so")
                || (text.Contains("hủy") && text.Contains("đơn"))
-               || (text.Contains("huỷ") && text.Contains("đơn"));
+               || (text.Contains("huỷ") && text.Contains("đơn"))
+               || text.Contains("pending approval")
+               || text.Contains("pending approvals")
+               || text.Contains("show pending")
+               || text.Contains("chờ duyệt")
+               || text.Contains("cho duyet")
+               || text.Contains("danh sách chờ duyệt")
+               || text.Contains("danh sach cho duyet")
+               || text.Contains("update reference")
+               || text.Contains("update po reference")
+               || text.Contains("change reference")
+               || (text.Contains("cập nhật") && text.Contains("reference"))
+               || (text.Contains("cap nhat") && text.Contains("reference"))
+               || text.Contains("từ chối duyệt")
+               || text.Contains("tu choi duyet")
+               || text.Contains("từ chối phê duyệt")
+               || text.Contains("tu choi phe duyet");
     }
 
     /// <summary>Common LLM / API misnomers for registered BE functions.</summary>
@@ -313,6 +329,12 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
         var text = userMessage.Trim().ToLowerInvariant();
         return text.Contains("reject approval")
                || text.Contains("rejectapproval")
+               || text.Contains("từ chối duyệt")
+               || text.Contains("tu choi duyet")
+               || text.Contains("từ chối phê duyệt")
+               || text.Contains("tu choi phe duyet")
+               || text.Contains("không duyệt")
+               || text.Contains("khong duyet")
                || (text.Contains("reject") && text.Contains("approval"));
     }
 

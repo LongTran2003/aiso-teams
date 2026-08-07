@@ -12,7 +12,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "New here? Follow the flow for your role, then use a shortcut or type a short English command.",
+      "text": "New here? Follow the flow for your role, then use a shortcut or type a short command in English or Vietnamese (one language per message).",
       "wrap": true,
       "isSubtle": true,
       "spacing": "Small"
@@ -137,7 +137,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "Example commands",
+      "text": "Example commands (EN)",
       "weight": "Bolder",
       "spacing": "Medium",
       "size": "Small",
@@ -145,7 +145,24 @@
     },
     {
       "type": "TextBlock",
-      "text": "• recent orders\n• show my sales orders\n• show open orders\n• show orders of TV01\n• show open orders of FU24\n• show order 13122\n• show overdue orders\n• show revenue kpi\n• kpi by customer 1000\n• kpi by product MAT-01\n• request release 13122\n• reject order 13122\n• forward order 13122 to DEV-xxx\n• help · logout",
+      "text": "• recent orders\n• show my sales orders\n• show open orders\n• show orders of TV01\n• show open orders of FU24\n• show order 13122\n• show overdue orders\n• create order / tạo đơn\n• update reference 13122 to 'PO-99'\n• show revenue kpi\n• kpi by customer 1000\n• kpi by product MAT-01\n• request release 13122\n• reject order 13122\n• cancel order 13122\n• forward order 13122 to DEV-xxx\n• help · logout",
+      "wrap": true,
+      "spacing": "Small",
+      "fontType": "Monospace",
+      "size": "Small",
+      "$when": "${role == 'Employee'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ví dụ lệnh (VI)",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "size": "Small",
+      "$when": "${role == 'Employee'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "• đơn hàng gần đây · show my sales orders\n• kiểm tra đơn 13122 · tạo đơn\n• yêu cầu duyệt 13122 · xin duyệt 13122\n• hủy đơn 13122 · reject order 13122\n• chuyển đơn 13122 cho DEV-xxx\n• cập nhật reference 13122 thành 'PO-99'\n• hướng dẫn · đăng xuất",
       "wrap": true,
       "spacing": "Small",
       "fontType": "Monospace",
@@ -201,6 +218,40 @@
     },
     {
       "type": "TextBlock",
+      "text": "Try saying (EN)",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "size": "Small",
+      "$when": "${role == 'Manager'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "• show pending approvals\n• approve order 13122 · reject approval 13122\n• show order 13122 · cancel order 13122\n• show revenue kpi · logout",
+      "wrap": true,
+      "spacing": "Small",
+      "fontType": "Monospace",
+      "size": "Small",
+      "$when": "${role == 'Manager'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ví dụ lệnh (VI)",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "size": "Small",
+      "$when": "${role == 'Manager'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "• chờ duyệt · danh sách chờ duyệt\n• phê duyệt đơn 13122 · duyệt đơn 13122\n• từ chối duyệt 13122 · không duyệt 13122\n• hủy đơn 13122 · kiểm tra đơn 13122\n• đăng xuất",
+      "wrap": true,
+      "spacing": "Small",
+      "fontType": "Monospace",
+      "size": "Small",
+      "$when": "${role == 'Manager'}"
+    },
+    {
+      "type": "TextBlock",
       "text": "Shortcuts",
       "weight": "Bolder",
       "spacing": "Medium",
@@ -248,39 +299,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "Try saying (English)",
-      "weight": "Bolder",
-      "spacing": "Medium",
-      "size": "Small",
-      "$when": "${role == 'Employee'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "• recent orders · show order 13122\n• request release 13122 · reject order 13122\n• forward order 13122 to DEV-xxx\n• show revenue kpi · logout",
-      "wrap": true,
-      "spacing": "Small",
-      "size": "Small",
-      "$when": "${role == 'Employee'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "Try saying (English)",
-      "weight": "Bolder",
-      "spacing": "Medium",
-      "size": "Small",
-      "$when": "${role == 'Manager'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "• show pending approvals\n• approve order 13122 · reject approval 13122\n• show order 13122 · cancel order 13122\n• show revenue kpi · logout",
-      "wrap": true,
-      "spacing": "Small",
-      "size": "Small",
-      "$when": "${role == 'Manager'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "Try saying (English)",
+      "text": "Try saying (EN)",
       "weight": "Bolder",
       "spacing": "Medium",
       "size": "Small",
@@ -288,15 +307,33 @@
     },
     {
       "type": "TextBlock",
-      "text": "• list users · manage user DEV-xxx\n• view audit log · force release 13122 · logout",
+      "text": "• list users · manage user DEV-xxx\n• view audit log · force release 13122 · force cancel 13122 · logout",
       "wrap": true,
       "spacing": "Small",
+      "fontType": "Monospace",
       "size": "Small",
       "$when": "${role == 'Admin'}"
     },
     {
       "type": "TextBlock",
-      "text": "Tip: Prefer one language per message. Vietnamese like hướng dẫn / trợ giúp also opens this card.",
+      "text": "Ví dụ lệnh (VI)",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "size": "Small",
+      "$when": "${role == 'Admin'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "• danh sách user · nhật ký audit\n• ép release 13122 · ép hủy 13122\n• đăng xuất",
+      "wrap": true,
+      "spacing": "Small",
+      "fontType": "Monospace",
+      "size": "Small",
+      "$when": "${role == 'Admin'}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Tip: Prefer one language per message. Card buttons stay in English. Vietnamese like hướng dẫn / trợ giúp also opens this card.",
       "wrap": true,
       "isSubtle": true,
       "size": "Small",

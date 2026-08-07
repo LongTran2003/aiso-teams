@@ -111,6 +111,25 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
+        // Manager: pending approvals (EN + VI) — before generic "show … order" / "đơn"
+        if (IsPendingApprovalsIntent(text))
+        {
+            var pendingFn = _registry.GetByName("GetPendingApprovals");
+            if (pendingFn is not null)
+            {
+                var paramsJson = "{}";
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await pendingFn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult
+                {
+                    Handled = true,
+                    FunctionName = pendingFn.Name,
+                    Result = result,
+                    ParametersJson = paramsJson
+                };
+            }
+        }
+
         // Pattern 1: Check specific order — "kiểm tra đơn hàng 5001" or "check order 5001" or "show sales order 5001"
         if (text.Contains("kiểm tra") || text.Contains("check") || text.Contains("show"))
         {
@@ -185,17 +204,27 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
-        // Pattern: Update Reference
-        if (text.Contains("cập nhật") && text.Contains("reference"))
+        // Pattern: Update Reference (EN + VI)
+        if (IsUpdateReferenceIntent(text))
         {
             var fn = _registry.GetByName("UpdateOrderReference");
             if (fn is not null)
             {
                 var orderMatch = OrderIdPattern().Match(text);
-                var refMatch = Regex.Match(text, @"thành '([^']+)'", RegexOptions.IgnoreCase);
+                var refMatch = Regex.Match(
+                    text,
+                    @"(?:thành|to|thanh)\s+['""]?([^'""]+)['""]?",
+                    RegexOptions.IgnoreCase);
+                if (!refMatch.Success)
+                {
+                    refMatch = Regex.Match(
+                        text,
+                        @"reference\s+(?:to\s+)?['""]?([a-z0-9][a-z0-9 _\-/]*)['""]?\s*$",
+                        RegexOptions.IgnoreCase);
+                }
 
                 var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
-                var newRef = refMatch.Success ? refMatch.Groups[1].Value : "Updated Reference";
+                var newRef = refMatch.Success ? refMatch.Groups[1].Value.Trim().TrimEnd('.', '!', '?') : "Updated Reference";
 
                 var paramsObj = new { order_id = orderId, new_reference = newRef };
                 var paramsJson = JsonSerializer.Serialize(paramsObj);
@@ -366,10 +395,14 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         }
 
         // Pattern: Approve / release order (checker / direct SAP release) — not force release
-        if ((text.Contains("phê duyệt") || text.Contains("approve") || text.Contains("release"))
-            && (text.Contains("đơn") || text.Contains("order") || OrderIdPattern().IsMatch(text))
+        if ((text.Contains("phê duyệt") || text.Contains("phe duyet")
+                || text.Contains("duyệt đơn") || text.Contains("duyet don")
+                || text.Contains("duyệt order") || text.Contains("duyet order")
+                || text.Contains("approve") || text.Contains("release"))
+            && (text.Contains("đơn") || text.Contains("don") || text.Contains("order") || OrderIdPattern().IsMatch(text))
             && !IsRequestReleaseIntent(text)
-            && !IsForceReleaseIntent(text))
+            && !IsForceReleaseIntent(text)
+            && !IsRejectApprovalIntent(text))
         {
             var fn = _registry.GetByName("ReleaseOrder");
             if (fn is not null)
@@ -493,12 +526,41 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
     private static bool IsRequestReleaseIntent(string text) =>
         text.Contains("request release")
         || text.Contains("yêu cầu duyệt")
+        || text.Contains("yeu cau duyet")
         || text.Contains("yêu cầu release")
+        || text.Contains("yeu cau release")
         || text.Contains("yêu cầu giải phóng")
+        || text.Contains("yeu cau giai phong")
         || text.Contains("xin duyệt")
+        || text.Contains("xin duyet")
+        || text.Contains("xin release")
         || text.Contains("submit for approval")
         || text.Contains("send for approval")
         || (text.Contains("request") && text.Contains("release"));
+
+    private static bool IsPendingApprovalsIntent(string text) =>
+        text.Contains("pending approval")
+        || text.Contains("pending approvals")
+        || text.Contains("show pending")
+        || text.Contains("list pending")
+        || text.Contains("chờ duyệt")
+        || text.Contains("cho duyet")
+        || text.Contains("đang chờ duyệt")
+        || text.Contains("dang cho duyet")
+        || text.Contains("duyệt pending")
+        || text.Contains("duyet pending")
+        || text.Contains("danh sách chờ duyệt")
+        || text.Contains("danh sach cho duyet")
+        || text.Contains("danh sách pending")
+        || text.Contains("danh sach pending");
+
+    private static bool IsUpdateReferenceIntent(string text) =>
+        text.Contains("update reference")
+        || text.Contains("update po reference")
+        || text.Contains("change reference")
+        || text.Contains("update po ref")
+        || (text.Contains("cập nhật") && (text.Contains("reference") || text.Contains("tham chiếu") || text.Contains("po")))
+        || (text.Contains("cap nhat") && (text.Contains("reference") || text.Contains("tham chieu") || text.Contains("po")));
 
     private static bool IsForceCancelIntent(string text) =>
         text.Contains("force cancel")
@@ -530,6 +592,10 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         || text.Contains("rejectapproval")
         || text.Contains("từ chối duyệt")
         || text.Contains("tu choi duyet")
+        || text.Contains("từ chối phê duyệt")
+        || text.Contains("tu choi phe duyet")
+        || text.Contains("không duyệt")
+        || text.Contains("khong duyet")
         || (text.Contains("reject") && text.Contains("approval"));
 
     private static string InferRejectionReasonCode(string text)
