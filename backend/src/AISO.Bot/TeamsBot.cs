@@ -328,6 +328,34 @@ public class TeamsBot : TeamsActivityHandler
                                 newSalesOrg,
                                 cancellationToken);
 
+                            var adminSap = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                            string? sapSyncWarning = null;
+                            if (string.IsNullOrWhiteSpace(adminSap))
+                            {
+                                sapSyncWarning = "Bot access updated, but SAP role was not synced (Admin has no linked SAP User ID).";
+                            }
+                            else
+                            {
+                                try
+                                {
+                                    await _sap.SyncUserRoleAsync(
+                                        updated.SapUserId,
+                                        updated.Role.ToString().ToUpperInvariant(),
+                                        updated.SalesOrg,
+                                        adminSap,
+                                        cancellationToken);
+                                }
+                                catch (Exception syncEx)
+                                {
+                                    _logger.LogWarning(
+                                        syncEx,
+                                        "SAP syncUserRole failed for {SapUser} after bot UpdateAccess",
+                                        updated.SapUserId);
+                                    sapSyncWarning =
+                                        $"Bot access updated, but SAP syncUserRole failed: {syncEx.Message}";
+                                }
+                            }
+
                             await _audit.LogAsync(new AuditEntry
                             {
                                 TeamsUserId = teamsUserId,
@@ -337,10 +365,20 @@ public class TeamsBot : TeamsActivityHandler
                                 {
                                     sap_user_id = updated.SapUserId,
                                     role = updated.Role.ToString(),
-                                    sales_org = updated.SalesOrg
+                                    sales_org = updated.SalesOrg,
+                                    sap_sync = sapSyncWarning is null ? "ok" : "failed"
                                 }),
-                                ResultStatus = "Success"
+                                ResultStatus = sapSyncWarning is null ? "Success" : "PartialSuccess"
                             }, cancellationToken);
+
+                            if (sapSyncWarning is not null)
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "SAP_SYNC",
+                                        sapSyncWarning)),
+                                    cancellationToken);
+                            }
 
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(
