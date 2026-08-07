@@ -1,10 +1,14 @@
 using System.Text.Json;
+using AISO.Domain.SalesOrders;
 using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.AiOrchestration.Functions;
 
-/// <summary>Admin override: force-release an SO via SAP (bypasses ownership).</summary>
+/// <summary>
+/// Admin override: validate then show confirm card (reason required).
+/// SAP call happens on Adaptive Card <c>force_release_confirm</c>.
+/// </summary>
 public sealed class ForceReleaseFunction : IFunction
 {
     private readonly ISapClient _sap;
@@ -19,7 +23,8 @@ public sealed class ForceReleaseFunction : IFunction
     public string Name => "ForceRelease";
 
     public string Description =>
-        "Admin-only: force release a sales order in SAP, bypassing ownership. Requires an override reason.";
+        "Admin-only: prepare force release for a sales order (bypasses ownership). " +
+        "Returns a confirmation card — does not release until the user confirms with a reason.";
 
     public string ParametersJsonSchema => """
         {
@@ -31,10 +36,10 @@ public sealed class ForceReleaseFunction : IFunction
             },
             "reason": {
               "type": "string",
-              "description": "Mandatory override reason."
+              "description": "Optional draft override reason to prefill on the confirm card."
             }
           },
-          "required": ["order_id", "reason"]
+          "required": ["order_id"]
         }
         """;
 
@@ -51,27 +56,35 @@ public sealed class ForceReleaseFunction : IFunction
 
         if (string.IsNullOrWhiteSpace(orderId))
             return FunctionResult.Fail("Missing required parameter: order_id");
-        if (string.IsNullOrWhiteSpace(reason))
-            return FunctionResult.Fail("Missing required parameter: reason");
 
         try
         {
-            var updated = await _sap.ForceReleaseAsync(orderId, requestingSapUser, reason, ct);
-            _logger.LogInformation(
-                "ForceRelease: so={SoNumber} by={User} reason={Reason}",
-                updated.SoNumber, requestingSapUser, reason);
-            return FunctionResult.Ok(new
+            var existing = await _sap.GetSalesOrderByIdAsync(orderId, ct);
+            if (existing is null)
+                return FunctionResult.Fail($"Sales order {orderId} was not found in SAP.", "NOT_FOUND");
+
+            if (SalesOrderWorkflow.BlocksReleaseRejectForward(existing.Status))
             {
-                order_id = updated.SoNumber,
-                action = "ForceReleased",
-                reason,
-                message = $"Sales order {updated.SoNumber} was force-released by Admin."
-            });
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Force release"),
+                    "VALIDATION");
+            }
+
+            _logger.LogInformation(
+                "ForceRelease confirm step: so={SoNumber} by={User} (not submitted yet)",
+                existing.SoNumber, requestingSapUser);
+
+            return FunctionResult.Ok(new ConfirmForceReleaseResponse(
+                existing.SoNumber,
+                string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "ForceRelease failed for {OrderId}", orderId);
+            _logger.LogError(ex, "ForceRelease prepare failed for {OrderId}", orderId);
             return FunctionResult.Fail($"Force release failed: {ex.Message}");
         }
     }
 }
+
+/// <summary>Payload telling the bot to show <c>confirm-force-release</c>.</summary>
+public sealed record ConfirmForceReleaseResponse(string SoNumber, string? Reason = null);

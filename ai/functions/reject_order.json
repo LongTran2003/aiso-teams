@@ -1,6 +1,6 @@
 {
   "name": "RejectOrder",
-  "description": "Reject a sales order. Requires both order_id and a short reason_code.",
+  "description": "Reject (cancel) a sales order in SAP. Requires order_id and reason_code. Do NOT use for 'force cancel' (use ForceCancel) or 'reject approval' (use RejectApproval).",
   "parameters": {
     "type": "object",
     "properties": {

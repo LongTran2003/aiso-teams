@@ -1,0 +1,73 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Attention",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Force cancel (Admin)",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Attention",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Sales order ${salesOrderNumber}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "This bypasses ownership and cancels the sales order in SAP. Confirm only for emergencies.",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "reason",
+      "label": "Override reason",
+      "isRequired": true,
+      "errorMessage": "Please enter a reason",
+      "isMultiline": true,
+      "placeholder": "Why is Admin force-cancelling this order?",
+      "value": "${reason}"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Confirm force cancel",
+      "style": "destructive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Confirm force cancel ${salesOrderNumber}",
+          "text": "force cancel ${salesOrderNumber}"
+        },
+        "action": "force_cancel_confirm",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}
