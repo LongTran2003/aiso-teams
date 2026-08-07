@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AISO.AiOrchestration.Functions;
 using AISO.Domain.Approvals;
 using AISO.Domain.SalesOrders;
 using AISO.Domain.Users;
@@ -112,24 +113,116 @@ internal static class TeamsCardBuilder
 
     public static Attachment BuildConfirmCreateOrderCard(
         string customer,
+        string salesOrg,
+        string currency,
+        string plant = "1010",
+        string unit = "PC",
+        IReadOnlyList<ConfirmCreateOrderLine>? lines = null) =>
+        BuildConfirmCreateOrderCard(new ConfirmCreateOrderResponse(
+            customer,
+            salesOrg,
+            currency,
+            plant,
+            unit,
+            NormalizeCreateLines(lines)));
+
+    /// <summary>Backward-compatible overload (single material).</summary>
+    public static Attachment BuildConfirmCreateOrderCard(
+        string customer,
         string material,
         decimal qty,
         string salesOrg,
         string currency,
         string plant = "1010",
         string unit = "PC") =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+        BuildConfirmCreateOrderCard(
+            customer,
+            salesOrg,
+            currency,
+            plant,
+            unit,
+            new[] { new ConfirmCreateOrderLine(material, qty) });
+
+    public static Attachment BuildConfirmCreateOrderCard(ConfirmCreateOrderResponse draft)
+    {
+        var lines = NormalizeCreateLines(draft.Lines);
+        var (salesOrgChoice, salesOrgCustom) = SplitKnownOrCustom(
+            draft.SalesOrg,
+            KnownSalesOrgs,
+            fallback: "1010");
+        var (currencyChoice, currencyCustom) = SplitKnownOrCustom(
+            draft.Currency,
+            KnownCurrencies,
+            fallback: "USD");
+
+        string SlotMaterial(int i) =>
+            i < lines.Count ? lines[i].Material : string.Empty;
+        decimal SlotQty(int i) =>
+            i < lines.Count ? lines[i].Qty : (i == 0 ? 1m : 0m);
+
+        return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "confirm-create.json",
             new
             {
-                customer,
-                material,
-                qty,
-                salesOrg,
-                currency,
-                plant,
-                unit
+                customer = draft.Customer,
+                salesOrg = salesOrgChoice,
+                salesOrgCustom,
+                currency = currencyChoice,
+                currencyCustom,
+                plant = string.IsNullOrWhiteSpace(draft.Plant) ? "1010" : draft.Plant,
+                unit = string.IsNullOrWhiteSpace(draft.Unit) ? "PC" : draft.Unit,
+                material1 = SlotMaterial(0),
+                qty1 = SlotQty(0),
+                material2 = SlotMaterial(1),
+                qty2 = SlotQty(1),
+                material3 = SlotMaterial(2),
+                qty3 = SlotQty(2),
+                material4 = SlotMaterial(3),
+                qty4 = SlotQty(3),
+                material5 = SlotMaterial(4),
+                qty5 = SlotQty(4)
             });
+    }
+
+    private static readonly HashSet<string> KnownSalesOrgs = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "1010", "TV01", "FU24", "UE00", "UW00", "DN00", "DS00"
+    };
+
+    private static readonly HashSet<string> KnownCurrencies = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "USD", "EUR", "VND", "JPY", "GBP"
+    };
+
+    private static IReadOnlyList<ConfirmCreateOrderLine> NormalizeCreateLines(
+        IReadOnlyList<ConfirmCreateOrderLine>? lines)
+    {
+        if (lines is null || lines.Count == 0)
+            return new[] { new ConfirmCreateOrderLine("TG11", 1m) };
+
+        return lines
+            .Where(l => !string.IsNullOrWhiteSpace(l.Material))
+            .Take(CreateOrderFunction.MaxLineSlots)
+            .Select(l => new ConfirmCreateOrderLine(
+                l.Material.Trim().ToUpperInvariant(),
+                l.Qty < 1 ? 1m : l.Qty))
+            .ToList();
+    }
+
+    private static (string Choice, string Custom) SplitKnownOrCustom(
+        string? value,
+        HashSet<string> known,
+        string fallback)
+    {
+        var trimmed = value?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(trimmed))
+            return (fallback, string.Empty);
+
+        if (known.Contains(trimmed))
+            return (known.First(k => k.Equals(trimmed, StringComparison.OrdinalIgnoreCase)), string.Empty);
+
+        return (fallback, trimmed.ToUpperInvariant());
+    }
 
     public static Attachment BuildConfirmUpdateReferenceCard(
         string salesOrderNumber,

@@ -6,10 +6,12 @@ namespace AISO.AiOrchestration.Functions;
 
 /// <summary>
 /// Prepare create-sales-order form (confirm card). SAP call runs on Adaptive Card
-/// <c>create_so_confirm</c>.
+/// <c>create_so_confirm</c>. Supports up to 5 line items.
 /// </summary>
 public sealed class CreateOrderFunction : IFunction
 {
+    public const int MaxLineSlots = 5;
+
     private readonly ILogger<CreateOrderFunction> _logger;
 
     public CreateOrderFunction(ISapClient sap, ILogger<CreateOrderFunction> logger)
@@ -21,7 +23,7 @@ public sealed class CreateOrderFunction : IFunction
     public string Name => "CreateOrder";
 
     public string Description =>
-        "Create a new sales order in the SAP ERP system. " +
+        "Create a new sales order in the SAP ERP system with one or more materials. " +
         "Returns a confirmation form — does not create until the user confirms.";
 
     public string ParametersJsonSchema => """
@@ -57,36 +59,50 @@ public sealed class CreateOrderFunction : IFunction
         var customer = ReadString(parameters, "customer") ?? "10100001";
         var salesOrg = ReadString(parameters, "sales_org") ?? "1010";
         var currency = ReadString(parameters, "currency") ?? "USD";
-        var material = "TG11";
-        var qty = 1m;
         var plant = "1010";
         var unit = "PC";
 
+        var lines = new List<ConfirmCreateOrderLine>();
         if (parameters.TryGetProperty("items", out var itemsElement) && itemsElement.ValueKind == JsonValueKind.Array)
         {
             foreach (var item in itemsElement.EnumerateArray())
             {
-                material = ReadString(item, "material") ?? material;
+                if (lines.Count >= MaxLineSlots)
+                    break;
+
+                var material = ReadString(item, "material");
+                if (string.IsNullOrWhiteSpace(material))
+                    continue;
+
+                var qty = 1m;
                 if (item.TryGetProperty("qty", out var q) && q.ValueKind == JsonValueKind.Number)
                     qty = q.GetDecimal();
+                if (qty < 1)
+                    qty = 1m;
+
                 plant = ReadString(item, "plant") ?? plant;
                 unit = ReadString(item, "unit") ?? unit;
-                break;
+
+                lines.Add(new ConfirmCreateOrderLine(
+                    material.Trim().ToUpperInvariant(),
+                    qty));
             }
         }
 
+        if (lines.Count == 0)
+            lines.Add(new ConfirmCreateOrderLine("TG11", 1m));
+
         _logger.LogInformation(
-            "CreateOrder confirm step: customer={Customer} material={Material} qty={Qty} by={User}",
-            customer, material, qty, requestingSapUser);
+            "CreateOrder confirm step: customer={Customer} lines={LineCount} by={User}",
+            customer, lines.Count, requestingSapUser);
 
         return Task.FromResult(FunctionResult.Ok(new ConfirmCreateOrderResponse(
             Customer: customer.Trim(),
-            Material: material.Trim().ToUpperInvariant(),
-            Qty: qty,
             SalesOrg: salesOrg.Trim(),
             Currency: currency.Trim().ToUpperInvariant(),
             Plant: plant.Trim(),
-            Unit: unit.Trim().ToUpperInvariant())));
+            Unit: unit.Trim().ToUpperInvariant(),
+            Lines: lines)));
     }
 
     private static string? ReadString(JsonElement element, string name) =>
@@ -95,12 +111,20 @@ public sealed class CreateOrderFunction : IFunction
             : null;
 }
 
+public sealed record ConfirmCreateOrderLine(string Material, decimal Qty);
+
 /// <summary>Payload telling the bot to show <c>confirm-create.json</c>.</summary>
 public sealed record ConfirmCreateOrderResponse(
     string Customer,
-    string Material,
-    decimal Qty,
     string SalesOrg,
     string Currency,
     string Plant,
-    string Unit);
+    string Unit,
+    IReadOnlyList<ConfirmCreateOrderLine> Lines)
+{
+    /// <summary>First line material (tests / legacy callers).</summary>
+    public string Material => Lines.Count > 0 ? Lines[0].Material : string.Empty;
+
+    /// <summary>First line qty (tests / legacy callers).</summary>
+    public decimal Qty => Lines.Count > 0 ? Lines[0].Qty : 1m;
+}

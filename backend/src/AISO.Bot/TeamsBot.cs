@@ -1233,15 +1233,22 @@ public class TeamsBot : TeamsActivityHandler
                         var customer = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken)
                             ? custToken.ToString()?.Trim()
                             : null;
-                        var material = valueObj.TryGetValue("material", StringComparison.OrdinalIgnoreCase, out var matToken)
-                            ? matToken.ToString()?.Trim()
+                        var salesOrgCustom = valueObj.TryGetValue("salesOrgCustom", StringComparison.OrdinalIgnoreCase, out var orgCustomToken)
+                            ? orgCustomToken.ToString()?.Trim()
                             : null;
-                        var salesOrg = valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var orgToken)
-                            ? orgToken.ToString()?.Trim()
-                            : "1010";
-                        var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var curToken)
-                            ? curToken.ToString()?.Trim()
-                            : "USD";
+                        var salesOrg = !string.IsNullOrWhiteSpace(salesOrgCustom)
+                            ? salesOrgCustom
+                            : valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var orgToken)
+                                ? orgToken.ToString()?.Trim()
+                                : "1010";
+                        var currencyCustom = valueObj.TryGetValue("currencyCustom", StringComparison.OrdinalIgnoreCase, out var curCustomToken)
+                            ? curCustomToken.ToString()?.Trim()
+                            : null;
+                        var currency = !string.IsNullOrWhiteSpace(currencyCustom)
+                            ? currencyCustom
+                            : valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var curToken)
+                                ? curToken.ToString()?.Trim()
+                                : "USD";
                         var plant = valueObj.TryGetValue("plant", StringComparison.OrdinalIgnoreCase, out var plantToken)
                             ? plantToken.ToString()?.Trim()
                             : "1010";
@@ -1249,19 +1256,48 @@ public class TeamsBot : TeamsActivityHandler
                             ? unitToken.ToString()?.Trim()
                             : "PC";
 
-                        decimal qty = 1m;
-                        if (valueObj.TryGetValue("qty", StringComparison.OrdinalIgnoreCase, out var qtyToken))
+                        var lineItems = new List<CreateSalesOrderItemDto>();
+                        for (var i = 1; i <= AISO.AiOrchestration.Functions.CreateOrderFunction.MaxLineSlots; i++)
                         {
-                            if (!decimal.TryParse(qtyToken.ToString(), out qty) || qty < 1)
-                                qty = 1m;
+                            var matKey = $"material{i}";
+                            var qtyKey = $"qty{i}";
+                            // Legacy single-field card
+                            if (i == 1
+                                && !valueObj.TryGetValue(matKey, StringComparison.OrdinalIgnoreCase, out _)
+                                && valueObj.TryGetValue("material", StringComparison.OrdinalIgnoreCase, out var legacyMat))
+                            {
+                                matKey = "material";
+                                qtyKey = "qty";
+                            }
+
+                            var material = valueObj.TryGetValue(matKey, StringComparison.OrdinalIgnoreCase, out var matToken)
+                                ? matToken.ToString()?.Trim()
+                                : null;
+                            if (string.IsNullOrWhiteSpace(material))
+                                continue;
+
+                            decimal qty = 1m;
+                            if (valueObj.TryGetValue(qtyKey, StringComparison.OrdinalIgnoreCase, out var qtyToken))
+                            {
+                                if (!decimal.TryParse(qtyToken.ToString(), out qty) || qty < 1)
+                                    qty = 1m;
+                            }
+
+                            lineItems.Add(new CreateSalesOrderItemDto
+                            {
+                                Material = material.ToUpperInvariant(),
+                                OrderQty = qty,
+                                Plant = string.IsNullOrWhiteSpace(plant) ? "1010" : plant,
+                                Unit = string.IsNullOrWhiteSpace(unit) ? "PC" : unit.ToUpperInvariant()
+                            });
                         }
 
-                        if (string.IsNullOrWhiteSpace(customer) || string.IsNullOrWhiteSpace(material))
+                        if (string.IsNullOrWhiteSpace(customer) || lineItems.Count == 0)
                         {
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
                                     "VALIDATION",
-                                    "Customer ID and material are required to create an order.")),
+                                    "Customer ID and at least one material are required to create an order.")),
                                 cancellationToken);
                             return;
                         }
@@ -1272,24 +1308,17 @@ public class TeamsBot : TeamsActivityHandler
                                 new CreateSalesOrderDto
                                 {
                                     DocType = "TA",
-                                    SalesOrg = string.IsNullOrWhiteSpace(salesOrg) ? "1010" : salesOrg,
+                                    SalesOrg = string.IsNullOrWhiteSpace(salesOrg) ? "1010" : salesOrg.ToUpperInvariant(),
                                     DistChannel = "10",
                                     Division = "00",
                                     Customer = customer,
                                     Currency = string.IsNullOrWhiteSpace(currency) ? "USD" : currency.ToUpperInvariant(),
                                     RequestingSapUser = linkedSapUsername,
-                                    Items = new[]
-                                    {
-                                        new CreateSalesOrderItemDto
-                                        {
-                                            Material = material.ToUpperInvariant(),
-                                            OrderQty = qty,
-                                            Plant = string.IsNullOrWhiteSpace(plant) ? "1010" : plant,
-                                            Unit = string.IsNullOrWhiteSpace(unit) ? "PC" : unit.ToUpperInvariant()
-                                        }
-                                    }
+                                    Items = lineItems
                                 },
                                 cancellationToken);
+
+                            var linesSummary = string.Join(", ", lineItems.Select(i => $"{i.Material} x {i.OrderQty:0}"));
 
                             await _audit.LogAsync(new AuditEntry
                             {
@@ -1300,8 +1329,9 @@ public class TeamsBot : TeamsActivityHandler
                                 {
                                     order_id = created.SoNumber,
                                     customer,
-                                    material,
-                                    qty
+                                    sales_org = salesOrg,
+                                    currency,
+                                    items = lineItems.Select(i => new { i.Material, qty = i.OrderQty })
                                 }),
                                 ResultStatus = "Success"
                             }, cancellationToken);
@@ -1310,7 +1340,7 @@ public class TeamsBot : TeamsActivityHandler
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(
                                     created.SoNumber,
                                     "Created",
-                                    $"{customer} · {material} x {qty:0}")),
+                                    $"{customer} · {linesSummary}")),
                                 cancellationToken);
 
                             var roleForDetail = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
@@ -2505,19 +2535,13 @@ public class TeamsBot : TeamsActivityHandler
                 await ReplaceLoadingActivityAsync(
                     turnContext,
                     loadingActivityId,
-                    TeamsCardBuilder.BuildConfirmCreateOrderCard(
-                        confirmCreate.Customer,
-                        confirmCreate.Material,
-                        confirmCreate.Qty,
-                        confirmCreate.SalesOrg,
-                        confirmCreate.Currency,
-                        confirmCreate.Plant,
-                        confirmCreate.Unit),
+                    TeamsCardBuilder.BuildConfirmCreateOrderCard(confirmCreate),
                     cancellationToken);
 
                 _logger.LogInformation(
-                    "Bot replied with confirm-create card for customer {Customer}",
-                    confirmCreate.Customer);
+                    "Bot replied with confirm-create card for customer {Customer} ({LineCount} lines)",
+                    confirmCreate.Customer,
+                    confirmCreate.Lines.Count);
                 return;
             }
 

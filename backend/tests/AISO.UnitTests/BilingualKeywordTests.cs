@@ -57,6 +57,7 @@ public class BilingualKeywordTests
         var payload = Assert.IsType<ConfirmCreateOrderResponse>(result.Result!.Payload);
         Assert.Equal("10100001", payload.Customer);
         Assert.Equal("TG11", payload.Material);
+        Assert.Single(payload.Lines);
     }
 
     [Theory]
@@ -79,10 +80,22 @@ public class BilingualKeywordTests
     public void BuildConfirmCreateAndUpdateCards_IncludeActions()
     {
         var create = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmCreateOrderCard(
-            "10100001", "TG11", 2, "1010", "USD");
+            "10100001",
+            "1010",
+            "USD",
+            lines: new[]
+            {
+                new ConfirmCreateOrderLine("TG11", 2),
+                new ConfirmCreateOrderLine("DXTR1000", 5)
+            });
         var createJson = Newtonsoft.Json.JsonConvert.SerializeObject(create.Content);
         Assert.Contains("create_so_confirm", createJson);
         Assert.Contains("10100001", createJson);
+        Assert.Contains("material1", createJson);
+        Assert.Contains("TG11", createJson);
+        Assert.Contains("DXTR1000", createJson);
+        Assert.Contains("salesOrgCustom", createJson);
+        Assert.Contains("currencyCustom", createJson);
 
         var update = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmUpdateReferenceCard(
             "0000005001", "OLD", "NEW-PO");
