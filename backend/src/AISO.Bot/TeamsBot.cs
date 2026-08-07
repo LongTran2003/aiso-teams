@@ -953,6 +953,200 @@ public class TeamsBot : TeamsActivityHandler
                         return;
                     }
 
+                    if (string.Equals(action, "force_cancel_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken)
+                            ? idToken.ToString()
+                            : "UNKNOWN";
+                        var reason = valueObj.TryGetValue("reason", StringComparison.OrdinalIgnoreCase, out var reasonToken)
+                            ? reasonToken.ToString()?.Trim()
+                            : null;
+
+                        var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        if (role != UserRole.Admin)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
+                                    "Only administrators can force cancel sales orders.",
+                                    role.ToString(),
+                                    "Admin")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_LINKED",
+                                    "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(reason))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "VALIDATION",
+                                    "Override reason is required for force cancel.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        try
+                        {
+                            if (!await EnsureLifecycleActionAllowedAsync(
+                                    turnContext,
+                                    salesOrderId,
+                                    "Force cancel",
+                                    cancellationToken))
+                            {
+                                return;
+                            }
+
+                            var updated = await _sap.ForceCancelAsync(
+                                salesOrderId,
+                                linkedSapUsername,
+                                reason,
+                                cancellationToken);
+
+                            await _audit.LogAsync(new AuditEntry
+                            {
+                                TeamsUserId = teamsUserId,
+                                ConversationId = conversationId,
+                                Action = "ForceCancel",
+                                ParametersJson = JsonConvert.SerializeObject(new
+                                {
+                                    order_id = updated.SoNumber,
+                                    reason
+                                }),
+                                ResultStatus = "Success"
+                            }, cancellationToken);
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(
+                                    updated.SoNumber,
+                                    "ForceCancelled",
+                                    reason)),
+                                cancellationToken);
+                        }
+                        catch (SapODataException sapEx)
+                        {
+                            _logger.LogError(sapEx, "SAP error force-cancelling order {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Unexpected error force-cancelling order {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken);
+                        }
+
+                        return;
+                    }
+
+                    if (string.Equals(action, "force_release_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken)
+                            ? idToken.ToString()
+                            : "UNKNOWN";
+                        var reason = valueObj.TryGetValue("reason", StringComparison.OrdinalIgnoreCase, out var reasonToken)
+                            ? reasonToken.ToString()?.Trim()
+                            : null;
+
+                        var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        if (role != UserRole.Admin)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
+                                    "Only administrators can force release sales orders.",
+                                    role.ToString(),
+                                    "Admin")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_LINKED",
+                                    "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(reason))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "VALIDATION",
+                                    "Override reason is required for force release.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        try
+                        {
+                            if (!await EnsureLifecycleActionAllowedAsync(
+                                    turnContext,
+                                    salesOrderId,
+                                    "Force release",
+                                    cancellationToken))
+                            {
+                                return;
+                            }
+
+                            var updated = await _sap.ForceReleaseAsync(
+                                salesOrderId,
+                                linkedSapUsername,
+                                reason,
+                                cancellationToken);
+
+                            await _audit.LogAsync(new AuditEntry
+                            {
+                                TeamsUserId = teamsUserId,
+                                ConversationId = conversationId,
+                                Action = "ForceRelease",
+                                ParametersJson = JsonConvert.SerializeObject(new
+                                {
+                                    order_id = updated.SoNumber,
+                                    reason
+                                }),
+                                ResultStatus = "Success"
+                            }, cancellationToken);
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(
+                                    updated.SoNumber,
+                                    "ForceReleased",
+                                    reason)),
+                                cancellationToken);
+                        }
+                        catch (SapODataException sapEx)
+                        {
+                            _logger.LogError(sapEx, "SAP error force-releasing order {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Unexpected error force-releasing order {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken);
+                        }
+
+                        return;
+                    }
+
                     if (string.Equals(action, "forward_so_confirm", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
@@ -1585,7 +1779,38 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
-            // Workflow action results (Release, Reject, Forward) — show a success card when applicable
+            if (result.Payload is AISO.AiOrchestration.Functions.ConfirmForceCancelResponse confirmForceCancel)
+            {
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildConfirmForceCancelCard(
+                        confirmForceCancel.SoNumber,
+                        confirmForceCancel.Reason),
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with confirm-force-cancel card for SO {SoNumber}",
+                    confirmForceCancel.SoNumber);
+                return;
+            }
+
+            if (result.Payload is AISO.AiOrchestration.Functions.ConfirmForceReleaseResponse confirmForceRelease)
+            {
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildConfirmForceReleaseCard(
+                        confirmForceRelease.SoNumber,
+                        confirmForceRelease.Reason),
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with confirm-force-release card for SO {SoNumber}",
+                    confirmForceRelease.SoNumber);
+                return;
+            }
+
             if (result.Payload is AISO.AiOrchestration.Functions.ConfirmForwardResponse confirmForward)
             {
                 var recipientChoices = await _userMappingService.GetForwardRecipientChoicesAsync(

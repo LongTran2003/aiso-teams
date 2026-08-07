@@ -1,6 +1,6 @@
 {
   "name": "ForceCancel",
-  "description": "Admin only: force cancel a sales order in SAP bypassing ownership. Requires a reason. Use when admin says 'force cancel' (not plain reject/cancel).",
+  "description": "Admin only: prepare force cancel for a sales order (bypasses ownership). Shows a confirm card with required override reason. Use when admin says 'force cancel' (not plain reject/cancel).",
   "parameters": {
     "type": "object",
     "properties": {
@@ -10,10 +10,10 @@
       },
       "reason": {
         "type": "string",
-        "description": "Mandatory override reason."
+        "description": "Optional draft override reason to prefill on the confirm card."
       }
     },
-    "required": ["order_id", "reason"],
+    "required": ["order_id"],
     "additionalProperties": false
   }
 }

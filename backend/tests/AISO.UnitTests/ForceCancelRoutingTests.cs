@@ -21,15 +21,16 @@ public class ForceCancelRoutingTests
         var dispatcher = CreateKeywordDispatcher();
 
         var result = await dispatcher.DispatchAsync(
-            "force cancel 0000013069",
+            "force cancel 0000005001",
             "DEV-001",
             UserRole.Admin);
 
         Assert.True(result.Handled);
         Assert.False(result.Denied);
         Assert.Equal("ForceCancel", result.FunctionName);
-        Assert.Contains("0000013069", result.ParametersJson ?? "", StringComparison.Ordinal);
-        Assert.Contains("reason", result.ParametersJson ?? "", StringComparison.OrdinalIgnoreCase);
+        Assert.True(result.Result?.Success);
+        var payload = Assert.IsType<ConfirmForceCancelResponse>(result.Result!.Payload);
+        Assert.Equal("0000005001", payload.SoNumber);
     }
 
     [Fact]
@@ -38,13 +39,15 @@ public class ForceCancelRoutingTests
         var dispatcher = CreateKeywordDispatcher();
 
         var result = await dispatcher.DispatchAsync(
-            "force release order 13122 reason: unlock now",
+            "force release order 0000005001 reason: unlock now",
             "DEV-001",
             UserRole.Admin);
 
         Assert.True(result.Handled);
         Assert.Equal("ForceRelease", result.FunctionName);
-        Assert.Contains("unlock now", result.ParametersJson ?? "", StringComparison.Ordinal);
+        Assert.True(result.Result?.Success);
+        var payload = Assert.IsType<ConfirmForceReleaseResponse>(result.Result!.Payload);
+        Assert.Equal("unlock now", payload.Reason);
     }
 
     [Fact]
@@ -109,6 +112,20 @@ public class ForceCancelRoutingTests
         Assert.Contains("Force cancel", result.ErrorMessage ?? "", StringComparison.Ordinal);
         Assert.Contains("Delivered", result.ErrorMessage ?? "", StringComparison.Ordinal);
         Assert.DoesNotContain("Reject is not allowed", result.ErrorMessage ?? "", StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void BuildConfirmForceCancelCard_IncludesReasonAndAction()
+    {
+        var attachment = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmForceCancelCard(
+            "0000005001",
+            "emergency");
+        var json = Newtonsoft.Json.JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Force cancel", json);
+        Assert.Contains("0000005001", json);
+        Assert.Contains("force_cancel_confirm", json);
+        Assert.Contains("emergency", json);
     }
 
     private static KeywordFunctionDispatcher CreateKeywordDispatcher()

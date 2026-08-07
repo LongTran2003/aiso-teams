@@ -1,6 +1,6 @@
 {
   "name": "ForceRelease",
-  "description": "Admin only: force release a sales order in SAP bypassing ownership. Requires a reason. Use when admin says force release.",
+  "description": "Admin only: prepare force release for a sales order (bypasses ownership). Shows a confirm card with required override reason. Use when admin says force release.",
   "parameters": {
     "type": "object",
     "properties": {
@@ -10,10 +10,10 @@
       },
       "reason": {
         "type": "string",
-        "description": "Mandatory override reason."
+        "description": "Optional draft override reason to prefill on the confirm card."
       }
     },
-    "required": ["order_id", "reason"],
+    "required": ["order_id"],
     "additionalProperties": false
   }
 }

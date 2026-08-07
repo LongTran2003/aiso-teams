@@ -119,6 +119,28 @@ internal static class TeamsCardBuilder
     public static Attachment BuildConfirmRejectApprovalCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-reject-approval.json", new { salesOrderNumber });
 
+    public static Attachment BuildConfirmForceCancelCard(
+        string salesOrderNumber,
+        string? reason = null) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "confirm-force-cancel.json",
+            new
+            {
+                salesOrderNumber,
+                reason = reason ?? string.Empty
+            });
+
+    public static Attachment BuildConfirmForceReleaseCard(
+        string salesOrderNumber,
+        string? reason = null) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "confirm-force-release.json",
+            new
+            {
+                salesOrderNumber,
+                reason = reason ?? string.Empty
+            });
+
     public static Attachment BuildPendingApprovalsCard(object data) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("pending-approvals.json", data);
 
@@ -607,6 +629,20 @@ internal static class TeamsCardBuilder
                     ? "Bot role / sales org was updated for this SAP user."
                     : $"Access is now {detail.Trim()}. Changes apply on the next command for that user.",
                 "Bot RBAC updated",
+                false),
+            "ForceCancelled" => (
+                "Force cancel completed",
+                string.IsNullOrWhiteSpace(detail)
+                    ? "Admin force-cancelled the sales order in SAP."
+                    : $"Admin force-cancelled the sales order. Reason: {detail.Trim()}",
+                "Force cancelled",
+                false),
+            "ForceReleased" => (
+                "Force release completed",
+                string.IsNullOrWhiteSpace(detail)
+                    ? "Admin force-released the sales order in SAP."
+                    : $"Admin force-released the sales order. Reason: {detail.Trim()}",
+                "Force released",
                 false),
             _ => (
                 "Action completed",

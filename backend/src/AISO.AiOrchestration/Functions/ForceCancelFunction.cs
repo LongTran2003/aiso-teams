@@ -5,7 +5,10 @@ using Microsoft.Extensions.Logging;
 
 namespace AISO.AiOrchestration.Functions;
 
-/// <summary>Admin override: force-cancel an SO via SAP (bypasses ownership).</summary>
+/// <summary>
+/// Admin override: validate then show confirm card (reason required).
+/// SAP call happens on Adaptive Card <c>force_cancel_confirm</c>.
+/// </summary>
 public sealed class ForceCancelFunction : IFunction
 {
     private readonly ISapClient _sap;
@@ -20,7 +23,8 @@ public sealed class ForceCancelFunction : IFunction
     public string Name => "ForceCancel";
 
     public string Description =>
-        "Admin-only: force cancel a sales order in SAP, bypassing ownership. Requires an override reason.";
+        "Admin-only: prepare force cancel for a sales order (bypasses ownership). " +
+        "Returns a confirmation card — does not cancel until the user confirms with a reason.";
 
     public string ParametersJsonSchema => """
         {
@@ -32,10 +36,10 @@ public sealed class ForceCancelFunction : IFunction
             },
             "reason": {
               "type": "string",
-              "description": "Mandatory override reason."
+              "description": "Optional draft override reason to prefill on the confirm card."
             }
           },
-          "required": ["order_id", "reason"]
+          "required": ["order_id"]
         }
         """;
 
@@ -52,8 +56,6 @@ public sealed class ForceCancelFunction : IFunction
 
         if (string.IsNullOrWhiteSpace(orderId))
             return FunctionResult.Fail("Missing required parameter: order_id");
-        if (string.IsNullOrWhiteSpace(reason))
-            return FunctionResult.Fail("Missing required parameter: reason");
 
         try
         {
@@ -68,22 +70,21 @@ public sealed class ForceCancelFunction : IFunction
                     "VALIDATION");
             }
 
-            var updated = await _sap.ForceCancelAsync(orderId, requestingSapUser, reason, ct);
             _logger.LogInformation(
-                "ForceCancel: so={SoNumber} by={User} reason={Reason}",
-                updated.SoNumber, requestingSapUser, reason);
-            return FunctionResult.Ok(new
-            {
-                order_id = updated.SoNumber,
-                action = "ForceCancelled",
-                reason,
-                message = $"Sales order {updated.SoNumber} was force-cancelled by Admin."
-            });
+                "ForceCancel confirm step: so={SoNumber} by={User} (not submitted yet)",
+                existing.SoNumber, requestingSapUser);
+
+            return FunctionResult.Ok(new ConfirmForceCancelResponse(
+                existing.SoNumber,
+                string.IsNullOrWhiteSpace(reason) ? null : reason.Trim()));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "ForceCancel failed for {OrderId}", orderId);
+            _logger.LogError(ex, "ForceCancel prepare failed for {OrderId}", orderId);
             return FunctionResult.Fail($"Force cancel failed: {ex.Message}");
         }
     }
 }
+
+/// <summary>Payload telling the bot to show <c>confirm-force-cancel</c>.</summary>
+public sealed record ConfirmForceCancelResponse(string SoNumber, string? Reason = null);

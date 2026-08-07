@@ -193,9 +193,12 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 var reasonMatch = Regex.Match(text, @"reason:\s*(.+)$", RegexOptions.IgnoreCase);
                 var reason = reasonMatch.Success
                     ? reasonMatch.Groups[1].Value.Trim()
-                    : "Admin force cancel via Teams";
+                    : null;
 
-                var paramsJson = JsonSerializer.Serialize(new { order_id = orderId, reason });
+                object paramsObj = string.IsNullOrWhiteSpace(reason)
+                    ? new { order_id = orderId }
+                    : new { order_id = orderId, reason };
+                var paramsJson = JsonSerializer.Serialize(paramsObj);
                 using var doc = JsonDocument.Parse(paramsJson);
                 var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
                 return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
@@ -212,9 +215,12 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                 var reasonMatch = Regex.Match(text, @"reason:\s*(.+)$", RegexOptions.IgnoreCase);
                 var reason = reasonMatch.Success
                     ? reasonMatch.Groups[1].Value.Trim()
-                    : "Admin force release via Teams";
+                    : null;
 
-                var paramsJson = JsonSerializer.Serialize(new { order_id = orderId, reason });
+                object paramsObj = string.IsNullOrWhiteSpace(reason)
+                    ? new { order_id = orderId }
+                    : new { order_id = orderId, reason };
+                var paramsJson = JsonSerializer.Serialize(paramsObj);
                 using var doc = JsonDocument.Parse(paramsJson);
                 var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
                 return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
