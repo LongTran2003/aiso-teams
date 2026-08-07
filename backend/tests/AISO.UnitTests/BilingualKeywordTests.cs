@@ -94,8 +94,9 @@ public class BilingualKeywordTests
         Assert.Contains("material1", createJson);
         Assert.Contains("TG11", createJson);
         Assert.Contains("DXTR1000", createJson);
-        Assert.Contains("salesOrgCustom", createJson);
-        Assert.Contains("currencyCustom", createJson);
+        Assert.Contains("ColumnSet", createJson);
+        Assert.DoesNotContain("salesOrgCustom", createJson);
+        Assert.DoesNotContain("Input.ChoiceSet", createJson);
 
         var update = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmUpdateReferenceCard(
             "0000005001", "OLD", "NEW-PO");

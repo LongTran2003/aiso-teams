@@ -18,7 +18,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "Add up to 5 materials. Leave unused lines blank. Custom sales org / currency override the dropdown when filled.",
+          "text": "Up to 5 materials. Leave unused lines blank.",
           "size": "Small",
           "isSubtle": true,
           "spacing": "None",
@@ -36,48 +36,18 @@
       "value": "${customer}"
     },
     {
-      "type": "Input.ChoiceSet",
+      "type": "Input.Text",
       "id": "salesOrg",
       "label": "Sales org",
-      "style": "compact",
-      "value": "${salesOrg}",
-      "choices": [
-        { "title": "1010", "value": "1010" },
-        { "title": "TV01", "value": "TV01" },
-        { "title": "FU24", "value": "FU24" },
-        { "title": "UE00", "value": "UE00" },
-        { "title": "UW00", "value": "UW00" },
-        { "title": "DN00", "value": "DN00" },
-        { "title": "DS00", "value": "DS00" }
-      ]
+      "placeholder": "e.g. 1010",
+      "value": "${salesOrg}"
     },
     {
       "type": "Input.Text",
-      "id": "salesOrgCustom",
-      "label": "Custom sales org (optional)",
-      "placeholder": "Overrides dropdown if filled",
-      "value": "${salesOrgCustom}"
-    },
-    {
-      "type": "Input.ChoiceSet",
       "id": "currency",
       "label": "Currency",
-      "style": "compact",
-      "value": "${currency}",
-      "choices": [
-        { "title": "USD", "value": "USD" },
-        { "title": "EUR", "value": "EUR" },
-        { "title": "VND", "value": "VND" },
-        { "title": "JPY", "value": "JPY" },
-        { "title": "GBP", "value": "GBP" }
-      ]
-    },
-    {
-      "type": "Input.Text",
-      "id": "currencyCustom",
-      "label": "Custom currency (optional)",
-      "placeholder": "Overrides dropdown if filled",
-      "value": "${currencyCustom}"
+      "placeholder": "e.g. USD",
+      "value": "${currency}"
     },
     {
       "type": "TextBlock",
@@ -87,78 +57,168 @@
       "size": "Small"
     },
     {
-      "type": "Input.Text",
-      "id": "material1",
-      "label": "Material 1",
-      "isRequired": true,
-      "errorMessage": "At least one material is required",
-      "placeholder": "e.g. TG11",
-      "value": "${material1}"
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "material1",
+              "label": "Material 1",
+              "isRequired": true,
+              "errorMessage": "At least one material is required",
+              "placeholder": "e.g. TG11",
+              "value": "${material1}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty1",
+              "label": "Qty",
+              "isRequired": true,
+              "errorMessage": "Qty required",
+              "min": 1,
+              "value": "${qty1}"
+            }
+          ]
+        }
+      ]
     },
     {
-      "type": "Input.Number",
-      "id": "qty1",
-      "label": "Qty 1",
-      "isRequired": true,
-      "errorMessage": "Quantity is required",
-      "min": 1,
-      "value": "${qty1}"
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "material2",
+              "label": "Material 2",
+              "placeholder": "Optional",
+              "value": "${material2}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty2",
+              "label": "Qty",
+              "min": 0,
+              "value": "${qty2}"
+            }
+          ]
+        }
+      ]
     },
     {
-      "type": "Input.Text",
-      "id": "material2",
-      "label": "Material 2 (optional)",
-      "placeholder": "Leave blank if unused",
-      "value": "${material2}"
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "material3",
+              "label": "Material 3",
+              "placeholder": "Optional",
+              "value": "${material3}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty3",
+              "label": "Qty",
+              "min": 0,
+              "value": "${qty3}"
+            }
+          ]
+        }
+      ]
     },
     {
-      "type": "Input.Number",
-      "id": "qty2",
-      "label": "Qty 2",
-      "min": 0,
-      "value": "${qty2}"
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "material4",
+              "label": "Material 4",
+              "placeholder": "Optional",
+              "value": "${material4}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty4",
+              "label": "Qty",
+              "min": 0,
+              "value": "${qty4}"
+            }
+          ]
+        }
+      ]
     },
     {
-      "type": "Input.Text",
-      "id": "material3",
-      "label": "Material 3 (optional)",
-      "placeholder": "Leave blank if unused",
-      "value": "${material3}"
-    },
-    {
-      "type": "Input.Number",
-      "id": "qty3",
-      "label": "Qty 3",
-      "min": 0,
-      "value": "${qty3}"
-    },
-    {
-      "type": "Input.Text",
-      "id": "material4",
-      "label": "Material 4 (optional)",
-      "placeholder": "Leave blank if unused",
-      "value": "${material4}"
-    },
-    {
-      "type": "Input.Number",
-      "id": "qty4",
-      "label": "Qty 4",
-      "min": 0,
-      "value": "${qty4}"
-    },
-    {
-      "type": "Input.Text",
-      "id": "material5",
-      "label": "Material 5 (optional)",
-      "placeholder": "Leave blank if unused",
-      "value": "${material5}"
-    },
-    {
-      "type": "Input.Number",
-      "id": "qty5",
-      "label": "Qty 5",
-      "min": 0,
-      "value": "${qty5}"
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "material5",
+              "label": "Material 5",
+              "placeholder": "Optional",
+              "value": "${material5}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty5",
+              "label": "Qty",
+              "min": 0,
+              "value": "${qty5}"
+            }
+          ]
+        }
+      ]
     }
   ],
   "actions": [

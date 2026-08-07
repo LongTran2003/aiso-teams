@@ -1233,22 +1233,12 @@ public class TeamsBot : TeamsActivityHandler
                         var customer = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken)
                             ? custToken.ToString()?.Trim()
                             : null;
-                        var salesOrgCustom = valueObj.TryGetValue("salesOrgCustom", StringComparison.OrdinalIgnoreCase, out var orgCustomToken)
-                            ? orgCustomToken.ToString()?.Trim()
-                            : null;
-                        var salesOrg = !string.IsNullOrWhiteSpace(salesOrgCustom)
-                            ? salesOrgCustom
-                            : valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var orgToken)
-                                ? orgToken.ToString()?.Trim()
-                                : "1010";
-                        var currencyCustom = valueObj.TryGetValue("currencyCustom", StringComparison.OrdinalIgnoreCase, out var curCustomToken)
-                            ? curCustomToken.ToString()?.Trim()
-                            : null;
-                        var currency = !string.IsNullOrWhiteSpace(currencyCustom)
-                            ? currencyCustom
-                            : valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var curToken)
-                                ? curToken.ToString()?.Trim()
-                                : "USD";
+                        var salesOrg = valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var orgToken)
+                            ? orgToken.ToString()?.Trim()
+                            : "1010";
+                        var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var curToken)
+                            ? curToken.ToString()?.Trim()
+                            : "USD";
                         var plant = valueObj.TryGetValue("plant", StringComparison.OrdinalIgnoreCase, out var plantToken)
                             ? plantToken.ToString()?.Trim()
                             : "1010";

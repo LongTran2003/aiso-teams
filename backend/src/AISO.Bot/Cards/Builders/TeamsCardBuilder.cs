@@ -146,14 +146,6 @@ internal static class TeamsCardBuilder
     public static Attachment BuildConfirmCreateOrderCard(ConfirmCreateOrderResponse draft)
     {
         var lines = NormalizeCreateLines(draft.Lines);
-        var (salesOrgChoice, salesOrgCustom) = SplitKnownOrCustom(
-            draft.SalesOrg,
-            KnownSalesOrgs,
-            fallback: "1010");
-        var (currencyChoice, currencyCustom) = SplitKnownOrCustom(
-            draft.Currency,
-            KnownCurrencies,
-            fallback: "USD");
 
         string SlotMaterial(int i) =>
             i < lines.Count ? lines[i].Material : string.Empty;
@@ -165,10 +157,8 @@ internal static class TeamsCardBuilder
             new
             {
                 customer = draft.Customer,
-                salesOrg = salesOrgChoice,
-                salesOrgCustom,
-                currency = currencyChoice,
-                currencyCustom,
+                salesOrg = string.IsNullOrWhiteSpace(draft.SalesOrg) ? "1010" : draft.SalesOrg,
+                currency = string.IsNullOrWhiteSpace(draft.Currency) ? "USD" : draft.Currency,
                 plant = string.IsNullOrWhiteSpace(draft.Plant) ? "1010" : draft.Plant,
                 unit = string.IsNullOrWhiteSpace(draft.Unit) ? "PC" : draft.Unit,
                 material1 = SlotMaterial(0),
@@ -184,16 +174,6 @@ internal static class TeamsCardBuilder
             });
     }
 
-    private static readonly HashSet<string> KnownSalesOrgs = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "1010", "TV01", "FU24", "UE00", "UW00", "DN00", "DS00"
-    };
-
-    private static readonly HashSet<string> KnownCurrencies = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "USD", "EUR", "VND", "JPY", "GBP"
-    };
-
     private static IReadOnlyList<ConfirmCreateOrderLine> NormalizeCreateLines(
         IReadOnlyList<ConfirmCreateOrderLine>? lines)
     {
@@ -207,21 +187,6 @@ internal static class TeamsCardBuilder
                 l.Material.Trim().ToUpperInvariant(),
                 l.Qty < 1 ? 1m : l.Qty))
             .ToList();
-    }
-
-    private static (string Choice, string Custom) SplitKnownOrCustom(
-        string? value,
-        HashSet<string> known,
-        string fallback)
-    {
-        var trimmed = value?.Trim() ?? string.Empty;
-        if (string.IsNullOrWhiteSpace(trimmed))
-            return (fallback, string.Empty);
-
-        if (known.Contains(trimmed))
-            return (known.First(k => k.Equals(trimmed, StringComparison.OrdinalIgnoreCase)), string.Empty);
-
-        return (fallback, trimmed.ToUpperInvariant());
     }
 
     public static Attachment BuildConfirmUpdateReferenceCard(
