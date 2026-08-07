@@ -344,6 +344,46 @@ public class SapClient : ISapClient
         }
     }
 
+    public async Task<SalesOrder> CancelOrderAsync(
+        string soNumber,
+        string requestingSapUser,
+        string? reason = null,
+        CancellationToken ct = default)
+    {
+        var formattedSo = FormatSoNumber(soNumber);
+        var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.cancelOrder?sap-client=324&$format=json";
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        var payload = new
+        {
+            REQUESTING_TEAMS_USER = requestingSapUser,
+            REASON = string.IsNullOrWhiteSpace(reason) ? string.Empty : reason.Trim(),
+        };
+
+        try
+        {
+            var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
+            if (result == null)
+                throw new InvalidOperationException("Failed to deserialize cancelled order.");
+
+            var refreshed = await GetSalesOrderByIdAsync(formattedSo, ct);
+            if (refreshed is not null)
+                return refreshed;
+
+            var order = MapToDomain(result);
+            return order with
+            {
+                SoNumber = order.SoNumber is "UNKNOWN" ? formattedSo : order.SoNumber,
+                Status = SalesOrderStatus.Cancelled
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error calling SAP OData CancelOrderAsync for {SoNumber}", soNumber);
+            throw;
+        }
+    }
+
     public async Task<SalesOrder> ReleaseOrderAsync(string soNumber, string requestingTeamsUser, CancellationToken ct = default)
     {
         return await PostSalesOrderActionAsync(

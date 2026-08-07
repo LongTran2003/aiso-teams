@@ -169,6 +169,18 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
                 function = rejectApproval;
             }
         }
+        else if (LooksLikeCancelOrder(userMessage)
+                 && string.Equals(function.Name, "RejectOrder", StringComparison.OrdinalIgnoreCase)
+                 && !LooksLikeForceCancel(userMessage)
+                 && !LooksLikeRejectApproval(userMessage))
+        {
+            var cancelOrder = _registry.GetByName("CancelOrder");
+            if (cancelOrder is not null)
+            {
+                _logger.LogInformation("Remapping RejectOrder → CancelOrder for cancel-order intent");
+                function = cancelOrder;
+            }
+        }
 
         using var argsDoc = JsonDocument.Parse(argsJson);
 
@@ -250,7 +262,11 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
                || text.Contains("forcerelease")
                || text.Contains("force-release")
                || text.Contains("reject approval")
-               || text.Contains("rejectapproval");
+               || text.Contains("rejectapproval")
+               || text.Contains("cancel order")
+               || text.Contains("cancel so")
+               || (text.Contains("hủy") && text.Contains("đơn"))
+               || (text.Contains("huỷ") && text.Contains("đơn"));
     }
 
     /// <summary>Common LLM / API misnomers for registered BE functions.</summary>
@@ -269,6 +285,19 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
         return text.Contains("force cancel")
                || text.Contains("forcecancel")
                || text.Contains("force-cancel");
+    }
+
+    public static bool LooksLikeCancelOrder(string userMessage)
+    {
+        if (LooksLikeForceCancel(userMessage) || LooksLikeRejectApproval(userMessage))
+            return false;
+
+        var text = userMessage.Trim().ToLowerInvariant();
+        return text.Contains("cancel order")
+               || text.Contains("cancel so")
+               || text.Contains("cancel sales order")
+               || (text.Contains("hủy") && text.Contains("đơn"))
+               || (text.Contains("huỷ") && text.Contains("đơn"));
     }
 
     public static bool LooksLikeForceRelease(string userMessage)

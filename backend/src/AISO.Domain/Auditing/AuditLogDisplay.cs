@@ -15,6 +15,7 @@ public static class AuditLogDisplay
             ["RejectApproval"] = "Reject approval",
             ["ReleaseOrder"] = "Release order",
             ["RejectOrder"] = "Reject order",
+            ["CancelOrder"] = "Cancel order",
             ["ForwardOrder"] = "Forward order",
             ["ForceRelease"] = "Force release",
             ["ForceCancel"] = "Force cancel",

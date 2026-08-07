@@ -46,6 +46,16 @@ public interface ISapClient
         string requestingTeamsUser,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Cancels a sales order via SAP <c>cancelOrder</c>.
+    /// Employee: own SO only (SAP + BE). Manager/Admin: any SO.
+    /// </summary>
+    Task<SalesOrder> CancelOrderAsync(
+        string soNumber,
+        string requestingSapUser,
+        string? reason = null,
+        CancellationToken ct = default);
+
     Task<SalesOrder> ReleaseOrderAsync(
         string soNumber,
         string requestingTeamsUser,

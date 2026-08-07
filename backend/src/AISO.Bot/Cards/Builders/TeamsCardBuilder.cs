@@ -99,6 +99,17 @@ internal static class TeamsCardBuilder
                     .ToList()
             });
 
+    public static Attachment BuildConfirmCancelCard(
+        string salesOrderNumber,
+        string? reason = null) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "confirm-cancel.json",
+            new
+            {
+                salesOrderNumber,
+                reason = reason ?? string.Empty
+            });
+
     public static Attachment BuildConfirmReleaseCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-release.json", new { salesOrderNumber });
 
@@ -375,6 +386,8 @@ internal static class TeamsCardBuilder
             journeySteps = journey.Select(s => new { title = s.Title, detail = s.Detail }).ToList(),
             showRequestRelease = isEmployee && canMutateWhilePending ? "true" : "false",
             showApprove = isApprover && canMutateLifecycle && showActivePending && materialOk ? "true" : "false",
+            // Manager/Admin: cancel any cancellable SO (including while pending release).
+            showCancel = isApprover && canReject && materialOk ? "true" : "false",
             showReject = canRejectWhilePending ? "true" : "false",
             showForward = canMutateWhilePending ? "true" : "false",
             items = items.Select(item =>

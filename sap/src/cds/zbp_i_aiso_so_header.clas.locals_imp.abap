@@ -601,15 +601,27 @@ ENDMETHOD.
 
   LOOP AT keys INTO DATA(ls_key).
     DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+    DATA(lv_requesting_user) = ls_key-%param-requesting_teams_user.
+    DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
 
     SELECT SINGLE sap_user FROM zaiso_so_map
       INTO @DATA(lv_owner)
       WHERE so_number = @lv_so_number.
 
-    IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
+    " Employee: own SO only. Manager/Admin: any SO.
+    IF lv_owner IS NOT INITIAL
+       AND lv_owner <> lv_requesting_user
+       AND lv_role <> 'MANAGER'
+       AND lv_role <> 'ADMIN'.
       APPEND VALUE #( %tky        = ls_key-%tky
                        %fail-cause = if_abap_behv=>cause-unauthorized )
              TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Only owner or Manager/Admin can cancel' ) )
+             TO reported-salesorder.
       CONTINUE.
     ENDIF.
 
@@ -692,7 +704,8 @@ ENDMETHOD.
     APPEND VALUE #(
       mandt       = sy-mandt
       audit_id    = lv_audit_id
-      sap_user    = sy-uname
+      sap_user    = lv_requesting_user
+      actor_role  = lv_role
       action_type = 'CANCEL_SO'
       so_number   = lv_so_number
       status      = 'SUCCESS'

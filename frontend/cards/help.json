@@ -51,7 +51,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "1. Open **Pending approvals**\n2. Review the order → **View details** if needed\n3. **Approve** (releases in SAP) or **Reject approval** (keeps order, clears pending)\n4. You can also browse orders / KPIs anytime",
+          "text": "1. Open **Pending approvals**\n2. Review the order → **View details** if needed\n3. **Approve** (releases in SAP) or **Reject approval** (keeps order, clears pending)\n4. On detail you can also **Cancel order** (cancels SO in SAP)\n5. You can also browse orders / KPIs anytime",
           "wrap": true,
           "spacing": "Small"
         }
@@ -272,7 +272,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "• show pending approvals\n• approve order 13122 · reject approval 13122\n• show order 13122 · show revenue kpi · logout",
+      "text": "• show pending approvals\n• approve order 13122 · reject approval 13122\n• show order 13122 · cancel order 13122\n• show revenue kpi · logout",
       "wrap": true,
       "spacing": "Small",
       "size": "Small",

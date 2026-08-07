@@ -1,0 +1,19 @@
+{
+  "name": "CancelOrder",
+  "description": "Cancel (soft-delete) a sales order in SAP. Use when the user asks to cancel or hủy an order. Employee may cancel their own order; Manager/Admin may cancel others. Prefer this over RejectOrder when the user says cancel/hủy without a rejection reason code. Do not use for reject approval (deny release request) or Admin force cancel.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "order_id": {
+        "type": "string",
+        "description": "The sales order number (e.g. '0000013122' or '13122')."
+      },
+      "reason": {
+        "type": ["string", "null"],
+        "description": "Optional free-text cancel reason. Use null if not provided."
+      }
+    },
+    "required": ["order_id"],
+    "additionalProperties": false
+  }
+}

@@ -446,6 +446,21 @@
     },
     {
       "type": "Action.Submit",
+      "title": "Cancel order",
+      "style": "destructive",
+      "$when": "${showCancel == 'true'}",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Cancel order ${salesOrderNumber}",
+          "text": "cancel order ${salesOrderNumber}"
+        },
+        "action": "cancel_so",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
       "title": "Reject order",
       "style": "destructive",
       "$when": "${showReject == 'true'}",

@@ -65,7 +65,24 @@ public class ForceCancelRoutingTests
     }
 
     [Fact]
-    public async Task Keyword_PlainCancelOrder_StillRoutesToRejectOrder()
+    public async Task Keyword_PlainCancelOrder_RoutesToCancelOrder()
+    {
+        var dispatcher = CreateKeywordDispatcher();
+
+        var result = await dispatcher.DispatchAsync(
+            "cancel order 0000005001",
+            "DEV-MGR",
+            UserRole.Manager);
+
+        Assert.True(result.Handled);
+        Assert.Equal("CancelOrder", result.FunctionName);
+        Assert.True(result.Result?.Success, result.Result?.ErrorMessage);
+        var payload = Assert.IsType<ConfirmCancelOrderResponse>(result.Result!.Payload);
+        Assert.Equal("0000005001", payload.SoNumber);
+    }
+
+    [Fact]
+    public async Task Keyword_RejectOrder_StillRoutesToRejectOrder()
     {
         var dispatcher = CreateKeywordDispatcher();
 
@@ -84,6 +101,22 @@ public class ForceCancelRoutingTests
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("force cancel 0000013069"));
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("force release 13122"));
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("reject approval 9"));
+        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("cancel order 13122"));
+        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("hủy đơn 13122"));
+    }
+
+    [Fact]
+    public void BuildConfirmCancelCard_IncludesAction()
+    {
+        var attachment = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmCancelCard(
+            "0000005001",
+            "demo reason");
+        var json = Newtonsoft.Json.JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("Confirm cancel", json);
+        Assert.Contains("0000005001", json);
+        Assert.Contains("cancel_so_confirm", json);
+        Assert.Contains("demo reason", json);
     }
 
     [Fact]
@@ -139,6 +172,7 @@ public class ForceCancelRoutingTests
         services.AddSingleton<IFunction, ForceReleaseFunction>();
         services.AddSingleton<IFunction, RejectApprovalFunction>();
         services.AddSingleton<IFunction, RejectOrderFunction>();
+        services.AddSingleton<IFunction, CancelOrderFunction>();
         services.AddSingleton<IFunctionRegistry, FunctionRegistry>();
         var sp = services.BuildServiceProvider();
         return new KeywordFunctionDispatcher(sp.GetRequiredService<IFunctionRegistry>());
@@ -174,6 +208,8 @@ public class ForceCancelRoutingTests
         public Task<SalesOrder> UpdateReferenceAsync(string soNumber, string newReference, string requestingSapUser, CancellationToken ct = default)
             => throw new NotImplementedException();
         public Task<SalesOrder> RejectOrderAsync(string soNumber, string rejectionCode, string requestingTeamsUser, CancellationToken ct = default)
+            => throw new NotImplementedException();
+        public Task<SalesOrder> CancelOrderAsync(string soNumber, string requestingSapUser, string? reason = null, CancellationToken ct = default)
             => throw new NotImplementedException();
         public Task<SalesOrder> ReleaseOrderAsync(string soNumber, string requestingTeamsUser, CancellationToken ct = default)
             => throw new NotImplementedException();
@@ -240,6 +276,6 @@ public class ForceCancelRoutingTests
             => Task.FromResult(UserRole.Manager);
 
         public Task<string?> GetSalesOrgBySapUserAsync(string sapUserId, CancellationToken ct = default)
-            => Task.FromResult<string?>("FU24");
+            => Task.FromResult<string?>("UE00");
     }
 }

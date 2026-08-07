@@ -274,6 +274,13 @@ public sealed class MockSapClient : ISapClient
         return Task.FromResult(order with { Status = SalesOrderStatus.Cancelled });
     }
 
+    public Task<SalesOrder> CancelOrderAsync(
+        string soNumber,
+        string requestingSapUser,
+        string? reason = null,
+        CancellationToken ct = default)
+        => RejectOrderAsync(soNumber, "Z1", requestingSapUser, ct);
+
     public Task<SalesOrder> ReleaseOrderAsync(string soNumber, string requestingTeamsUser, CancellationToken ct = default)
     {
         var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)

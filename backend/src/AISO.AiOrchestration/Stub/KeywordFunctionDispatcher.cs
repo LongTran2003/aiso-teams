@@ -228,6 +228,29 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
+        // Cancel order (before RejectOrder — "cancel order" / "hủy đơn")
+        if (IsCancelOrderIntent(text) && (text.Contains("đơn") || text.Contains("order") || OrderIdPattern().IsMatch(text)))
+        {
+            var fn = _registry.GetByName("CancelOrder");
+            if (fn is not null)
+            {
+                var orderMatch = OrderIdPattern().Match(text);
+                var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
+                var reasonMatch = Regex.Match(text, @"reason:\s*(.+)$", RegexOptions.IgnoreCase);
+                var reason = reasonMatch.Success
+                    ? reasonMatch.Groups[1].Value.Trim()
+                    : null;
+
+                object paramsObj = string.IsNullOrWhiteSpace(reason)
+                    ? new { order_id = orderId }
+                    : new { order_id = orderId, reason };
+                var paramsJson = JsonSerializer.Serialize(paramsObj);
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
+            }
+        }
+
         if (IsForceReleaseIntent(text) && (text.Contains("đơn") || text.Contains("order") || OrderIdPattern().IsMatch(text)))
         {
             var fn = _registry.GetByName("ForceRelease");
@@ -268,10 +291,11 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
-        // Pattern: Cancel/Reject Order (not force*, not reject approval)
-        if ((text.Contains("hủy") || text.Contains("huỷ") || text.Contains("reject") || text.Contains("cancel"))
+        // Pattern: Reject Order (reason codes) — not cancel/hủy (→ CancelOrder), not force*, not reject approval
+        if (text.Contains("reject")
             && (text.Contains("đơn") || text.Contains("order"))
             && !IsForceCancelIntent(text)
+            && !IsCancelOrderIntent(text)
             && !IsRejectApprovalIntent(text))
         {
             var fn = _registry.GetByName("RejectOrder");
@@ -482,6 +506,17 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         || text.Contains("force-cancel")
         || text.Contains("ép hủy")
         || text.Contains("ep huy");
+
+    private static bool IsCancelOrderIntent(string text) =>
+        !IsForceCancelIntent(text)
+        && !IsRejectApprovalIntent(text)
+        && (
+            text.Contains("cancel order")
+            || text.Contains("cancel so")
+            || text.Contains("cancel sales order")
+            || (text.Contains("hủy") && text.Contains("đơn"))
+            || (text.Contains("huỷ") && text.Contains("đơn"))
+            || (text.Contains("huy") && text.Contains("don")));
 
     private static bool IsForceReleaseIntent(string text) =>
         text.Contains("force release")
