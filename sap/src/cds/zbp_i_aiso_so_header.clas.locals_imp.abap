@@ -421,17 +421,27 @@ ENDMETHOD.
   ENDMETHOD.
 
   METHOD createSalesOrder.
-  DATA: ls_header_in  TYPE bapisdhead1,
-        ls_header_inx TYPE bapisdhead1x,
-        lt_partners   TYPE TABLE OF bapiparnr,
-        lt_items_in   TYPE TABLE OF bapiitemin,
-        lt_return     TYPE TABLE OF bapiret2,
-        lv_so_number  TYPE vbeln_va,
-        lv_timestamp  TYPE c LENGTH 14,
-        lv_audit_id   TYPE sysuuid_c32,
-        lv_requesting_user  TYPE char100.
+  " CREATEFROMDAT2 requires BAPISDHD1 / BAPISDITM (NOT BAPISDHEAD1 / BAPIITEMIN).
+  " Wrong types cause runtime dump CALL_FUNCTION_CONFLICT_LENG.
+  DATA: ls_header_in    TYPE bapisdhd1,
+        ls_header_inx   TYPE bapisdhd1x,
+        lt_partners     TYPE TABLE OF bapiparnr,
+        lt_items_in     TYPE TABLE OF bapisditm,
+        lt_items_inx    TYPE TABLE OF bapisditmx,
+        lt_schedules_in TYPE TABLE OF bapischdl,
+        lt_schedules_inx TYPE TABLE OF bapischdlx,
+        lt_return       TYPE TABLE OF bapiret2,
+        lv_so_number    TYPE vbeln_va,
+        lv_timestamp    TYPE c LENGTH 14,
+        lv_audit_id     TYPE sysuuid_c32,
+        lv_requesting_user TYPE char100,
+        lv_customer     TYPE kunnr,
+        lv_material     TYPE matnr,
+        lv_item_no      TYPE posnr_va,
+        lv_sched_line   TYPE etenr.
   LOOP AT keys INTO DATA(ls_key).
-    CLEAR: ls_header_in, ls_header_inx, lt_partners, lt_items_in, lt_return, lv_so_number.
+    CLEAR: ls_header_in, ls_header_inx, lt_partners, lt_items_in, lt_items_inx,
+           lt_schedules_in, lt_schedules_inx, lt_return, lv_so_number.
 
     lv_requesting_user = ls_key-%param-requesting_teams_user.
     DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
@@ -458,47 +468,95 @@ ENDMETHOD.
     ls_header_in-division   = ls_key-%param-division.
     ls_header_in-currency   = ls_key-%param-currency.
 
+    ls_header_inx-updateflag = 'I'.
     ls_header_inx-doc_type   = 'X'.
     ls_header_inx-sales_org  = 'X'.
     ls_header_inx-distr_chan = 'X'.
     ls_header_inx-division   = 'X'.
     ls_header_inx-currency   = 'X'.
 
-    APPEND VALUE #( partn_role = 'AG' partn_numb = ls_key-%param-customer ) TO lt_partners.
+    lv_customer = |{ ls_key-%param-customer ALPHA = IN }|.
+    APPEND VALUE #( partn_role = 'AG' partn_numb = lv_customer ) TO lt_partners.
 
+    CLEAR lv_item_no.
     LOOP AT ls_key-%param-items INTO DATA(ls_item).
-      APPEND VALUE #( material   = ls_item-material
+      lv_item_no = lv_item_no + 10.
+      lv_sched_line = '0001'.
+
+      lv_material = ls_item-material.
+      CALL FUNCTION 'CONVERSION_EXIT_MATN1_INPUT'
+        EXPORTING
+          input  = lv_material
+        IMPORTING
+          output = lv_material
+        EXCEPTIONS
+          length_error = 1
+          OTHERS       = 2.
+      IF sy-subrc <> 0.
+        lv_material = ls_item-material.
+      ENDIF.
+
+      APPEND VALUE #( itm_number = lv_item_no
+                       material   = lv_material
                        plant      = ls_item-plant
                        target_qty = ls_item-order_qty
                        target_qu  = ls_item-unit ) TO lt_items_in.
+      APPEND VALUE #( itm_number = lv_item_no
+                       updateflag = 'I'
+                       material   = 'X'
+                       plant      = 'X'
+                       target_qty = 'X'
+                       target_qu  = 'X' ) TO lt_items_inx.
+
+      APPEND VALUE #( itm_number = lv_item_no
+                       sched_line = lv_sched_line
+                       req_qty    = ls_item-order_qty ) TO lt_schedules_in.
+      APPEND VALUE #( itm_number = lv_item_no
+                       sched_line = lv_sched_line
+                       updateflag = 'I'
+                       req_qty    = 'X' ) TO lt_schedules_inx.
     ENDLOOP.
 
     CALL FUNCTION 'BAPI_SALESORDER_CREATEFROMDAT2'
       EXPORTING
-        order_header_in  = ls_header_in
-        order_header_inx = ls_header_inx
+        order_header_in     = ls_header_in
+        order_header_inx    = ls_header_inx
       IMPORTING
-        salesdocument    = lv_so_number
+        salesdocument       = lv_so_number
       TABLES
-        return           = lt_return
-        order_partners   = lt_partners
-        order_items_in   = lt_items_in.
+        return              = lt_return
+        order_partners      = lt_partners
+        order_items_in      = lt_items_in
+        order_items_inx     = lt_items_inx
+        order_schedules_in  = lt_schedules_in
+        order_schedules_inx = lt_schedules_inx.
 
     READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
-    IF sy-subrc = 0.
+    DATA(lv_has_bapi_error) = xsdbool( sy-subrc = 0 ).
+    IF lv_has_bapi_error = abap_true OR lv_so_number IS INITIAL.
       APPEND VALUE #( %cid        = ls_key-%cid
                        %fail-cause = if_abap_behv=>cause-unspecific )
              TO failed-salesorder.
-      APPEND VALUE #( %cid = ls_key-%cid
-                       %msg = new_message(
-                         id       = ls_error-id
-                         number   = ls_error-number
-                         severity = if_abap_behv_message=>severity-error
-                         v1       = ls_error-message_v1
-                         v2       = ls_error-message_v2
-                         v3       = ls_error-message_v3
-                         v4       = ls_error-message_v4 ) )
-             TO reported-salesorder.
+      IF lv_has_bapi_error = abap_true.
+        APPEND VALUE #( %cid = ls_key-%cid
+                         %msg = new_message(
+                           id       = ls_error-id
+                           number   = ls_error-number
+                           severity = if_abap_behv_message=>severity-error
+                           v1       = ls_error-message_v1
+                           v2       = ls_error-message_v2
+                           v3       = ls_error-message_v3
+                           v4       = ls_error-message_v4 ) )
+               TO reported-salesorder.
+      ELSE.
+        APPEND VALUE #( %cid = ls_key-%cid
+                         %msg = new_message(
+                           id       = '00'
+                           number   = '001'
+                           severity = if_abap_behv_message=>severity-error
+                           v1       = 'Create SO failed (no document number)' ) )
+               TO reported-salesorder.
+      ENDIF.
       CONTINUE.
     ENDIF.
 
@@ -528,8 +586,9 @@ ENDMETHOD.
       created_at  = lv_timestamp
     ) TO lcl_buffer=>gt_audit_db.
 
-    APPEND VALUE #( %cid             = ls_key-%cid
-                     %param-SoNumber = lv_so_number ) TO result.
+    " Static action result [1] $self → return entity key (SoNumber), not %param
+    APPEND VALUE #( %cid     = ls_key-%cid
+                     SoNumber = lv_so_number ) TO result.
   ENDLOOP.
 ENDMETHOD.
 

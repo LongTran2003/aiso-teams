@@ -135,19 +135,42 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
-        // Pattern: Create Order
-        if (text.Contains("tạo") && text.Contains("đơn"))
+        // Pattern: Create Order (VI: "tạo đơn" / EN: "create order" | "create so" | "create sales order")
+        if ((text.Contains("tạo") && text.Contains("đơn"))
+            || text.Contains("create order")
+            || text.Contains("create so")
+            || text.Contains("create sales order"))
         {
             var fn = _registry.GetByName("CreateOrder");
             if (fn is not null)
             {
-                var custMatch = Regex.Match(text, @"(uscu_[a-z0-9]+)", RegexOptions.IgnoreCase);
-                var matMatch = Regex.Match(text, @"mặt hàng ([a-z0-9]+)", RegexOptions.IgnoreCase);
-                var qtyMatch = Regex.Match(text, @"số lượng (\d+)");
+                var custMatch = Regex.Match(
+                    text,
+                    @"(?:customer|khách(?:\s+hàng)?|cho khách)\s+([a-z0-9_]+)|(uscu_[a-z0-9]+)|(\d{6,10})",
+                    RegexOptions.IgnoreCase);
+                var matMatch = Regex.Match(
+                    text,
+                    @"(?:material|mặt hàng|item)\s+([a-z0-9_-]+)",
+                    RegexOptions.IgnoreCase);
+                var qtyMatch = Regex.Match(
+                    text,
+                    @"(?:qty|quantity|số lượng)\s+(\d+)|(\d+)\s+(?:pc|pcs|units?)",
+                    RegexOptions.IgnoreCase);
 
-                var customerId = custMatch.Success ? custMatch.Groups[1].Value.ToUpperInvariant() : "10100001";
+                var customerId = "10100001";
+                if (custMatch.Success)
+                {
+                    customerId = (custMatch.Groups[1].Success ? custMatch.Groups[1].Value
+                        : custMatch.Groups[2].Success ? custMatch.Groups[2].Value
+                        : custMatch.Groups[3].Value).ToUpperInvariant();
+                }
+
                 var material = matMatch.Success ? matMatch.Groups[1].Value.ToUpperInvariant() : "TG11";
-                var qty = qtyMatch.Success ? int.Parse(qtyMatch.Groups[1].Value) : 1;
+                var qty = 1;
+                if (qtyMatch.Success)
+                {
+                    qty = int.Parse(qtyMatch.Groups[1].Success ? qtyMatch.Groups[1].Value : qtyMatch.Groups[2].Value);
+                }
 
                 var paramsObj = new
                 {
