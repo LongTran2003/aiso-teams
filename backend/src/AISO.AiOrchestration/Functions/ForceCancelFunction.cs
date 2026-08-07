@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AISO.Domain.SalesOrders;
 using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
 
@@ -56,6 +57,17 @@ public sealed class ForceCancelFunction : IFunction
 
         try
         {
+            var existing = await _sap.GetSalesOrderByIdAsync(orderId, ct);
+            if (existing is null)
+                return FunctionResult.Fail($"Sales order {orderId} was not found in SAP.", "NOT_FOUND");
+
+            if (SalesOrderWorkflow.BlocksReject(existing.Status))
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Force cancel"),
+                    "VALIDATION");
+            }
+
             var updated = await _sap.ForceCancelAsync(orderId, requestingSapUser, reason, ct);
             _logger.LogInformation(
                 "ForceCancel: so={SoNumber} by={User} reason={Reason}",

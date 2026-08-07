@@ -182,8 +182,68 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
-        // Pattern: Cancel/Reject Order
-        if ((text.Contains("hủy") || text.Contains("huỷ") || text.Contains("reject") || text.Contains("cancel")) && (text.Contains("đơn") || text.Contains("order")))
+        // Admin force* must run before generic cancel/reject/release (e.g. "force cancel 13069").
+        if (IsForceCancelIntent(text) && (text.Contains("đơn") || text.Contains("order") || OrderIdPattern().IsMatch(text)))
+        {
+            var fn = _registry.GetByName("ForceCancel");
+            if (fn is not null)
+            {
+                var orderMatch = OrderIdPattern().Match(text);
+                var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
+                var reasonMatch = Regex.Match(text, @"reason:\s*(.+)$", RegexOptions.IgnoreCase);
+                var reason = reasonMatch.Success
+                    ? reasonMatch.Groups[1].Value.Trim()
+                    : "Admin force cancel via Teams";
+
+                var paramsJson = JsonSerializer.Serialize(new { order_id = orderId, reason });
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
+            }
+        }
+
+        if (IsForceReleaseIntent(text) && (text.Contains("đơn") || text.Contains("order") || OrderIdPattern().IsMatch(text)))
+        {
+            var fn = _registry.GetByName("ForceRelease");
+            if (fn is not null)
+            {
+                var orderMatch = OrderIdPattern().Match(text);
+                var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
+                var reasonMatch = Regex.Match(text, @"reason:\s*(.+)$", RegexOptions.IgnoreCase);
+                var reason = reasonMatch.Success
+                    ? reasonMatch.Groups[1].Value.Trim()
+                    : "Admin force release via Teams";
+
+                var paramsJson = JsonSerializer.Serialize(new { order_id = orderId, reason });
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
+            }
+        }
+
+        // Maker-checker: reject approval (before RejectOrder — "reject approval" contains "reject").
+        if (IsRejectApprovalIntent(text) && (text.Contains("đơn") || text.Contains("order") || OrderIdPattern().IsMatch(text)))
+        {
+            var fn = _registry.GetByName("RejectApproval");
+            if (fn is not null)
+            {
+                var orderMatch = OrderIdPattern().Match(text);
+                var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
+                var commentMatch = Regex.Match(text, @"comment:\s*(.+)$", RegexOptions.IgnoreCase);
+                var comment = commentMatch.Success ? commentMatch.Groups[1].Value.Trim() : null;
+
+                var paramsJson = JsonSerializer.Serialize(new { order_id = orderId, comment });
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
+            }
+        }
+
+        // Pattern: Cancel/Reject Order (not force*, not reject approval)
+        if ((text.Contains("hủy") || text.Contains("huỷ") || text.Contains("reject") || text.Contains("cancel"))
+            && (text.Contains("đơn") || text.Contains("order"))
+            && !IsForceCancelIntent(text)
+            && !IsRejectApprovalIntent(text))
         {
             var fn = _registry.GetByName("RejectOrder");
             if (fn is not null)
@@ -252,10 +312,11 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
-        // Pattern: Approve / release order (checker / direct SAP release)
+        // Pattern: Approve / release order (checker / direct SAP release) — not force release
         if ((text.Contains("phê duyệt") || text.Contains("approve") || text.Contains("release"))
-            && (text.Contains("đơn") || text.Contains("order"))
-            && !IsRequestReleaseIntent(text))
+            && (text.Contains("đơn") || text.Contains("order") || OrderIdPattern().IsMatch(text))
+            && !IsRequestReleaseIntent(text)
+            && !IsForceReleaseIntent(text))
         {
             var fn = _registry.GetByName("ReleaseOrder");
             if (fn is not null)
@@ -385,6 +446,27 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         || text.Contains("submit for approval")
         || text.Contains("send for approval")
         || (text.Contains("request") && text.Contains("release"));
+
+    private static bool IsForceCancelIntent(string text) =>
+        text.Contains("force cancel")
+        || text.Contains("forcecancel")
+        || text.Contains("force-cancel")
+        || text.Contains("ép hủy")
+        || text.Contains("ep huy");
+
+    private static bool IsForceReleaseIntent(string text) =>
+        text.Contains("force release")
+        || text.Contains("forcerelease")
+        || text.Contains("force-release")
+        || text.Contains("ép release")
+        || text.Contains("ep release");
+
+    private static bool IsRejectApprovalIntent(string text) =>
+        text.Contains("reject approval")
+        || text.Contains("rejectapproval")
+        || text.Contains("từ chối duyệt")
+        || text.Contains("tu choi duyet")
+        || (text.Contains("reject") && text.Contains("approval"));
 
     private static string InferRejectionReasonCode(string text)
     {

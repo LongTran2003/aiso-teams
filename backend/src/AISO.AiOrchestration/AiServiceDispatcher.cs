@@ -120,7 +120,6 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
 
         // Convert the AI arguments dict to a JsonElement for IFunction.ExecuteAsync
         var argsJson = JsonSerializer.Serialize(toolCall.Arguments);
-        using var argsDoc = JsonDocument.Parse(argsJson);
 
         // Maker-checker: AI often maps "request release" → ReleaseOrder.
         // Employees cannot release; rewrite to RequestRelease before the role gate.
@@ -135,6 +134,43 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
                 function = requestRelease;
             }
         }
+
+        // Admin force*: LLM often picks RejectOrder / ReleaseOrder instead.
+        if (LooksLikeForceCancel(userMessage)
+            && string.Equals(function.Name, "RejectOrder", StringComparison.OrdinalIgnoreCase))
+        {
+            var forceCancel = _registry.GetByName("ForceCancel");
+            if (forceCancel is not null)
+            {
+                _logger.LogInformation("Remapping RejectOrder → ForceCancel for force-cancel intent");
+                function = forceCancel;
+                argsJson = EnsureForceReasonArg(argsJson, "Admin force cancel via Teams");
+            }
+        }
+        else if (LooksLikeForceRelease(userMessage)
+                 && (string.Equals(function.Name, "ReleaseOrder", StringComparison.OrdinalIgnoreCase)
+                     || string.Equals(function.Name, "ApproveOrder", StringComparison.OrdinalIgnoreCase)))
+        {
+            var forceRelease = _registry.GetByName("ForceRelease");
+            if (forceRelease is not null)
+            {
+                _logger.LogInformation("Remapping {From} → ForceRelease for force-release intent", function.Name);
+                function = forceRelease;
+                argsJson = EnsureForceReasonArg(argsJson, "Admin force release via Teams");
+            }
+        }
+        else if (LooksLikeRejectApproval(userMessage)
+                 && string.Equals(function.Name, "RejectOrder", StringComparison.OrdinalIgnoreCase))
+        {
+            var rejectApproval = _registry.GetByName("RejectApproval");
+            if (rejectApproval is not null)
+            {
+                _logger.LogInformation("Remapping RejectOrder → RejectApproval for reject-approval intent");
+                function = rejectApproval;
+            }
+        }
+
+        using var argsDoc = JsonDocument.Parse(argsJson);
 
         // Role-based access control (Phase B): block the action before any side effect.
         if (!RolePolicy.CanExecute(role, function.Name))
@@ -206,7 +242,15 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
                || text.Contains("danh sách user")
                || text.Contains("danh sach user")
                || text.Contains("nhật ký audit")
-               || text.Contains("nhat ky audit");
+               || text.Contains("nhat ky audit")
+               || text.Contains("force cancel")
+               || text.Contains("forcecancel")
+               || text.Contains("force-cancel")
+               || text.Contains("force release")
+               || text.Contains("forcerelease")
+               || text.Contains("force-release")
+               || text.Contains("reject approval")
+               || text.Contains("rejectapproval");
     }
 
     /// <summary>Common LLM / API misnomers for registered BE functions.</summary>
@@ -218,4 +262,70 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
             var n when n.Equals("AuditLog", StringComparison.OrdinalIgnoreCase) => "ViewAuditLog",
             _ => functionName
         };
+
+    public static bool LooksLikeForceCancel(string userMessage)
+    {
+        var text = userMessage.Trim().ToLowerInvariant();
+        return text.Contains("force cancel")
+               || text.Contains("forcecancel")
+               || text.Contains("force-cancel");
+    }
+
+    public static bool LooksLikeForceRelease(string userMessage)
+    {
+        var text = userMessage.Trim().ToLowerInvariant();
+        return text.Contains("force release")
+               || text.Contains("forcerelease")
+               || text.Contains("force-release");
+    }
+
+    public static bool LooksLikeRejectApproval(string userMessage)
+    {
+        var text = userMessage.Trim().ToLowerInvariant();
+        return text.Contains("reject approval")
+               || text.Contains("rejectapproval")
+               || (text.Contains("reject") && text.Contains("approval"));
+    }
+
+    /// <summary>
+    /// ForceCancel/ForceRelease need <c>reason</c>; LLM RejectOrder args use <c>reason_code</c>.
+    /// </summary>
+    public static string EnsureForceReasonArg(string argsJson, string defaultReason)
+    {
+        try
+        {
+            using var doc = JsonDocument.Parse(string.IsNullOrWhiteSpace(argsJson) ? "{}" : argsJson);
+            var root = doc.RootElement;
+            if (root.ValueKind != JsonValueKind.Object)
+                return JsonSerializer.Serialize(new { reason = defaultReason });
+
+            var map = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            foreach (var prop in root.EnumerateObject())
+            {
+                map[prop.Name] = prop.Value.ValueKind switch
+                {
+                    JsonValueKind.String => prop.Value.GetString(),
+                    JsonValueKind.Number => prop.Value.GetRawText(),
+                    JsonValueKind.True => true,
+                    JsonValueKind.False => false,
+                    JsonValueKind.Null => null,
+                    _ => prop.Value.GetRawText()
+                };
+            }
+
+            if (!map.TryGetValue("reason", out var reasonObj)
+                || reasonObj is not string reasonStr
+                || string.IsNullOrWhiteSpace(reasonStr))
+            {
+                var fromCode = map.TryGetValue("reason_code", out var code) ? code as string : null;
+                map["reason"] = string.IsNullOrWhiteSpace(fromCode) ? defaultReason : fromCode;
+            }
+
+            return JsonSerializer.Serialize(map);
+        }
+        catch (JsonException)
+        {
+            return JsonSerializer.Serialize(new { reason = defaultReason });
+        }
+    }
 }

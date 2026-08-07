@@ -1,6 +1,6 @@
 {
   "name": "ForceCancel",
-  "description": "Admin only: force cancel a sales order in SAP bypassing ownership. Requires a reason. Use when admin says force cancel.",
+  "description": "Admin only: force cancel a sales order in SAP bypassing ownership. Requires a reason. Use when admin says 'force cancel' (not plain reject/cancel).",
   "parameters": {
     "type": "object",
     "properties": {
