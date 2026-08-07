@@ -450,8 +450,39 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
+        // Pattern: Overdue orders (before generic list — "show overdue orders" contains "order")
+        if (IsOverdueOrdersIntent(text))
+        {
+            var fn = _registry.GetByName("GetOverdueOrders");
+            if (fn is not null)
+            {
+                var args = new Dictionary<string, object?>();
+                var customerIdOrName = ExtractCustomerIdOrName(text);
+                var salesOrg = ExtractSalesOrg(text);
+                if (customerIdOrName is not null)
+                    args["customerIdOrName"] = customerIdOrName;
+                if (salesOrg is not null)
+                    args["salesOrg"] = salesOrg;
+
+                var daysMatch = Regex.Match(text, @"(\d+)\s*(?:days?|ngày|ngay)");
+                if (daysMatch.Success && int.TryParse(daysMatch.Groups[1].Value, out var days) && days > 0)
+                    args["daysPastDue"] = days;
+
+                var paramsJson = JsonSerializer.Serialize(args);
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult
+                {
+                    Handled = true,
+                    FunctionName = fn.Name,
+                    Result = result,
+                    ParametersJson = paramsJson
+                };
+            }
+        }
+
         // Pattern 2: List orders — "show orders", "đơn hàng gần đây", "my sales orders"
-        if (text.Contains("order") || text.Contains("đơn"))
+        if (text.Contains("order") || text.Contains("đơn") || text.Contains("don"))
         {
             var fn = _registry.GetByName("GetSalesOrders");
             if (fn is null)
@@ -464,12 +495,24 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
 
             var customerIdOrName = ExtractCustomerIdOrName(text);
+            var salesOrg = ExtractSalesOrg(text);
+            var ownedByMe = IsMyOrdersIntent(text);
+            var statusOpen = text.Contains("open")
+                || text.Contains("mở")
+                || text.Contains("dang mo")
+                || text.Contains("đang mở");
 
-            var paramsObj = customerIdOrName != null
-                ? new { customerIdOrName }
-                : (object)new { };
+            var args = new Dictionary<string, object?>();
+            if (customerIdOrName is not null)
+                args["customerIdOrName"] = customerIdOrName;
+            if (salesOrg is not null)
+                args["salesOrg"] = salesOrg;
+            if (ownedByMe)
+                args["ownedByMe"] = true;
+            if (statusOpen)
+                args["status"] = "Open";
 
-            var paramsJson = JsonSerializer.Serialize(paramsObj);
+            var paramsJson = JsonSerializer.Serialize(args);
             using var doc = JsonDocument.Parse(paramsJson);
 
             var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
@@ -529,7 +572,22 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         if (IsKnownSalesOrg(value))
             return null;
 
+        // "đơn của tôi" / "orders of me" — ownership intent, not a customer name.
+        if (value is "tôi" or "toi" or "me" or "myself")
+            return null;
+
         return value;
+    }
+
+    private static string? ExtractSalesOrg(string text)
+    {
+        foreach (var org in KnownSalesOrgs)
+        {
+            if (text.Contains(org, StringComparison.OrdinalIgnoreCase))
+                return org.ToUpperInvariant();
+        }
+
+        return null;
     }
 
     private static readonly HashSet<string> KnownSalesOrgs = new(StringComparer.OrdinalIgnoreCase)
@@ -538,6 +596,28 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
     };
 
     private static bool IsKnownSalesOrg(string value) => KnownSalesOrgs.Contains(value.Trim());
+
+    private static bool IsMyOrdersIntent(string text) =>
+        text.Contains("my sales")
+        || text.Contains("my order")
+        || text.Contains("của tôi")
+        || text.Contains("cua toi")
+        || text.Contains("đơn hàng của tôi")
+        || text.Contains("don hang cua toi")
+        || (text.Contains("my") && (text.Contains("order") || text.Contains("orders")));
+
+    private static bool IsOverdueOrdersIntent(string text) =>
+        text.Contains("overdue")
+        || text.Contains("quá hạn")
+        || text.Contains("qua han")
+        || text.Contains("giao trễ")
+        || text.Contains("giao tre")
+        || text.Contains("trễ hạn")
+        || text.Contains("tre han")
+        || text.Contains("past due")
+        || text.Contains("late delivery")
+        || text.Contains("delayed shipment")
+        || text.Contains("delayed order");
 
     private static bool IsRequestReleaseIntent(string text) =>
         text.Contains("request release")

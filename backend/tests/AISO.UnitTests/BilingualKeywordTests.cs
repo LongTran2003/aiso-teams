@@ -140,6 +140,42 @@ public class BilingualKeywordTests
         Assert.Equal("RequestRelease", result.FunctionName);
     }
 
+    [Theory]
+    [InlineData("show my sales orders")]
+    [InlineData("my orders")]
+    [InlineData("đơn của tôi")]
+    [InlineData("đơn hàng của tôi")]
+    public async Task Keyword_MyOrders_SetsOwnedByMe(string message)
+    {
+        var dispatcher = CreateDispatcher();
+
+        var result = await dispatcher.DispatchAsync(message, "DEV-249", UserRole.Employee);
+
+        Assert.True(result.Handled);
+        Assert.Equal("GetSalesOrders", result.FunctionName);
+        Assert.True(result.Result?.Success, result.Result?.ErrorMessage);
+        Assert.Contains("ownedByMe", result.ParametersJson ?? "", StringComparison.OrdinalIgnoreCase);
+        var payload = Assert.IsType<GetSalesOrdersResponse>(result.Result!.Payload);
+        Assert.Equal("My sales orders", payload.Title);
+        Assert.All(payload.Orders, o => Assert.Equal("DEV-249", o.OwnerSapUser));
+    }
+
+    [Theory]
+    [InlineData("show overdue orders")]
+    [InlineData("xem đơn hàng quá hạn")]
+    [InlineData("đơn giao trễ")]
+    public async Task Keyword_OverdueOrders_RoutesToGetOverdueOrders(string message)
+    {
+        var dispatcher = CreateDispatcher();
+
+        var result = await dispatcher.DispatchAsync(message, "DEV-249", UserRole.Employee);
+
+        Assert.True(result.Handled);
+        Assert.Equal("GetOverdueOrders", result.FunctionName);
+        Assert.True(result.Result?.Success, result.Result?.ErrorMessage);
+        Assert.IsType<GetOverdueOrdersResponse>(result.Result!.Payload);
+    }
+
     [Fact]
     public void IsDeterministicShortcut_IncludesPendingAndUpdateReference()
     {
@@ -149,6 +185,10 @@ public class BilingualKeywordTests
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("edit order 13122"));
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("sửa đơn 13122"));
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("từ chối duyệt 13122"));
+        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("show my sales orders"));
+        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("đơn của tôi"));
+        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("show overdue orders"));
+        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("quá hạn"));
     }
 
     private static KeywordFunctionDispatcher CreateDispatcher()
@@ -165,6 +205,8 @@ public class BilingualKeywordTests
         services.AddSingleton<IFunction, ReleaseOrderFunction>();
         services.AddSingleton<IFunction, RejectApprovalFunction>();
         services.AddSingleton<IFunction, RequestReleaseFunction>();
+        services.AddSingleton<IFunction, GetSalesOrdersFunction>();
+        services.AddSingleton<IFunction, GetOverdueOrdersFunction>();
         services.AddSingleton<IFunctionRegistry, FunctionRegistry>();
         var sp = services.BuildServiceProvider();
         return new KeywordFunctionDispatcher(sp.GetRequiredService<IFunctionRegistry>());

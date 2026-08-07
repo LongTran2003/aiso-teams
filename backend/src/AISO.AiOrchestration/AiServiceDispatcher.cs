@@ -289,7 +289,16 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
                || text.Contains("từ chối duyệt")
                || text.Contains("tu choi duyet")
                || text.Contains("từ chối phê duyệt")
-               || text.Contains("tu choi phe duyet");
+               || text.Contains("tu choi phe duyet")
+               || text.Contains("my sales")
+               || text.Contains("my order")
+               || text.Contains("của tôi")
+               || text.Contains("cua toi")
+               || text.Contains("overdue")
+               || text.Contains("quá hạn")
+               || text.Contains("qua han")
+               || text.Contains("giao trễ")
+               || text.Contains("giao tre");
     }
 
     /// <summary>Common LLM / API misnomers for registered BE functions.</summary>

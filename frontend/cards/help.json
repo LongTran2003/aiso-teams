@@ -173,7 +173,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "• đơn hàng gần đây · show my sales orders\n• kiểm tra đơn 13122 · tạo đơn\n• sửa đơn 13122 · edit order 13122\n• yêu cầu duyệt 13122 · xin duyệt 13122\n• hủy đơn 13122 · reject order 13122\n• chuyển đơn 13122 cho DEV-xxx\n• cập nhật reference 13122 thành 'PO-99'\n• hướng dẫn · đăng xuất",
+      "text": "• đơn hàng gần đây · show my sales orders\n• đơn của tôi · show overdue orders\n• kiểm tra đơn 13122 · tạo đơn\n• sửa đơn 13122 · edit order 13122\n• yêu cầu duyệt 13122 · xin duyệt 13122\n• hủy đơn 13122 · reject order 13122\n• chuyển đơn 13122 cho DEV-xxx\n• cập nhật reference 13122 thành 'PO-99'\n• hướng dẫn · đăng xuất",
       "wrap": true,
       "spacing": "Small",
       "fontType": "Monospace",
