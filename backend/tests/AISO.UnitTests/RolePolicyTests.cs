@@ -79,6 +79,8 @@ public class RolePolicyTests
     [InlineData("ForwardOrder")]
     [InlineData("UpdateOrderReference")]
     [InlineData("CreateOrder")]
+    [InlineData("EditOrder")]
+    [InlineData("CancelOrder")]
     public void OwnerWriteActions_AreAllowedForEmployee(string function)
     {
         Assert.True(RolePolicy.CanExecute(UserRole.Employee, function));

@@ -207,6 +207,8 @@ public class ForceCancelRoutingTests
             => throw new NotImplementedException();
         public Task<SalesOrder> UpdateReferenceAsync(string soNumber, string newReference, string requestingSapUser, CancellationToken ct = default)
             => throw new NotImplementedException();
+        public Task<SalesOrder> UpdateSalesOrderAsync(UpdateSalesOrderDto dto, CancellationToken ct = default)
+            => throw new NotImplementedException();
         public Task<SalesOrder> RejectOrderAsync(string soNumber, string rejectionCode, string requestingTeamsUser, CancellationToken ct = default)
             => throw new NotImplementedException();
         public Task<SalesOrder> CancelOrderAsync(string soNumber, string requestingSapUser, string? reason = null, CancellationToken ct = default)

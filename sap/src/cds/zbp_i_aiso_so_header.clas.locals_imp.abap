@@ -24,6 +24,9 @@ CLASS lhc_SalesOrder DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS updateReference FOR MODIFY
       IMPORTING keys FOR ACTION SalesOrder~updateReference RESULT result.
 
+    METHODS updateSalesOrder FOR MODIFY
+      IMPORTING keys FOR ACTION SalesOrder~updateSalesOrder RESULT result.
+
     METHODS read FOR READ
       IMPORTING keys FOR READ SalesOrder RESULT result.
 
@@ -780,6 +783,207 @@ ENDMETHOD.
     ENDLOOP.
   ENDMETHOD.
 
+  METHOD updateSalesOrder.
+  DATA: ls_header_in     TYPE bapisdh1,
+        ls_header_inx    TYPE bapisdh1x,
+        lt_items_in      TYPE TABLE OF bapisditm,
+        lt_items_inx     TYPE TABLE OF bapisditmx,
+        lt_schedules_in  TYPE TABLE OF bapischdl,
+        lt_schedules_inx TYPE TABLE OF bapischdlx,
+        lt_return        TYPE TABLE OF bapiret2,
+        lv_timestamp     TYPE c LENGTH 14,
+        lv_audit_id      TYPE sysuuid_c32,
+        lv_so_number     TYPE vbeln_va,
+        lv_material      TYPE matnr,
+        lv_item_no       TYPE posnr_va,
+        lv_sched_line    TYPE etenr,
+        lv_flag          TYPE c LENGTH 1.
+
+  LOOP AT keys INTO DATA(ls_key).
+    lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
+    DATA(lv_requesting_user) = ls_key-%param-requesting_teams_user.
+    DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
+
+    SELECT SINGLE sap_user FROM zaiso_so_map
+      INTO @DATA(lv_owner)
+      WHERE so_number = @lv_so_number.
+
+    " Owner-only edit (same as updateReference). Manager/Admin may edit any.
+    IF lv_owner IS NOT INITIAL
+       AND lv_owner <> lv_requesting_user
+       AND lv_role <> 'MANAGER'
+       AND lv_role <> 'ADMIN'.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Only owner or Manager/Admin can edit SO' ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    CLEAR: ls_header_in, ls_header_inx, lt_items_in, lt_items_inx,
+           lt_schedules_in, lt_schedules_inx, lt_return.
+
+    IF ls_key-%param-change_reference = 'X'.
+      ls_header_in-purch_no_c  = ls_key-%param-new_reference.
+      ls_header_inx-purch_no_c = 'X'.
+      ls_header_inx-updateflag = 'U'.
+    ENDIF.
+
+    IF ls_key-%param-change_req_date = 'X'.
+      ls_header_in-req_date_h  = ls_key-%param-req_deliv_date.
+      ls_header_inx-req_date_h = 'X'.
+      ls_header_inx-updateflag = 'U'.
+    ENDIF.
+
+    LOOP AT ls_key-%param-items INTO DATA(ls_item).
+      lv_flag = to_upper( ls_item-change_flag ).
+      IF lv_flag IS INITIAL.
+        CONTINUE.
+      ENDIF.
+
+      lv_item_no = ls_item-item_no.
+      IF lv_item_no IS INITIAL AND lv_flag = 'I'.
+        " Let SAP assign next item — still pass 0; BAPI may need high item no.
+        lv_item_no = '000000'.
+      ENDIF.
+
+      lv_material = ls_item-material.
+      IF lv_material IS NOT INITIAL.
+        CALL FUNCTION 'CONVERSION_EXIT_MATN1_INPUT'
+          EXPORTING
+            input  = lv_material
+          IMPORTING
+            output = lv_material
+          EXCEPTIONS
+            length_error = 1
+            OTHERS       = 2.
+        IF sy-subrc <> 0.
+          lv_material = ls_item-material.
+        ENDIF.
+      ENDIF.
+
+      lv_sched_line = '0001'.
+
+      CASE lv_flag.
+        WHEN 'D'.
+          APPEND VALUE #( itm_number = lv_item_no ) TO lt_items_in.
+          APPEND VALUE #( itm_number = lv_item_no
+                           updateflag = 'D' ) TO lt_items_inx.
+
+        WHEN 'I'.
+          APPEND VALUE #( itm_number = lv_item_no
+                           material   = lv_material
+                           plant      = ls_item-plant
+                           target_qty = ls_item-order_qty
+                           target_qu  = ls_item-unit ) TO lt_items_in.
+          APPEND VALUE #( itm_number = lv_item_no
+                           updateflag = 'I'
+                           material   = 'X'
+                           plant      = 'X'
+                           target_qty = 'X'
+                           target_qu  = 'X' ) TO lt_items_inx.
+          APPEND VALUE #( itm_number = lv_item_no
+                           sched_line = lv_sched_line
+                           req_qty    = ls_item-order_qty ) TO lt_schedules_in.
+          APPEND VALUE #( itm_number = lv_item_no
+                           sched_line = lv_sched_line
+                           updateflag = 'I'
+                           req_qty    = 'X' ) TO lt_schedules_inx.
+
+        WHEN OTHERS. " U = update
+          APPEND VALUE #( itm_number = lv_item_no
+                           material   = lv_material
+                           plant      = ls_item-plant
+                           target_qty = ls_item-order_qty
+                           target_qu  = ls_item-unit ) TO lt_items_in.
+          APPEND VALUE #( itm_number  = lv_item_no
+                           updateflag = 'U'
+                           material   = COND #( WHEN lv_material IS NOT INITIAL THEN 'X' ELSE ' ' )
+                           plant      = COND #( WHEN ls_item-plant IS NOT INITIAL THEN 'X' ELSE ' ' )
+                           target_qty = 'X'
+                           target_qu  = COND #( WHEN ls_item-unit IS NOT INITIAL THEN 'X' ELSE ' ' ) )
+                 TO lt_items_inx.
+          APPEND VALUE #( itm_number = lv_item_no
+                           sched_line = lv_sched_line
+                           req_qty    = ls_item-order_qty ) TO lt_schedules_in.
+          APPEND VALUE #( itm_number = lv_item_no
+                           sched_line = lv_sched_line
+                           updateflag = 'U'
+                           req_qty    = 'X' ) TO lt_schedules_inx.
+      ENDCASE.
+    ENDLOOP.
+
+    IF ls_header_inx IS INITIAL
+       AND lt_items_in IS INITIAL.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Nothing to update' ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+      EXPORTING
+        salesdocument    = lv_so_number
+        order_header_in  = ls_header_in
+        order_header_inx = ls_header_inx
+      TABLES
+        return           = lt_return
+        order_item_in    = lt_items_in
+        order_item_inx   = lt_items_inx
+        schedule_lines   = lt_schedules_in
+        schedule_linesx  = lt_schedules_inx.
+
+    READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
+    IF sy-subrc = 0.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message(
+                         id       = ls_error-id
+                         number   = ls_error-number
+                         severity = if_abap_behv_message=>severity-error
+                         v1       = ls_error-message_v1
+                         v2       = ls_error-message_v2
+                         v3       = ls_error-message_v3
+                         v4       = ls_error-message_v4 ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
+
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = lv_requesting_user
+      actor_role  = lv_role
+      action_type = 'UPDATE_SO'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
+
+    APPEND VALUE #( %tky = ls_key-%tky ) TO result.
+  ENDLOOP.
+  ENDMETHOD.
+
   METHOD read.
   DATA(lt_keys) = keys.
 
@@ -1095,7 +1299,10 @@ ENDMETHOD.
       %action-rejectApproval = if_abap_behv=>auth-allowed
       %action-reassignOwner  = if_abap_behv=>auth-allowed
       %action-forceCancel    = if_abap_behv=>auth-allowed
-      %action-forceRelease   = if_abap_behv=>auth-allowed ) ).
+      %action-forceRelease   = if_abap_behv=>auth-allowed
+      %action-updateReference = if_abap_behv=>auth-allowed
+      %action-updateSalesOrder = if_abap_behv=>auth-allowed
+      %action-cancelOrder    = if_abap_behv=>auth-allowed ) ).
 ENDMETHOD.
 ENDCLASS.
 

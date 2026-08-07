@@ -59,6 +59,22 @@ public class BilingualKeywordTests
         Assert.Equal("TG11", payload.Material);
     }
 
+    [Theory]
+    [InlineData("edit order 0000005001")]
+    [InlineData("sửa đơn 0000005001")]
+    public async Task Keyword_EditOrder_EnAndVi(string message)
+    {
+        var dispatcher = CreateDispatcher();
+
+        var result = await dispatcher.DispatchAsync(message, "DEV-249", UserRole.Employee);
+
+        Assert.True(result.Handled);
+        Assert.Equal("EditOrder", result.FunctionName);
+        Assert.True(result.Result?.Success, result.Result?.ErrorMessage);
+        var payload = Assert.IsType<ConfirmEditOrderResponse>(result.Result!.Payload);
+        Assert.Equal("0000005001", payload.SoNumber);
+    }
+
     [Fact]
     public void BuildConfirmCreateAndUpdateCards_IncludeActions()
     {
@@ -73,6 +89,13 @@ public class BilingualKeywordTests
         var updateJson = Newtonsoft.Json.JsonConvert.SerializeObject(update.Content);
         Assert.Contains("update_ref_confirm", updateJson);
         Assert.Contains("NEW-PO", updateJson);
+
+        var edit = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmEditOrderCard(
+            "0000005001", "OLD", "NEW", "2026-08-01", "2026-08-15",
+            "U", "10", "TG11", 2, "1010", "PC", "10 · TG11 x 2 PC");
+        var editJson = Newtonsoft.Json.JsonConvert.SerializeObject(edit.Content);
+        Assert.Contains("edit_so_confirm", editJson);
+        Assert.Contains("Edit sales order", editJson);
     }
 
     [Theory]
@@ -123,6 +146,8 @@ public class BilingualKeywordTests
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("show pending approvals"));
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("chờ duyệt"));
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("update reference 13122"));
+        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("edit order 13122"));
+        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("sửa đơn 13122"));
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("từ chối duyệt 13122"));
     }
 
@@ -136,6 +161,7 @@ public class BilingualKeywordTests
         services.AddSingleton<IFunction, GetPendingApprovalsFunction>();
         services.AddSingleton<IFunction, UpdateOrderReferenceFunction>();
         services.AddSingleton<IFunction, CreateOrderFunction>();
+        services.AddSingleton<IFunction, EditOrderFunction>();
         services.AddSingleton<IFunction, ReleaseOrderFunction>();
         services.AddSingleton<IFunction, RejectApprovalFunction>();
         services.AddSingleton<IFunction, RequestReleaseFunction>();

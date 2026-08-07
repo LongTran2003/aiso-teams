@@ -1,0 +1,150 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Edit sales order",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Sales order ${salesOrderNumber}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Current PO ref",
+          "value": "${currentReference}"
+        },
+        {
+          "title": "Current req. date",
+          "value": "${currentReqDate}"
+        },
+        {
+          "title": "Lines",
+          "value": "${linesSummary}"
+        }
+      ],
+      "spacing": "Medium"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Header",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "size": "Small"
+    },
+    {
+      "type": "Input.Text",
+      "id": "newReference",
+      "label": "PO / customer reference",
+      "placeholder": "Leave blank to keep current",
+      "value": "${newReference}"
+    },
+    {
+      "type": "Input.Date",
+      "id": "reqDeliveryDate",
+      "label": "Requested delivery date",
+      "value": "${newReqDate}"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Line item (one change per confirm)",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "size": "Small"
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "lineOp",
+      "label": "Line operation",
+      "style": "compact",
+      "value": "${lineOp}",
+      "choices": [
+        { "title": "No line change", "value": "none" },
+        { "title": "Update quantity / material", "value": "U" },
+        { "title": "Add line", "value": "I" },
+        { "title": "Delete line", "value": "D" }
+      ]
+    },
+    {
+      "type": "Input.Text",
+      "id": "itemNumber",
+      "label": "Item number",
+      "placeholder": "e. and 10 / 20",
+      "value": "${itemNumber}"
+    },
+    {
+      "type": "Input.Text",
+      "id": "material",
+      "label": "Material",
+      "placeholder": "Required for Add / Update",
+      "value": "${material}"
+    },
+    {
+      "type": "Input.Number",
+      "id": "qty",
+      "label": "Quantity",
+      "min": 0,
+      "value": "${qty}"
+    },
+    {
+      "type": "Input.Text",
+      "id": "plant",
+      "label": "Plant",
+      "placeholder": "e.g. 1010",
+      "value": "${plant}"
+    },
+    {
+      "type": "Input.Text",
+      "id": "unit",
+      "label": "Unit",
+      "placeholder": "e.g. PC",
+      "value": "${unit}"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Save changes",
+      "style": "positive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Confirm edit order ${salesOrderNumber}",
+          "text": "edit order ${salesOrderNumber}"
+        },
+        "action": "edit_so_confirm",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}

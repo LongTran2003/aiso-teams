@@ -495,6 +495,78 @@ public class TeamsBot : TeamsActivityHandler
                         return;
                     }
 
+                    if (string.Equals(action, "edit_so", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken)
+                            ? idToken.ToString()
+                            : "UNKNOWN";
+                        var linkedSapForGate = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        var roleForEdit = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        if (!await EnsureLifecycleActionAllowedAsync(
+                                turnContext,
+                                salesOrderId,
+                                "Edit",
+                                cancellationToken,
+                                blockIfPendingApproval: roleForEdit < UserRole.Manager,
+                                blockIfNotOwner: roleForEdit < UserRole.Manager,
+                                currentSapUser: linkedSapForGate))
+                        {
+                            return;
+                        }
+
+                        if (roleForEdit == UserRole.Manager)
+                        {
+                            var orderScope = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
+                            var managerSalesOrg = await _userMappingService.GetSalesOrgAsync(teamsUserId, cancellationToken);
+                            if (orderScope is not null
+                                && !string.IsNullOrWhiteSpace(managerSalesOrg)
+                                && !string.IsNullOrWhiteSpace(orderScope.SalesOrg)
+                                && !string.Equals(managerSalesOrg, orderScope.SalesOrg, StringComparison.OrdinalIgnoreCase))
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "VALIDATION",
+                                        $"Order {orderScope.SoNumber} belongs to sales org {orderScope.SalesOrg}; your scope is {managerSalesOrg}.")),
+                                    cancellationToken);
+                                return;
+                            }
+                        }
+
+                        var order = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
+                        if (order is null)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_FOUND",
+                                    $"Sales order {salesOrderId} was not found.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var first = order.Items?.FirstOrDefault();
+                        var linesSummary = order.Items is { Count: > 0 }
+                            ? string.Join("; ", order.Items.Select(i =>
+                                $"{(string.IsNullOrWhiteSpace(i.ItemNumber) ? "—" : i.ItemNumber.TrimStart('0'))} · {i.Material} x {i.Quantity:0} {i.Unit}"))
+                            : "No line items";
+
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmEditOrderCard(
+                                order.SoNumber,
+                                order.CustomerReference ?? string.Empty,
+                                order.CustomerReference ?? string.Empty,
+                                order.RequestedDeliveryDate?.ToString("yyyy-MM-dd") ?? string.Empty,
+                                order.RequestedDeliveryDate?.ToString("yyyy-MM-dd") ?? string.Empty,
+                                "none",
+                                first?.ItemNumber?.TrimStart('0') ?? "10",
+                                first?.Material ?? string.Empty,
+                                first?.Quantity ?? 1m,
+                                "1010",
+                                first?.Unit ?? "PC",
+                                linesSummary)),
+                            cancellationToken);
+                        return;
+                    }
+
                     if (string.Equals(action, "forward_so", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
@@ -1357,6 +1429,211 @@ public class TeamsBot : TeamsActivityHandler
                         catch (Exception ex)
                         {
                             _logger.LogError(ex, "Unexpected error updating reference for {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken);
+                        }
+
+                        return;
+                    }
+
+                    if (string.Equals(action, "edit_so_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken)
+                            ? idToken.ToString()
+                            : "UNKNOWN";
+                        var newReference = valueObj.TryGetValue("newReference", StringComparison.OrdinalIgnoreCase, out var refToken)
+                            ? refToken.ToString()?.Trim()
+                            : null;
+                        var reqDeliveryDate = valueObj.TryGetValue("reqDeliveryDate", StringComparison.OrdinalIgnoreCase, out var dateToken)
+                            ? dateToken.ToString()?.Trim()
+                            : null;
+                        var lineOp = valueObj.TryGetValue("lineOp", StringComparison.OrdinalIgnoreCase, out var opToken)
+                            ? opToken.ToString()?.Trim().ToUpperInvariant()
+                            : "NONE";
+                        var itemNumber = valueObj.TryGetValue("itemNumber", StringComparison.OrdinalIgnoreCase, out var itemToken)
+                            ? itemToken.ToString()?.Trim()
+                            : null;
+                        var material = valueObj.TryGetValue("material", StringComparison.OrdinalIgnoreCase, out var matToken)
+                            ? matToken.ToString()?.Trim()
+                            : null;
+                        var plant = valueObj.TryGetValue("plant", StringComparison.OrdinalIgnoreCase, out var plantToken)
+                            ? plantToken.ToString()?.Trim()
+                            : null;
+                        var unit = valueObj.TryGetValue("unit", StringComparison.OrdinalIgnoreCase, out var unitToken)
+                            ? unitToken.ToString()?.Trim()
+                            : null;
+
+                        decimal? qty = null;
+                        if (valueObj.TryGetValue("qty", StringComparison.OrdinalIgnoreCase, out var qtyToken)
+                            && decimal.TryParse(qtyToken.ToString(), out var parsedQty))
+                        {
+                            qty = parsedQty;
+                        }
+
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_LINKED",
+                                    "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        try
+                        {
+                            if (!await EnsureLifecycleActionAllowedAsync(
+                                    turnContext,
+                                    salesOrderId,
+                                    "Edit",
+                                    cancellationToken,
+                                    blockIfPendingApproval: role < UserRole.Manager,
+                                    blockIfNotOwner: role < UserRole.Manager,
+                                    currentSapUser: linkedSapUsername))
+                            {
+                                return;
+                            }
+
+                            if (role == UserRole.Manager)
+                            {
+                                var orderScope = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
+                                var managerSalesOrg = await _userMappingService.GetSalesOrgAsync(teamsUserId, cancellationToken);
+                                if (orderScope is not null
+                                    && !string.IsNullOrWhiteSpace(managerSalesOrg)
+                                    && !string.IsNullOrWhiteSpace(orderScope.SalesOrg)
+                                    && !string.Equals(managerSalesOrg, orderScope.SalesOrg, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    await turnContext.SendActivityAsync(
+                                        MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                            "VALIDATION",
+                                            $"Order {orderScope.SoNumber} belongs to sales org {orderScope.SalesOrg}; your scope is {managerSalesOrg}.")),
+                                        cancellationToken);
+                                    return;
+                                }
+                            }
+
+                            var existing = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
+                            var changeRef = !string.IsNullOrWhiteSpace(newReference)
+                                && !string.Equals(
+                                    newReference,
+                                    existing?.CustomerReference?.Trim() ?? string.Empty,
+                                    StringComparison.Ordinal);
+                            var currentDate = existing?.RequestedDeliveryDate?.ToString("yyyy-MM-dd") ?? string.Empty;
+                            var changeDate = !string.IsNullOrWhiteSpace(reqDeliveryDate)
+                                && !string.Equals(reqDeliveryDate, currentDate, StringComparison.Ordinal);
+
+                            var items = new List<UpdateSalesOrderItemDto>();
+                            if (!string.IsNullOrWhiteSpace(lineOp) && lineOp is not ("NONE" or "N"))
+                            {
+                                if (lineOp is "U" or "I")
+                                {
+                                    if (lineOp == "I" && string.IsNullOrWhiteSpace(material))
+                                    {
+                                        await turnContext.SendActivityAsync(
+                                            MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                                "VALIDATION",
+                                                "Material is required when adding a line.")),
+                                            cancellationToken);
+                                        return;
+                                    }
+
+                                    if (qty is null or < 0)
+                                    {
+                                        await turnContext.SendActivityAsync(
+                                            MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                                "VALIDATION",
+                                                "Quantity is required for line update/add.")),
+                                            cancellationToken);
+                                        return;
+                                    }
+                                }
+
+                                if ((lineOp is "U" or "D") && string.IsNullOrWhiteSpace(itemNumber))
+                                {
+                                    await turnContext.SendActivityAsync(
+                                        MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                            "VALIDATION",
+                                            "Item number is required for update/delete.")),
+                                        cancellationToken);
+                                    return;
+                                }
+
+                                items.Add(new UpdateSalesOrderItemDto
+                                {
+                                    Operation = lineOp,
+                                    ItemNumber = itemNumber,
+                                    Material = material,
+                                    Plant = string.IsNullOrWhiteSpace(plant) ? "1010" : plant,
+                                    OrderQty = qty,
+                                    Unit = string.IsNullOrWhiteSpace(unit) ? "PC" : unit
+                                });
+                            }
+
+                            if (!changeRef && !changeDate && items.Count == 0)
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "VALIDATION",
+                                        "Nothing to update. Change PO reference, delivery date, or a line operation.")),
+                                    cancellationToken);
+                                return;
+                            }
+
+                            var updated = await _sap.UpdateSalesOrderAsync(
+                                new UpdateSalesOrderDto
+                                {
+                                    SoNumber = salesOrderId,
+                                    RequestingSapUser = linkedSapUsername,
+                                    PurchaseOrderRef = changeRef ? newReference : null,
+                                    ReqDeliveryDate = changeDate ? reqDeliveryDate : null,
+                                    Items = items
+                                },
+                                cancellationToken);
+
+                            await _audit.LogAsync(new AuditEntry
+                            {
+                                TeamsUserId = teamsUserId,
+                                ConversationId = conversationId,
+                                Action = "EditOrder",
+                                ParametersJson = JsonConvert.SerializeObject(new
+                                {
+                                    order_id = updated.SoNumber,
+                                    new_reference = changeRef ? newReference : null,
+                                    req_delivery_date = changeDate ? reqDeliveryDate : null,
+                                    line_op = lineOp,
+                                    item_no = itemNumber
+                                }),
+                                ResultStatus = "Success"
+                            }, cancellationToken);
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(
+                                    updated.SoNumber,
+                                    "Updated",
+                                    "Sales order changes saved")),
+                                cancellationToken);
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(await BuildSalesOrderDetailAttachmentAsync(
+                                    updated,
+                                    role,
+                                    linkedSapUsername,
+                                    cancellationToken)),
+                                cancellationToken);
+                        }
+                        catch (SapODataException sapEx)
+                        {
+                            _logger.LogError(sapEx, "SAP error editing order {OrderId}", salesOrderId);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Unexpected error editing order {OrderId}", salesOrderId);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
                                 cancellationToken);
@@ -2261,6 +2538,32 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
+            if (result.Payload is AISO.AiOrchestration.Functions.ConfirmEditOrderResponse confirmEdit)
+            {
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildConfirmEditOrderCard(
+                        confirmEdit.SoNumber,
+                        confirmEdit.CurrentReference,
+                        confirmEdit.NewReference,
+                        confirmEdit.CurrentReqDate,
+                        confirmEdit.NewReqDate,
+                        confirmEdit.LineOp,
+                        confirmEdit.ItemNumber,
+                        confirmEdit.Material,
+                        confirmEdit.Qty,
+                        confirmEdit.Plant,
+                        confirmEdit.Unit,
+                        confirmEdit.LinesSummary),
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with confirm-edit-order card for SO {SoNumber}",
+                    confirmEdit.SoNumber);
+                return;
+            }
+
             if (result.Payload is AISO.AiOrchestration.Functions.ConfirmForceReleaseResponse confirmForceRelease)
             {
                 await ReplaceLoadingActivityAsync(
@@ -2409,7 +2712,8 @@ public class TeamsBot : TeamsActivityHandler
             if (SalesOrderWorkflow.BlocksReleaseRejectForward(order.Status)
                 && !string.Equals(actionLabel, "Reject", StringComparison.OrdinalIgnoreCase)
                 && !string.Equals(actionLabel, "Cancel", StringComparison.OrdinalIgnoreCase)
-                && !string.Equals(actionLabel, "Update reference", StringComparison.OrdinalIgnoreCase))
+                && !string.Equals(actionLabel, "Update reference", StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(actionLabel, "Edit", StringComparison.OrdinalIgnoreCase))
             {
                 await turnContext.SendActivityAsync(
                     MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
@@ -2421,7 +2725,8 @@ public class TeamsBot : TeamsActivityHandler
 
             if ((string.Equals(actionLabel, "Reject", StringComparison.OrdinalIgnoreCase)
                  || string.Equals(actionLabel, "Cancel", StringComparison.OrdinalIgnoreCase)
-                 || string.Equals(actionLabel, "Update reference", StringComparison.OrdinalIgnoreCase))
+                 || string.Equals(actionLabel, "Update reference", StringComparison.OrdinalIgnoreCase)
+                 || string.Equals(actionLabel, "Edit", StringComparison.OrdinalIgnoreCase))
                 && SalesOrderWorkflow.BlocksReject(order.Status))
             {
                 await turnContext.SendActivityAsync(

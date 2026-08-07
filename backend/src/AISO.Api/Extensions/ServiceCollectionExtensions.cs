@@ -33,6 +33,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFunction, CreateOrderFunction>();
         services.AddSingleton<IFunction, CancelOrderFunction>();
         services.AddSingleton<IFunction, UpdateOrderReferenceFunction>();
+        services.AddSingleton<IFunction, EditOrderFunction>();
 
         // Maker-checker + admin
         services.AddSingleton<IFunction, RequestReleaseFunction>();

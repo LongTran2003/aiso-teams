@@ -7,6 +7,7 @@ lock master
 {
   action cancelOrder parameter zaiso_a_cancel_so result [1] $self;
   action updateReference parameter zaiso_a_update_ref result [1] $self;
+  action updateSalesOrder parameter zaiso_a_update_so result [1] $self;
   static action createSalesOrder parameter zaiso_a_create_so result [1] $self;
   action releaseOrder parameter zaiso_s_release_params  result [1] $self;
   action forwardOrder parameter zaiso_s_forward_params result [1] $self;

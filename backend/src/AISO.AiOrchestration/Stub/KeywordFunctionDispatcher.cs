@@ -234,6 +234,22 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
+        // Pattern: Edit order (full header + line) — after update-reference so "cập nhật reference" stays specific
+        if (IsEditOrderIntent(text))
+        {
+            var fn = _registry.GetByName("EditOrder");
+            if (fn is not null)
+            {
+                var orderMatch = OrderIdPattern().Match(text);
+                var orderId = orderMatch.Success ? orderMatch.Groups[1].Value.PadLeft(10, '0') : "0000000000";
+                var paramsObj = new { order_id = orderId };
+                var paramsJson = JsonSerializer.Serialize(paramsObj);
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult { Handled = true, FunctionName = fn.Name, Result = result, ParametersJson = paramsJson };
+            }
+        }
+
         // Admin force* must run before generic cancel/reject/release (e.g. "force cancel 13069").
         if (IsForceCancelIntent(text) && (text.Contains("đơn") || text.Contains("order") || OrderIdPattern().IsMatch(text)))
         {
@@ -561,6 +577,17 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         || text.Contains("update po ref")
         || (text.Contains("cập nhật") && (text.Contains("reference") || text.Contains("tham chiếu") || text.Contains("po")))
         || (text.Contains("cap nhat") && (text.Contains("reference") || text.Contains("tham chieu") || text.Contains("po")));
+
+    private static bool IsEditOrderIntent(string text) =>
+        !IsUpdateReferenceIntent(text)
+        && (
+            text.Contains("edit order")
+            || text.Contains("edit so")
+            || text.Contains("edit sales order")
+            || (text.Contains("sửa") && text.Contains("đơn"))
+            || (text.Contains("sua") && text.Contains("don"))
+            || text.Contains("cập nhật đơn")
+            || text.Contains("cap nhat don"));
 
     private static bool IsForceCancelIntent(string text) =>
         text.Contains("force cancel")

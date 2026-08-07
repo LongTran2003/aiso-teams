@@ -445,6 +445,20 @@
     },
     {
       "type": "Action.Submit",
+      "title": "Edit order",
+      "$when": "${showEditOrder == 'true'}",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Edit order ${salesOrderNumber}",
+          "text": "edit order ${salesOrderNumber}"
+        },
+        "action": "edit_so",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
       "title": "Approve & release",
       "style": "positive",
       "$when": "${showApprove == 'true'}",

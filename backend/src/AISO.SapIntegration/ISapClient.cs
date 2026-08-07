@@ -38,6 +38,13 @@ public interface ISapClient
         CancellationToken ct = default);
 
     /// <summary>
+    /// Full edit via SAP <c>updateSalesOrder</c> (header PO/date + line I/U/D).
+    /// </summary>
+    Task<SalesOrder> UpdateSalesOrderAsync(
+        UpdateSalesOrderDto dto,
+        CancellationToken ct = default);
+
+    /// <summary>
     /// Rejects a sales order through the SAP <c>rejectOrder</c> RAP action.
     /// </summary>
     Task<SalesOrder> RejectOrderAsync(
@@ -147,6 +154,28 @@ public sealed record CreateSalesOrderItemDto
     public required string Plant { get; init; }
     public required decimal OrderQty { get; init; }
     public required string Unit { get; init; }
+}
+
+/// <summary>Payload for SAP <c>updateSalesOrder</c> (header + optional line ops).</summary>
+public sealed record UpdateSalesOrderDto
+{
+    public required string SoNumber { get; init; }
+    public required string RequestingSapUser { get; init; }
+    public string? PurchaseOrderRef { get; init; }
+    /// <summary>yyyy-MM-dd or empty to leave unchanged.</summary>
+    public string? ReqDeliveryDate { get; init; }
+    public IReadOnlyList<UpdateSalesOrderItemDto> Items { get; init; } = [];
+}
+
+public sealed record UpdateSalesOrderItemDto
+{
+    /// <summary>I = insert, U = update, D = delete.</summary>
+    public required string Operation { get; init; }
+    public string? ItemNumber { get; init; }
+    public string? Material { get; init; }
+    public string? Plant { get; init; }
+    public decimal? OrderQty { get; init; }
+    public string? Unit { get; init; }
 }
 
 /// <summary>

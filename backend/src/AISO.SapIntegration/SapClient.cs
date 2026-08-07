@@ -306,6 +306,73 @@ public class SapClient : ISapClient
         }
     }
 
+    public async Task<SalesOrder> UpdateSalesOrderAsync(UpdateSalesOrderDto dto, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(dto.RequestingSapUser))
+            throw new ArgumentException("RequestingSapUser is required for updateSalesOrder.", nameof(dto));
+
+        var formattedSo = FormatSoNumber(dto.SoNumber);
+        var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.updateSalesOrder?sap-client=324&$format=json";
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        var changeRef = !string.IsNullOrWhiteSpace(dto.PurchaseOrderRef);
+        var changeDate = !string.IsNullOrWhiteSpace(dto.ReqDeliveryDate);
+        var reqDate = changeDate ? NormalizeSapDate(dto.ReqDeliveryDate!) : null;
+
+        var payload = new
+        {
+            REQUESTING_TEAMS_USER = dto.RequestingSapUser.Trim(),
+            CHANGE_REFERENCE = changeRef ? "X" : string.Empty,
+            NEW_REFERENCE = changeRef ? dto.PurchaseOrderRef!.Trim() : string.Empty,
+            CHANGE_REQ_DATE = changeDate ? "X" : string.Empty,
+            REQ_DELIV_DATE = reqDate,
+            ITEMS = (dto.Items ?? Array.Empty<UpdateSalesOrderItemDto>()).Select(i => new
+            {
+                ITEM_NO = PadItemNumber(i.ItemNumber),
+                MATERIAL = i.Material ?? string.Empty,
+                ORDER_QTY = i.OrderQty ?? 0m,
+                PLANT = i.Plant ?? string.Empty,
+                UNIT = i.Unit ?? string.Empty,
+                CHANGE_FLAG = (i.Operation ?? string.Empty).Trim().ToUpperInvariant()
+            }).ToList()
+        };
+
+        try
+        {
+            var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
+            if (result == null)
+                throw new InvalidOperationException("Failed to deserialize updated order.");
+
+            var refreshed = await GetSalesOrderByIdAsync(formattedSo, ct);
+            return refreshed ?? MapToDomain(result);
+        }
+        catch (Exception ex) when (ex is not SapODataException and not ArgumentException and not InvalidOperationException)
+        {
+            _logger.LogError(ex, "Error calling SAP OData UpdateSalesOrderAsync for {SoNumber}", dto.SoNumber);
+            throw;
+        }
+    }
+
+    private static string PadItemNumber(string? itemNumber)
+    {
+        if (string.IsNullOrWhiteSpace(itemNumber))
+            return "000000";
+        var digits = new string(itemNumber.Where(char.IsDigit).ToArray());
+        if (string.IsNullOrEmpty(digits))
+            return "000000";
+        return digits.PadLeft(6, '0');
+    }
+
+    private static string? NormalizeSapDate(string value)
+    {
+        var trimmed = value.Trim();
+        if (DateOnly.TryParse(trimmed, out var d))
+            return d.ToString("yyyy-MM-dd");
+        if (trimmed.Length == 8 && trimmed.All(char.IsDigit))
+            return $"{trimmed[..4]}-{trimmed[4..6]}-{trimmed[6..8]}";
+        return trimmed;
+    }
+
     public async Task<SalesOrder> RejectOrderAsync(string soNumber, string rejectionCode, string requestingTeamsUser, CancellationToken ct = default)
     {
         var formattedSo = FormatSoNumber(soNumber);

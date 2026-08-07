@@ -264,8 +264,68 @@ public sealed class MockSapClient : ISapClient
     {
         var order = SeedData.FirstOrDefault(x => x.SoNumber == soNumber)
             ?? throw new InvalidOperationException($"Order {soNumber} not found.");
-        return Task.FromResult(order);
+        return Task.FromResult(order with { CustomerReference = newReference });
     }
+
+    public Task<SalesOrder> UpdateSalesOrderAsync(UpdateSalesOrderDto dto, CancellationToken ct = default)
+    {
+        var so = FormatSo(dto.SoNumber);
+        var order = SeedData.FirstOrDefault(x => x.SoNumber == so)
+            ?? throw new InvalidOperationException($"Order {dto.SoNumber} not found.");
+
+        var items = order.Items.ToList();
+        foreach (var op in dto.Items ?? Array.Empty<UpdateSalesOrderItemDto>())
+        {
+            var flag = (op.Operation ?? string.Empty).Trim().ToUpperInvariant();
+            var itemNo = (op.ItemNumber ?? string.Empty).Trim().PadLeft(6, '0');
+            if (flag == "D")
+            {
+                items.RemoveAll(i => string.Equals(i.ItemNumber.PadLeft(6, '0'), itemNo, StringComparison.Ordinal));
+            }
+            else if (flag == "I")
+            {
+                items.Add(new SalesOrderItem
+                {
+                    ItemNumber = itemNo == "000000" ? ((items.Count + 1) * 10).ToString("000000") : itemNo,
+                    Material = op.Material ?? "TG11",
+                    Description = op.Material ?? "TG11",
+                    Quantity = op.OrderQty ?? 1m,
+                    Unit = op.Unit ?? "PC",
+                    NetValue = 0m
+                });
+            }
+            else if (flag == "U")
+            {
+                var idx = items.FindIndex(i => string.Equals(i.ItemNumber.PadLeft(6, '0'), itemNo, StringComparison.Ordinal));
+                if (idx >= 0)
+                {
+                    var cur = items[idx];
+                    items[idx] = cur with
+                    {
+                        Material = string.IsNullOrWhiteSpace(op.Material) ? cur.Material : op.Material!,
+                        Quantity = op.OrderQty ?? cur.Quantity,
+                        Unit = string.IsNullOrWhiteSpace(op.Unit) ? cur.Unit : op.Unit!
+                    };
+                }
+            }
+        }
+
+        DateOnly? reqDate = order.RequestedDeliveryDate;
+        if (!string.IsNullOrWhiteSpace(dto.ReqDeliveryDate) && DateOnly.TryParse(dto.ReqDeliveryDate, out var parsed))
+            reqDate = parsed;
+
+        return Task.FromResult(order with
+        {
+            CustomerReference = string.IsNullOrWhiteSpace(dto.PurchaseOrderRef)
+                ? order.CustomerReference
+                : dto.PurchaseOrderRef,
+            RequestedDeliveryDate = reqDate,
+            Items = items
+        });
+    }
+
+    private static string FormatSo(string soNumber) =>
+        string.IsNullOrWhiteSpace(soNumber) ? soNumber : soNumber.Trim().PadLeft(10, '0');
 
     public Task<SalesOrder> RejectOrderAsync(string soNumber, string rejectionCode, string requestingTeamsUser, CancellationToken ct = default)
     {

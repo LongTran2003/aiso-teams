@@ -144,6 +144,37 @@ internal static class TeamsCardBuilder
                 newReference = newReference ?? string.Empty
             });
 
+    public static Attachment BuildConfirmEditOrderCard(
+        string salesOrderNumber,
+        string currentReference,
+        string newReference,
+        string currentReqDate,
+        string newReqDate,
+        string lineOp,
+        string itemNumber,
+        string material,
+        decimal qty,
+        string plant,
+        string unit,
+        string linesSummary) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "confirm-edit-order.json",
+            new
+            {
+                salesOrderNumber,
+                currentReference = string.IsNullOrWhiteSpace(currentReference) ? "—" : currentReference,
+                newReference = newReference ?? string.Empty,
+                currentReqDate = string.IsNullOrWhiteSpace(currentReqDate) ? "—" : currentReqDate,
+                newReqDate = newReqDate ?? string.Empty,
+                lineOp = string.IsNullOrWhiteSpace(lineOp) ? "none" : lineOp,
+                itemNumber = itemNumber ?? string.Empty,
+                material = material ?? string.Empty,
+                qty,
+                plant = plant ?? "1010",
+                unit = unit ?? "PC",
+                linesSummary = string.IsNullOrWhiteSpace(linesSummary) ? "—" : linesSummary
+            });
+
     public static Attachment BuildConfirmReleaseCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-release.json", new { salesOrderNumber });
 
@@ -423,6 +454,10 @@ internal static class TeamsCardBuilder
             // Manager/Admin: cancel any cancellable SO (including while pending release).
             showCancel = isApprover && canReject && materialOk ? "true" : "false",
             showUpdateReference = canMutateWhilePending ? "true" : "false",
+            // Owner (not pending) or Manager/Admin may open full edit.
+            showEditOrder = canReject && materialOk
+                && ((isOwner && !hasPendingApproval && !releaseApproved) || isApprover)
+                ? "true" : "false",
             showReject = canRejectWhilePending ? "true" : "false",
             showForward = canMutateWhilePending ? "true" : "false",
             items = items.Select(item =>
