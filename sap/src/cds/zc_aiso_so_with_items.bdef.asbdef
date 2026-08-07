@@ -7,7 +7,6 @@ define behavior for ZC_AISO_SO_WITH_ITEMS alias SalesOrder
   use action releaseOrder;
   use action forwardOrder;
   use action updateReference;
-  use action updateSalesOrder;
   use action createSalesOrder;
   use action rejectOrder;
   use action approveOrder;
