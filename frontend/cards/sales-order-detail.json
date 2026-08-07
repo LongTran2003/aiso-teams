@@ -431,6 +431,20 @@
     },
     {
       "type": "Action.Submit",
+      "title": "Update reference",
+      "$when": "${showUpdateReference == 'true'}",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Update reference ${salesOrderNumber}",
+          "text": "update reference ${salesOrderNumber}"
+        },
+        "action": "update_ref",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
       "title": "Approve & release",
       "style": "positive",
       "$when": "${showApprove == 'true'}",

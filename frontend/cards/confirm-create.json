@@ -1,0 +1,99 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Create sales order",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Review the defaults, then confirm to create in SAP.",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "Input.Text",
+      "id": "customer",
+      "label": "Customer ID",
+      "isRequired": true,
+      "errorMessage": "Customer ID is required",
+      "placeholder": "e.g. 10100001",
+      "value": "${customer}"
+    },
+    {
+      "type": "Input.Text",
+      "id": "material",
+      "label": "Material",
+      "isRequired": true,
+      "errorMessage": "Material is required",
+      "placeholder": "e.g. TG11",
+      "value": "${material}"
+    },
+    {
+      "type": "Input.Number",
+      "id": "qty",
+      "label": "Quantity",
+      "isRequired": true,
+      "errorMessage": "Quantity is required",
+      "min": 1,
+      "value": "${qty}"
+    },
+    {
+      "type": "Input.Text",
+      "id": "salesOrg",
+      "label": "Sales org",
+      "placeholder": "e.g. 1010",
+      "value": "${salesOrg}"
+    },
+    {
+      "type": "Input.Text",
+      "id": "currency",
+      "label": "Currency",
+      "placeholder": "e.g. USD",
+      "value": "${currency}"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Create order",
+      "style": "positive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Confirm create order",
+          "text": "create order"
+        },
+        "action": "create_so_confirm",
+        "plant": "${plant}",
+        "unit": "${unit}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,76 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Update PO reference",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Sales order ${salesOrderNumber}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Current reference",
+          "value": "${currentReference}"
+        }
+      ],
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.Text",
+      "id": "newReference",
+      "label": "New reference",
+      "isRequired": true,
+      "errorMessage": "Please enter a new reference",
+      "placeholder": "Customer PO / reference",
+      "value": "${newReference}"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Update reference",
+      "style": "positive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Confirm update reference ${salesOrderNumber}",
+          "text": "update reference ${salesOrderNumber}"
+        },
+        "action": "update_ref_confirm",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}

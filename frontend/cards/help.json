@@ -131,6 +131,17 @@
               "text": "request release"
             }
           }
+        },
+        {
+          "type": "Action.Submit",
+          "title": "Create order",
+          "data": {
+            "msteams": {
+              "type": "messageBack",
+              "displayText": "Create order",
+              "text": "create order"
+            }
+          }
         }
       ],
       "spacing": "Small"

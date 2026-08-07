@@ -38,7 +38,41 @@ public class BilingualKeywordTests
 
         Assert.True(result.Handled);
         Assert.Equal("UpdateOrderReference", result.FunctionName);
-        Assert.Contains("po-99", result.ParametersJson ?? "", StringComparison.OrdinalIgnoreCase);
+        Assert.True(result.Result?.Success, result.Result?.ErrorMessage);
+        var payload = Assert.IsType<ConfirmUpdateReferenceResponse>(result.Result!.Payload);
+        Assert.Equal("0000005001", payload.SoNumber);
+        Assert.Equal("PO-99", payload.NewReference, ignoreCase: true);
+    }
+
+    [Fact]
+    public async Task Keyword_CreateOrder_ShowsConfirmForm()
+    {
+        var dispatcher = CreateDispatcher();
+
+        var result = await dispatcher.DispatchAsync("create order", "DEV-249", UserRole.Employee);
+
+        Assert.True(result.Handled);
+        Assert.Equal("CreateOrder", result.FunctionName);
+        Assert.True(result.Result?.Success);
+        var payload = Assert.IsType<ConfirmCreateOrderResponse>(result.Result!.Payload);
+        Assert.Equal("10100001", payload.Customer);
+        Assert.Equal("TG11", payload.Material);
+    }
+
+    [Fact]
+    public void BuildConfirmCreateAndUpdateCards_IncludeActions()
+    {
+        var create = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmCreateOrderCard(
+            "10100001", "TG11", 2, "1010", "USD");
+        var createJson = Newtonsoft.Json.JsonConvert.SerializeObject(create.Content);
+        Assert.Contains("create_so_confirm", createJson);
+        Assert.Contains("10100001", createJson);
+
+        var update = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmUpdateReferenceCard(
+            "0000005001", "OLD", "NEW-PO");
+        var updateJson = Newtonsoft.Json.JsonConvert.SerializeObject(update.Content);
+        Assert.Contains("update_ref_confirm", updateJson);
+        Assert.Contains("NEW-PO", updateJson);
     }
 
     [Theory]
@@ -101,6 +135,7 @@ public class BilingualKeywordTests
         services.AddSingleton<IUserScopeLookup, NoopScope>();
         services.AddSingleton<IFunction, GetPendingApprovalsFunction>();
         services.AddSingleton<IFunction, UpdateOrderReferenceFunction>();
+        services.AddSingleton<IFunction, CreateOrderFunction>();
         services.AddSingleton<IFunction, ReleaseOrderFunction>();
         services.AddSingleton<IFunction, RejectApprovalFunction>();
         services.AddSingleton<IFunction, RequestReleaseFunction>();

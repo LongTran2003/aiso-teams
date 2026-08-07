@@ -110,6 +110,40 @@ internal static class TeamsCardBuilder
                 reason = reason ?? string.Empty
             });
 
+    public static Attachment BuildConfirmCreateOrderCard(
+        string customer,
+        string material,
+        decimal qty,
+        string salesOrg,
+        string currency,
+        string plant = "1010",
+        string unit = "PC") =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "confirm-create.json",
+            new
+            {
+                customer,
+                material,
+                qty,
+                salesOrg,
+                currency,
+                plant,
+                unit
+            });
+
+    public static Attachment BuildConfirmUpdateReferenceCard(
+        string salesOrderNumber,
+        string currentReference,
+        string newReference) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "confirm-update-reference.json",
+            new
+            {
+                salesOrderNumber,
+                currentReference = string.IsNullOrWhiteSpace(currentReference) ? "—" : currentReference,
+                newReference = newReference ?? string.Empty
+            });
+
     public static Attachment BuildConfirmReleaseCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-release.json", new { salesOrderNumber });
 
@@ -388,6 +422,7 @@ internal static class TeamsCardBuilder
             showApprove = isApprover && canMutateLifecycle && showActivePending && materialOk ? "true" : "false",
             // Manager/Admin: cancel any cancellable SO (including while pending release).
             showCancel = isApprover && canReject && materialOk ? "true" : "false",
+            showUpdateReference = canMutateWhilePending ? "true" : "false",
             showReject = canRejectWhilePending ? "true" : "false",
             showForward = canMutateWhilePending ? "true" : "false",
             items = items.Select(item =>

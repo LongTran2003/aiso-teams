@@ -1,12 +1,13 @@
 using System.Text.Json;
+using AISO.Domain.SalesOrders;
 using AISO.SapIntegration;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.AiOrchestration.Functions;
 
 /// <summary>
-/// Updates the reference number (e.g. Customer PO) of a Sales Order in SAP.
-/// Maps to AI function schema <c>UpdateOrderReference</c>.
+/// Prepare update-reference form (confirm card). SAP call runs on Adaptive Card
+/// <c>update_ref_confirm</c>.
 /// </summary>
 public sealed class UpdateOrderReferenceFunction : IFunction
 {
@@ -22,7 +23,8 @@ public sealed class UpdateOrderReferenceFunction : IFunction
     public string Name => "UpdateOrderReference";
 
     public string Description =>
-        "Update the reference number (like a Customer PO) on an existing sales order in SAP.";
+        "Update the reference number (like a Customer PO) on an existing sales order in SAP. " +
+        "Returns a confirmation form — does not update until the user confirms.";
 
     public string ParametersJsonSchema => """
         {
@@ -54,36 +56,52 @@ public sealed class UpdateOrderReferenceFunction : IFunction
             : null;
 
         if (string.IsNullOrWhiteSpace(orderId))
-        {
-            return FunctionResult.Fail("Missing required parameter: order_id");
-        }
-
-        if (string.IsNullOrWhiteSpace(newRef))
-        {
-            return FunctionResult.Fail("Missing required parameter: new_reference");
-        }
-
-        _logger.LogInformation(
-            "UpdateOrderReference: orderId={OrderId}, newRef={NewRef}, sapUser={SapUser}", orderId, newRef, requestingSapUser);
+            return FunctionResult.Fail("Missing required parameter: order_id", "VALIDATION");
 
         try
         {
-            var updatedOrder = await _sap.UpdateReferenceAsync(orderId, newRef, requestingSapUser, ct);
-            var result = new
-            {
-                order_id = updatedOrder.SoNumber,
-                action = "ReferenceUpdated",
-                new_reference = newRef,
-                message = $"Sales order {updatedOrder.SoNumber} reference has been updated to {newRef}."
-            };
+            var existing = await _sap.GetSalesOrderByIdAsync(orderId, ct);
+            if (existing is null)
+                return FunctionResult.Fail($"Sales order {orderId} was not found in SAP.", "NOT_FOUND");
 
-            return FunctionResult.Ok(result);
+            if (SalesOrderWorkflow.BlocksReject(existing.Status))
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildBlockedMessage(existing.Status, "Update reference"),
+                    "VALIDATION");
+            }
+
+            if (!SalesOrderWorkflow.IsCurrentOwner(existing.OwnerSapUser, requestingSapUser)
+                && !string.IsNullOrWhiteSpace(existing.OwnerSapUser))
+            {
+                return FunctionResult.Fail(
+                    SalesOrderWorkflow.BuildNotOwnerBlockedMessage("Update reference", existing.OwnerSapUser),
+                    "VALIDATION");
+            }
+
+            var draft = string.IsNullOrWhiteSpace(newRef) || newRef == "Updated Reference"
+                ? (existing.CustomerReference ?? string.Empty)
+                : newRef.Trim();
+
+            _logger.LogInformation(
+                "UpdateOrderReference confirm step: so={SoNumber} by={User}",
+                existing.SoNumber, requestingSapUser);
+
+            return FunctionResult.Ok(new ConfirmUpdateReferenceResponse(
+                existing.SoNumber,
+                existing.CustomerReference ?? string.Empty,
+                draft));
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update reference for order {OrderId}", orderId);
-            return FunctionResult.Fail($"Failed to update order reference in SAP: {ex.Message}");
+            _logger.LogError(ex, "UpdateOrderReference prepare failed for {OrderId}", orderId);
+            return FunctionResult.Fail($"Failed to prepare update reference: {ex.Message}", "ACTION_FAILED");
         }
     }
 }
 
+/// <summary>Payload telling the bot to show <c>confirm-update-reference.json</c>.</summary>
+public sealed record ConfirmUpdateReferenceResponse(
+    string SoNumber,
+    string CurrentReference,
+    string NewReference);
