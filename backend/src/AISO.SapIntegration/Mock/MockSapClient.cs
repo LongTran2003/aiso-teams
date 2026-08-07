@@ -227,9 +227,14 @@ public sealed class MockSapClient : ISapClient
 
     public Task<SalesOrder> CreateSalesOrderAsync(CreateSalesOrderDto dto, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(dto.RequestingSapUser))
+            throw new ArgumentException("RequestingSapUser is required for createSalesOrder.", nameof(dto));
+
+        var soNumber = "9999999999";
+        _owners[soNumber] = dto.RequestingSapUser.Trim();
         return Task.FromResult(new SalesOrder
         {
-            SoNumber = "9999999999",
+            SoNumber = soNumber,
             CustomerId = dto.Customer,
             CustomerName = "Mock Customer",
             SalesOrg = dto.SalesOrg,
@@ -237,8 +242,22 @@ public sealed class MockSapClient : ISapClient
             NetValue = 1000m,
             Currency = dto.Currency,
             Status = SalesOrderStatus.Open,
+            OwnerSapUser = dto.RequestingSapUser.Trim(),
             Items = Array.Empty<SalesOrderItem>(),
         });
+    }
+
+    public Task SyncUserRoleAsync(
+        string targetSapUser,
+        string newRole,
+        string? salesOrg,
+        string requestingAdminSapUser,
+        CancellationToken ct = default)
+    {
+        _logger?.LogDebug(
+            "MockSapClient.SyncUserRoleAsync: target={Target} role={Role} org={Org} by={Admin}",
+            targetSapUser, newRole, salesOrg, requestingAdminSapUser);
+        return Task.CompletedTask;
     }
 
     public Task<SalesOrder> UpdateReferenceAsync(string soNumber, string newReference, string requestingSapUser, CancellationToken ct = default)

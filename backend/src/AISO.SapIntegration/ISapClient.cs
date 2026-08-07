@@ -21,6 +21,16 @@ public interface ISapClient
         CreateSalesOrderDto dto,
         CancellationToken ct = default);
 
+    /// <summary>
+    /// Admin: upsert <c>ZAISO_USER_ROLE</c> via OData <c>UserRole.syncUserRole</c>.
+    /// </summary>
+    Task SyncUserRoleAsync(
+        string targetSapUser,
+        string newRole,
+        string? salesOrg,
+        string requestingAdminSapUser,
+        CancellationToken ct = default);
+
     Task<SalesOrder> UpdateReferenceAsync(
         string soNumber,
         string newReference,
@@ -116,6 +126,9 @@ public sealed record CreateSalesOrderDto
     public required string Customer { get; init; }
     public required string Currency { get; init; }
     public required IReadOnlyList<CreateSalesOrderItemDto> Items { get; init; }
+
+    /// <summary>SAP user id of the creator (OData <c>REQUESTING_TEAMS_USER</c>).</summary>
+    public string? RequestingSapUser { get; init; }
 }
 
 public sealed record CreateSalesOrderItemDto

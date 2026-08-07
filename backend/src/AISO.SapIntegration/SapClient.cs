@@ -182,6 +182,9 @@ public class SapClient : ISapClient
 
     public async Task<SalesOrder> CreateSalesOrderAsync(CreateSalesOrderDto dto, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(dto.RequestingSapUser))
+            throw new ArgumentException("RequestingSapUser is required for createSalesOrder.", nameof(dto));
+
         var url = "SalesOrder/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.createSalesOrder?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
@@ -193,6 +196,7 @@ public class SapClient : ISapClient
             DIVISION = dto.Division,
             CUSTOMER = dto.Customer,
             CURRENCY = dto.Currency,
+            REQUESTING_TEAMS_USER = dto.RequestingSapUser.Trim(),
             ITEMS = dto.Items.Select((i, index) => new
             {
                 SO_NUMBER = "0000000000",
@@ -206,30 +210,74 @@ public class SapClient : ISapClient
 
         try
         {
-            // TEMPORARY MOCK: SAP Backend is currently throwing ABAP RAISE_SHORTDUMP for createOrder
-            // (CALL_FUNCTION_CONFLICT_LENG) due to parameter mismatch.
-            _logger.LogWarning("SAP CreateSalesOrder is currently broken (RAISE_SHORTDUMP). Mocking success response.");
+            using var response = await SendPostRequestRawAsync(url, payload, ct);
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var soNumber = TryExtractSoNumber(rawJson);
+
+            if (string.IsNullOrWhiteSpace(soNumber))
+            {
+                _logger.LogWarning("createSalesOrder response had no SoNumber. Body={Body}", rawJson);
+                throw new InvalidOperationException("SAP createSalesOrder succeeded but returned no sales order number.");
+            }
+
+            var formatted = FormatSoNumber(soNumber);
+            var refreshed = await GetSalesOrderByIdAsync(formatted, ct);
+            if (refreshed is not null)
+                return refreshed;
 
             return new SalesOrder
             {
-                SoNumber = "0000009999", // Mock generated ID
-                CustomerId = dto.Customer ?? "UNKNOWN",
-                CustomerName = "Mocked Customer",
-                SalesOrg = dto.SalesOrg ?? "1000",
+                SoNumber = formatted,
+                CustomerId = dto.Customer,
+                CustomerName = string.Empty,
+                SalesOrg = dto.SalesOrg,
                 OrderDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                NetValue = 5000,
-                Currency = dto.Currency ?? "USD",
+                NetValue = 0,
+                Currency = dto.Currency,
                 Status = SalesOrderStatus.Open,
-                Items = new List<SalesOrderItem>()
+                OwnerSapUser = dto.RequestingSapUser.Trim(),
+                Items = Array.Empty<SalesOrderItem>()
             };
-
-            // REAL IMPLEMENTATION:
-            // var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
-            // return result == null ? throw new InvalidOperationException("Failed to deserialize created order.") : MapToDomain(result);
         }
-        catch (Exception ex)
+        catch (Exception ex) when (ex is not SapODataException and not ArgumentException and not InvalidOperationException)
         {
             _logger.LogError(ex, "Error calling SAP OData CreateSalesOrderAsync");
+            throw;
+        }
+    }
+
+    public async Task SyncUserRoleAsync(
+        string targetSapUser,
+        string newRole,
+        string? salesOrg,
+        string requestingAdminSapUser,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(targetSapUser))
+            throw new ArgumentException("Target SAP user is required.", nameof(targetSapUser));
+        if (string.IsNullOrWhiteSpace(newRole))
+            throw new ArgumentException("New role is required.", nameof(newRole));
+        if (string.IsNullOrWhiteSpace(requestingAdminSapUser))
+            throw new ArgumentException("Requesting admin SAP user is required.", nameof(requestingAdminSapUser));
+
+        var url = "UserRole/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.syncUserRole?sap-client=324&$format=json";
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        var payload = new
+        {
+            SAP_USER = targetSapUser.Trim().ToUpperInvariant(),
+            NEW_ROLE = newRole.Trim().ToUpperInvariant(),
+            SALES_ORG = string.IsNullOrWhiteSpace(salesOrg) ? string.Empty : salesOrg.Trim().ToUpperInvariant(),
+            REQUESTING_TEAMS_USER = requestingAdminSapUser.Trim()
+        };
+
+        try
+        {
+            using var _ = await SendPostRequestRawAsync(url, payload, ct);
+        }
+        catch (Exception ex) when (ex is not SapODataException and not ArgumentException)
+        {
+            _logger.LogError(ex, "Error calling SAP OData SyncUserRoleAsync for {SapUser}", targetSapUser);
             throw;
         }
     }
@@ -436,6 +484,12 @@ public class SapClient : ISapClient
 
     private async Task<TResult?> SendPostRequestAsync<TResult, TPayload>(string url, TPayload payload, CancellationToken ct)
     {
+        using var response = await SendPostRequestRawAsync(url, payload, ct);
+        return await response.Content.ReadFromJsonAsync<TResult>(cancellationToken: ct);
+    }
+
+    private async Task<HttpResponseMessage> SendPostRequestRawAsync<TPayload>(string url, TPayload payload, CancellationToken ct)
+    {
         var request = new HttpRequestMessage(HttpMethod.Post, url);
         var jsonString = System.Text.Json.JsonSerializer.Serialize(payload);
 
@@ -463,12 +517,71 @@ public class SapClient : ISapClient
         var response = await _httpClient.SendAsync(request, ct);
         if (!response.IsSuccessStatusCode)
         {
+            var statusCode = (int)response.StatusCode;
             var errorBody = await response.Content.ReadAsStringAsync(ct);
-            _logger.LogError("SAP POST Failed: HTTP {StatusCode}, URL={Url}, Body={ErrorBody}", (int)response.StatusCode, url, errorBody);
-            throw new SapODataException((int)response.StatusCode, ParseSapErrorMessage(errorBody, (int)response.StatusCode));
+            _logger.LogError("SAP POST Failed: HTTP {StatusCode}, URL={Url}, Body={ErrorBody}", statusCode, url, errorBody);
+            response.Dispose();
+            throw new SapODataException(statusCode, ParseSapErrorMessage(errorBody, statusCode));
         }
 
-        return await response.Content.ReadFromJsonAsync<TResult>(cancellationToken: ct);
+        return response;
+    }
+
+    private static string? TryExtractSoNumber(string rawJson)
+    {
+        if (string.IsNullOrWhiteSpace(rawJson))
+            return null;
+
+        try
+        {
+            using var doc = System.Text.Json.JsonDocument.Parse(rawJson);
+            return FindSoNumber(doc.RootElement);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string? FindSoNumber(System.Text.Json.JsonElement element)
+    {
+        if (element.ValueKind == System.Text.Json.JsonValueKind.Object)
+        {
+            foreach (var name in new[] { "SoNumber", "SO_NUMBER", "SalesOrder", "salesOrder", "salesdocument" })
+            {
+                if (element.TryGetProperty(name, out var prop)
+                    && prop.ValueKind == System.Text.Json.JsonValueKind.String
+                    && !string.IsNullOrWhiteSpace(prop.GetString()))
+                {
+                    return prop.GetString();
+                }
+            }
+
+            if (element.TryGetProperty("value", out var value))
+            {
+                var nested = FindSoNumber(value);
+                if (!string.IsNullOrWhiteSpace(nested))
+                    return nested;
+            }
+
+            foreach (var property in element.EnumerateObject())
+            {
+                var nested = FindSoNumber(property.Value);
+                if (!string.IsNullOrWhiteSpace(nested))
+                    return nested;
+            }
+        }
+        else if (element.ValueKind == System.Text.Json.JsonValueKind.Array)
+        {
+            foreach (var item in element.EnumerateArray())
+            {
+                var nested = FindSoNumber(item);
+                if (!string.IsNullOrWhiteSpace(nested))
+                    return nested;
+            }
+        }
+
+        return null;
     }
 
     private static string ParseSapErrorMessage(string errorBody, int statusCode)

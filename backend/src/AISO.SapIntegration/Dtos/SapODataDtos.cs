@@ -58,7 +58,13 @@ internal class SapSalesOrderItemDto
 internal class SapUserRoleDto
 {
     public string? SapUser { get; set; }
+
+    /// <summary>CDS element renamed to <c>UserRole</c> (was <c>Role</c>).</summary>
+    public string? UserRole { get; set; }
+
+    /// <summary>Legacy element name; kept for older bindings.</summary>
     public string? Role { get; set; }
+
     public string? SalesOrg { get; set; }
 }
 

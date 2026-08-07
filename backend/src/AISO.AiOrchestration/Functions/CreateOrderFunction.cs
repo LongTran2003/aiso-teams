@@ -98,7 +98,8 @@ public sealed class CreateOrderFunction : IFunction
                 Division = division!,
                 Customer = customer!,
                 Currency = currency!,
-                Items = itemsList
+                Items = itemsList,
+                RequestingSapUser = requestingSapUser
             };
 
             var newOrder = await _sap.CreateSalesOrderAsync(dto, ct);

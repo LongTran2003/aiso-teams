@@ -241,6 +241,60 @@ public class SapClientTests
     }
 
     [Fact]
+    public async Task CreateSalesOrder_PostsAction_WithRequestingUser_AndRefetches()
+    {
+        var handler = new StubHttpMessageHandler(
+            (HttpStatusCode.OK, "{\"SoNumber\":\"0000001888\"}"),
+            (HttpStatusCode.OK,
+                "{\"SoNumber\":\"0000001888\",\"Customer\":\"1000\",\"SalesOrg\":\"FU24\",\"OverallStatus\":\"A\",\"Currency\":\"VND\"}"),
+            (HttpStatusCode.OK, "{\"value\":[]}"));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://sap.test/") };
+        var client = new SapClient(httpClient, new StubTokenManager(), NullLogger<SapClient>.Instance);
+
+        var result = await client.CreateSalesOrderAsync(new CreateSalesOrderDto
+        {
+            DocType = "ZOR",
+            SalesOrg = "FU24",
+            DistChannel = "FU",
+            Division = "FS",
+            Customer = "1000",
+            Currency = "VND",
+            RequestingSapUser = "DEV-024",
+            Items = new[]
+            {
+                new CreateSalesOrderItemDto
+                {
+                    Material = "MAT-1",
+                    Plant = "1010",
+                    OrderQty = 1,
+                    Unit = "PC"
+                }
+            }
+        });
+
+        Assert.Equal("0000001888", result.SoNumber);
+        Assert.Contains(handler.RequestUris, u => u.Contains("createSalesOrder", StringComparison.Ordinal));
+        Assert.Contains("REQUESTING_TEAMS_USER", handler.RequestBodies[0] ?? "");
+        Assert.Contains("DEV-024", handler.RequestBodies[0] ?? "");
+        Assert.Contains(handler.RequestUris, u => u.Contains("SalesOrder('0000001888')", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task SyncUserRole_PostsStaticAction_WithAdminAndTarget()
+    {
+        var client = CreateClient(HttpStatusCode.OK, "{}", out var handler);
+
+        await client.SyncUserRoleAsync("DEV-024", "MANAGER", "FU24", "DEV-001");
+
+        Assert.Contains(handler.RequestUris, u => u.Contains("syncUserRole", StringComparison.Ordinal));
+        Assert.Contains(handler.RequestUris, u => u.Contains("UserRole/", StringComparison.Ordinal));
+        Assert.Contains("DEV-024", handler.RequestBodies[0] ?? "");
+        Assert.Contains("MANAGER", handler.RequestBodies[0] ?? "");
+        Assert.Contains("FU24", handler.RequestBodies[0] ?? "");
+        Assert.Contains("DEV-001", handler.RequestBodies[0] ?? "");
+    }
+
+    [Fact]
     public async Task ApproveOrder_PostsApproveOrderAction_WithSapUserParam()
     {
         var client = CreateClient(HttpStatusCode.OK, "{}", out var handler);
