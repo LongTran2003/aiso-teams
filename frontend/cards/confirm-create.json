@@ -93,11 +93,12 @@
           "width": "stretch",
           "items": [
             {
-              "type": "Input.Text",
+              "type": "Input.ChoiceSet",
               "id": "distChannel",
               "label": "Distribution channel",
-              "placeholder": "e.g. 10",
-              "value": "${distChannel}"
+              "style": "compact",
+              "value": "${distChannel}",
+              "choices": "${distChannelChoices}"
             }
           ]
         }
@@ -113,11 +114,12 @@
           "width": "stretch",
           "items": [
             {
-              "type": "Input.Text",
+              "type": "Input.ChoiceSet",
               "id": "division",
               "label": "Division",
-              "placeholder": "e.g. 00",
-              "value": "${division}"
+              "style": "compact",
+              "value": "${division}",
+              "choices": "${divisionChoices}"
             }
           ]
         },

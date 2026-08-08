@@ -143,6 +143,20 @@ internal static class TeamsCardBuilder
             unit,
             new[] { new ConfirmCreateOrderLine(material, qty) });
 
+    private static readonly (string Code, string Title)[] DefaultDistChannels = new[]
+    {
+        ("10", "10 - Direct Sales / Wholesale"),
+        ("20", "20 - Retail"),
+        ("FU", "FU - SD Wholesale")
+    };
+
+    private static readonly (string Code, string Title)[] DefaultDivisions = new[]
+    {
+        ("00", "00 - Cross-division"),
+        ("01", "01 - Products"),
+        ("FS", "FS - HCMC")
+    };
+
     public static Attachment BuildConfirmCreateOrderCard(ConfirmCreateOrderResponse draft)
     {
         var lines = NormalizeCreateLines(draft.Lines);
@@ -152,26 +166,34 @@ internal static class TeamsCardBuilder
         decimal SlotQty(int i) =>
             i < lines.Count ? lines[i].Qty : (i == 0 ? 1m : 0m);
 
-        var salesAreaChoices = (draft.SalesAreaChoices ?? Array.Empty<ConfirmCreateChoice>())
-            .Select(c => new { title = c.Title, value = c.Value })
+        var selectedDist = string.IsNullOrWhiteSpace(draft.DistChannel) ? "10" : draft.DistChannel.Trim();
+        var distChoices = DefaultDistChannels
+            .Select(c => new { title = c.Title, value = c.Code })
             .ToList();
-        var customerChoices = (draft.CustomerChoices ?? Array.Empty<ConfirmCreateChoice>())
-            .Select(c => new { title = c.Title, value = c.Value })
+        if (!distChoices.Any(c => string.Equals(c.value, selectedDist, StringComparison.OrdinalIgnoreCase)))
+        {
+            distChoices.Insert(0, new { title = selectedDist, value = selectedDist });
+        }
+
+        var selectedDiv = string.IsNullOrWhiteSpace(draft.Division) ? "00" : draft.Division.Trim();
+        var divChoices = DefaultDivisions
+            .Select(c => new { title = c.Title, value = c.Code })
             .ToList();
+        if (!divChoices.Any(c => string.Equals(c.value, selectedDiv, StringComparison.OrdinalIgnoreCase)))
+        {
+            divChoices.Insert(0, new { title = selectedDiv, value = selectedDiv });
+        }
 
         return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "confirm-create.json",
             new
             {
                 customer = draft.Customer,
-                salesOrg = string.IsNullOrWhiteSpace(draft.SalesOrg) ? "TV01" : draft.SalesOrg,
-                distChannel = string.IsNullOrWhiteSpace(draft.DistChannel) ? "10" : draft.DistChannel,
-                division = string.IsNullOrWhiteSpace(draft.Division) ? "00" : draft.Division,
-                salesArea = draft.SalesAreaKey,
-                useSalesAreaChoices = draft.UseSalesAreaChoices,
-                useCustomerChoices = draft.UseCustomerChoices,
-                salesAreaChoices,
-                customerChoices,
+                salesOrg = string.IsNullOrWhiteSpace(draft.SalesOrg) ? "1010" : draft.SalesOrg,
+                distChannel = selectedDist,
+                distChannelChoices = distChoices,
+                division = selectedDiv,
+                divisionChoices = divChoices,
                 currency = string.IsNullOrWhiteSpace(draft.Currency) ? "USD" : draft.Currency,
                 plant = string.IsNullOrWhiteSpace(draft.Plant) ? "1010" : draft.Plant,
                 unit = string.IsNullOrWhiteSpace(draft.Unit) ? "PC" : draft.Unit,
