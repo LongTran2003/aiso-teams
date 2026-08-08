@@ -32,6 +32,19 @@ public class SapClient : ISapClient
         return soNumber;
     }
 
+    /// <summary>KUNNR / partner number — numeric IDs are alpha-converted to 10 digits.</summary>
+    internal static string FormatCustomerNumber(string? customer)
+    {
+        if (string.IsNullOrWhiteSpace(customer))
+            return string.Empty;
+
+        var raw = customer.Trim();
+        if (raw.All(char.IsDigit))
+            return raw.PadLeft(10, '0');
+
+        return raw.ToUpperInvariant();
+    }
+
     public async Task<IReadOnlyList<SalesOrder>> GetSalesOrdersAsync(SalesOrdersQuery query, CancellationToken ct = default)
     {
         var builder = new ODataQueryBuilder("SalesOrder")
@@ -194,7 +207,7 @@ public class SapClient : ISapClient
             SALES_ORG = dto.SalesOrg,
             DIST_CHANNEL = dto.DistChannel,
             DIVISION = dto.Division,
-            CUSTOMER = dto.Customer,
+            CUSTOMER = FormatCustomerNumber(dto.Customer),
             CURRENCY = dto.Currency,
             REQUESTING_TEAMS_USER = dto.RequestingSapUser.Trim(),
             ITEMS = dto.Items.Select((i, index) => new

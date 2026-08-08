@@ -276,7 +276,18 @@ public class SapClientTests
         Assert.Contains(handler.RequestUris, u => u.Contains("createSalesOrder", StringComparison.Ordinal));
         Assert.Contains("REQUESTING_TEAMS_USER", handler.RequestBodies[0] ?? "");
         Assert.Contains("DEV-024", handler.RequestBodies[0] ?? "");
+        Assert.Contains("\"CUSTOMER\":\"0000001000\"", handler.RequestBodies[0] ?? "");
         Assert.Contains(handler.RequestUris, u => u.Contains("SalesOrder('0000001888')", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData("100323", "0000100323")]
+    [InlineData("0000100323", "0000100323")]
+    [InlineData("1000", "0000001000")]
+    [InlineData("USCU_ABC1", "USCU_ABC1")]
+    public void FormatCustomerNumber_PadsNumericIds(string input, string expected)
+    {
+        Assert.Equal(expected, SapClient.FormatCustomerNumber(input));
     }
 
     [Fact]
