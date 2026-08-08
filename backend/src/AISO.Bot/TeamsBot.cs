@@ -1236,6 +1236,12 @@ public class TeamsBot : TeamsActivityHandler
                         var salesOrg = valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var orgToken)
                             ? orgToken.ToString()?.Trim()
                             : "1010";
+                        var distChannel = valueObj.TryGetValue("distChannel", StringComparison.OrdinalIgnoreCase, out var distToken)
+                            ? distToken.ToString()?.Trim()
+                            : (valueObj.TryGetValue("distributionChannel", StringComparison.OrdinalIgnoreCase, out distToken) ? distToken.ToString()?.Trim() : "10");
+                        var division = valueObj.TryGetValue("division", StringComparison.OrdinalIgnoreCase, out var divToken)
+                            ? divToken.ToString()?.Trim()
+                            : "00";
                         var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var curToken)
                             ? curToken.ToString()?.Trim()
                             : "USD";
@@ -1299,8 +1305,8 @@ public class TeamsBot : TeamsActivityHandler
                                 {
                                     DocType = "TA",
                                     SalesOrg = string.IsNullOrWhiteSpace(salesOrg) ? "1010" : salesOrg.ToUpperInvariant(),
-                                    DistChannel = "10",
-                                    Division = "00",
+                                    DistChannel = string.IsNullOrWhiteSpace(distChannel) ? "10" : distChannel.ToUpperInvariant(),
+                                    Division = string.IsNullOrWhiteSpace(division) ? "00" : division.ToUpperInvariant(),
                                     Customer = customer,
                                     Currency = string.IsNullOrWhiteSpace(currency) ? "USD" : currency.ToUpperInvariant(),
                                     RequestingSapUser = linkedSapUsername,

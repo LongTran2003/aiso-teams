@@ -352,6 +352,28 @@ public class SalesOrderDetailCardTests
         Assert.DoesNotContain("\"status\":\"Open\"", json);
     }
 
+    [Fact]
+    public void BuildConfirmCreateOrderCard_BindsDistChannelAndDivision()
+    {
+        var response = new AISO.AiOrchestration.Functions.ConfirmCreateOrderResponse(
+            Customer: "10100001",
+            SalesOrg: "1010",
+            Currency: "USD",
+            Plant: "1010",
+            Unit: "PC",
+            Lines: new[] { new AISO.AiOrchestration.Functions.ConfirmCreateOrderLine("TG11", 2m) },
+            DistChannel: "10",
+            Division: "00");
+
+        var attachment = TeamsCardBuilder.BuildConfirmCreateOrderCard(response);
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("distChannel", json);
+        Assert.Contains("division", json);
+        Assert.Contains("Distribution channel", json);
+        Assert.Contains("Division", json);
+    }
+
     private static SalesOrder SampleOrder(bool withItems = false, SalesOrderStatus status = SalesOrderStatus.Blocked) =>
         new()
         {
