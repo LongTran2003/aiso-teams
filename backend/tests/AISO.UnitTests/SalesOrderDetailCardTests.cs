@@ -370,7 +370,9 @@ public class SalesOrderDetailCardTests
             },
             CustomerChoices: new[]
             {
-                new AISO.AiOrchestration.Functions.ConfirmCreateChoice("10100001 · Demo (TV01/10/00)", "10100001")
+                new AISO.AiOrchestration.Functions.ConfirmCreateChoice(
+                    "10100001 · Demo (TV01/10/00)",
+                    "10100001|TV01|10|00")
             });
 
         var attachment = TeamsCardBuilder.BuildConfirmCreateOrderCard(response);

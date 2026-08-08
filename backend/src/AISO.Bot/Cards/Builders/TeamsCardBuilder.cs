@@ -175,7 +175,9 @@ internal static class TeamsCardBuilder
             .ToList();
         if (customerChoices.Count == 0)
         {
-            customerChoices.Add(new { title = customer, value = customer });
+            var fallbackKey = $"{customer}|{salesOrg}|{distChannel}|{division}";
+            customerChoices.Add(new { title = $"{customer} ({salesOrg}/{distChannel}/{division})", value = fallbackKey });
+            customer = fallbackKey;
         }
 
         return CardTemplateFileLoader.BuildAdaptiveCardAttachment(

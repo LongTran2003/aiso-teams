@@ -55,7 +55,10 @@ public class BilingualKeywordTests
         Assert.Equal("CreateOrder", result.FunctionName);
         Assert.True(result.Result?.Success);
         var payload = Assert.IsType<ConfirmCreateOrderResponse>(result.Result!.Payload);
-        Assert.Equal("10100001", payload.Customer);
+        Assert.True(
+            payload.Customer == "10100001"
+            || payload.Customer.StartsWith("10100001|", StringComparison.OrdinalIgnoreCase),
+            $"Unexpected customer form value: {payload.Customer}");
         Assert.Equal("TG11", payload.Material);
         Assert.Single(payload.Lines);
     }

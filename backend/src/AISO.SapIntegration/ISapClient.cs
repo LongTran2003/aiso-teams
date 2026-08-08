@@ -187,6 +187,9 @@ public sealed record SapValidCustomer(
     string Division,
     string? CustomerName = null)
 {
+    /// <summary>Choice value: Customer|SalesOrg|DistChannel|Division.</summary>
+    public string Key => $"{Customer.Trim()}|{SalesOrg}|{DistChannel}|{Division}";
+
     public string Label
     {
         get
@@ -198,6 +201,28 @@ public sealed record SapValidCustomer(
             var area = $"{SalesOrg}/{DistChannel}/{Division}";
             return name is null ? $"{id} ({area})" : $"{id} · {name} ({area})";
         }
+    }
+
+    public static bool TryParseKey(
+        string? key,
+        out string customer,
+        out string salesOrg,
+        out string distChannel,
+        out string division)
+    {
+        customer = salesOrg = distChannel = division = string.Empty;
+        if (string.IsNullOrWhiteSpace(key))
+            return false;
+
+        var parts = key.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 4)
+            return false;
+
+        customer = parts[0];
+        salesOrg = parts[1].ToUpperInvariant();
+        distChannel = parts[2].ToUpperInvariant();
+        division = parts[3].ToUpperInvariant();
+        return !string.IsNullOrWhiteSpace(customer);
     }
 }
 

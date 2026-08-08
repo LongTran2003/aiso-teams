@@ -1230,7 +1230,7 @@ public class TeamsBot : TeamsActivityHandler
                             return;
                         }
 
-                        var customer = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken)
+                        var customerRaw = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken)
                             ? custToken.ToString()?.Trim()
                             : null;
                         var salesOrg = valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var orgToken)
@@ -1243,7 +1243,16 @@ public class TeamsBot : TeamsActivityHandler
                             ? divToken.ToString()?.Trim()
                             : null;
 
-                        if (valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken)
+                        // Customer dropdown value encodes ValidCustomer key → wins over separate salesArea.
+                        string? customer = customerRaw;
+                        if (SapValidCustomer.TryParseKey(customerRaw, out var keyCust, out var keyOrg, out var keyChan, out var keyDiv))
+                        {
+                            customer = keyCust;
+                            salesOrg = keyOrg;
+                            distChannel = keyChan;
+                            division = keyDiv;
+                        }
+                        else if (valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken)
                             && SapSalesArea.TryParseKey(areaToken.ToString(), out var areaOrg, out var areaChan, out var areaDiv))
                         {
                             salesOrg = areaOrg;

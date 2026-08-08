@@ -535,7 +535,8 @@ public sealed class MockSapClient : ISapClient
             new("10100001", "TV01", "10", "00", "Domestic Customer US"),
             new("10100002", "TV01", "10", "00", "Philly Bikes"),
             new("10100001", "FU24", "10", "00", "Domestic Customer US"),
-            new("17100001", "FU24", "10", "00", "Customer FU24")
+            new("17100001", "FU24", "10", "00", "Customer FU24"),
+            new("100323", "FU24", "FR", "FG", "Customer FR/FG")
         ];
 
         if (!string.IsNullOrWhiteSpace(salesOrg))
@@ -555,17 +556,19 @@ public sealed class MockSapClient : ISapClient
         string division,
         CancellationToken ct = default)
     {
-        var rows = await GetValidCustomersAsync(salesOrg, distChannel, division, top: 50, ct);
-        var needle = customer.Trim().TrimStart('0');
-        if (string.IsNullOrEmpty(needle))
-            needle = customer.Trim();
+        var raw = customer.Trim();
+        var stripped = raw.TrimStart('0');
+        if (string.IsNullOrEmpty(stripped))
+            stripped = raw;
 
+        var rows = await GetValidCustomersAsync(salesOrg, distChannel, division, top: 200, ct);
         return rows.Any(r =>
         {
             var id = r.Customer.Trim().TrimStart('0');
             if (string.IsNullOrEmpty(id))
                 id = r.Customer.Trim();
-            return string.Equals(id, needle, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(id, stripped, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(r.Customer.Trim(), raw, StringComparison.OrdinalIgnoreCase);
         });
     }
 }

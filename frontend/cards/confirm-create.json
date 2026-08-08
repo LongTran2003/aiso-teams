@@ -18,7 +18,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "Up to 5 materials. Leave unused lines blank.",
+          "text": "Pick a customer (includes sales area). Up to 5 materials.",
           "size": "Small",
           "isSubtle": true,
           "spacing": "None",
@@ -29,7 +29,7 @@
     {
       "type": "Input.ChoiceSet",
       "id": "customer",
-      "label": "Customer",
+      "label": "Customer (with sales area)",
       "style": "compact",
       "isRequired": true,
       "errorMessage": "Customer is required",

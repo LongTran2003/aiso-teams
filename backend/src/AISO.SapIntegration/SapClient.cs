@@ -1205,11 +1205,33 @@ public class SapClient : ISapClient
         int top = 100,
         CancellationToken ct = default)
     {
+        return await GetValidCustomersAsync(
+            customer: null,
+            salesOrg,
+            distChannel,
+            division,
+            top,
+            ct);
+    }
+
+    private async Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
+        string? customer,
+        string? salesOrg,
+        string? distChannel,
+        string? division,
+        int top,
+        CancellationToken ct)
+    {
         var take = Math.Clamp(top, 1, 200);
         var builder = new ODataQueryBuilder("ValidCustomer")
             .AddCustomParam("sap-client", "324")
             .Top(take);
 
+        if (!string.IsNullOrWhiteSpace(customer))
+        {
+            // KUNNR is often alpha-padded; try exact value from the card first.
+            builder.Filter("Customer", "eq", customer.Trim());
+        }
         if (!string.IsNullOrWhiteSpace(salesOrg))
             builder.Filter("SalesOrg", "eq", salesOrg.Trim().ToUpperInvariant());
         if (!string.IsNullOrWhiteSpace(distChannel))
@@ -1272,35 +1294,32 @@ public class SapClient : ISapClient
             || string.IsNullOrWhiteSpace(division))
             return false;
 
-        var rows = await GetValidCustomersAsync(
-            salesOrg.Trim(),
-            distChannel.Trim(),
-            division.Trim(),
-            top: 50,
-            ct);
+        var raw = customer.Trim();
+        var stripped = raw.TrimStart('0');
+        if (string.IsNullOrEmpty(stripped))
+            stripped = raw;
 
-        // Entity missing → empty list from soft-fail; treat as unknown.
-        if (rows.Count == 0)
+        // Prefer exact Customer filter (avoids false negatives from $top on sales-area lists).
+        foreach (var candidate in new[] { raw, stripped, raw.PadLeft(10, '0') }.Distinct(StringComparer.Ordinal))
         {
-            // Distinguish "no match" vs "entity down": probe unfiltered top 1.
-            var any = await GetValidCustomersAsync(top: 1, ct: ct);
-            if (any.Count == 0)
-                return null;
-            return false;
+            var rows = await GetValidCustomersAsync(
+                customer: candidate,
+                salesOrg: salesOrg.Trim(),
+                distChannel: distChannel.Trim(),
+                division: division.Trim(),
+                top: 5,
+                ct);
+
+            if (rows.Count > 0)
+                return true;
         }
 
-        var needle = customer.Trim().TrimStart('0');
-        if (string.IsNullOrEmpty(needle))
-            needle = customer.Trim();
+        // Entity down vs real miss: probe any ValidCustomer row.
+        var any = await GetValidCustomersAsync(top: 1, ct: ct);
+        if (any.Count == 0)
+            return null;
 
-        return rows.Any(r =>
-        {
-            var id = r.Customer.Trim().TrimStart('0');
-            if (string.IsNullOrEmpty(id))
-                id = r.Customer.Trim();
-            return string.Equals(id, needle, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(r.Customer.Trim(), customer.Trim(), StringComparison.OrdinalIgnoreCase);
-        });
+        return false;
     }
 
     public async Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default)

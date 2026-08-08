@@ -121,38 +121,60 @@ public sealed class CreateOrderFunction : IFunction
             .ToList();
 
         var customerChoices = customers
-            .GroupBy(c => c.Customer, StringComparer.OrdinalIgnoreCase)
+            .Select(c => new ConfirmCreateChoice(c.Label, c.Key))
+            .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
             .Select(g => g.First())
-            .Select(c => new ConfirmCreateChoice(c.Label, c.Customer.Trim()))
             .ToList();
 
-        var preferredArea = areas.FirstOrDefault(a =>
-                string.Equals(a.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(a.DistChannel, distChannel, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(a.Division, division, StringComparison.OrdinalIgnoreCase))
-            ?? areas.FirstOrDefault(a =>
-                string.Equals(a.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase))
-            ?? areas.FirstOrDefault();
-
-        if (preferredArea is not null)
+        // Prefer a ValidCustomer row matching draft customer (+ user org when possible).
+        ConfirmCreateChoice? selected = null;
+        if (customerChoices.Count > 0)
         {
-            salesOrg = preferredArea.SalesOrg;
-            distChannel = preferredArea.DistChannel;
-            division = preferredArea.Division;
+            selected = customerChoices.FirstOrDefault(c =>
+                    SapValidCustomer.TryParseKey(c.Value, out var id, out var org, out _, out _)
+                    && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase)
+                    && (string.IsNullOrWhiteSpace(salesOrg)
+                        || string.Equals(org, salesOrg, StringComparison.OrdinalIgnoreCase)))
+                ?? customerChoices.FirstOrDefault(c =>
+                    SapValidCustomer.TryParseKey(c.Value, out var id, out _, out _, out _)
+                    && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase))
+                ?? customerChoices[0];
+
+            if (SapValidCustomer.TryParseKey(selected.Value, out var sId, out var sOrg, out var sChan, out var sDiv))
+            {
+                customer = sId;
+                salesOrg = sOrg;
+                distChannel = sChan;
+                division = sDiv;
+            }
+        }
+        else
+        {
+            var preferredArea = areas.FirstOrDefault(a =>
+                    string.Equals(a.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(a.DistChannel, distChannel, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(a.Division, division, StringComparison.OrdinalIgnoreCase))
+                ?? areas.FirstOrDefault(a =>
+                    string.Equals(a.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase))
+                ?? areas.FirstOrDefault();
+
+            if (preferredArea is not null)
+            {
+                salesOrg = preferredArea.SalesOrg;
+                distChannel = preferredArea.DistChannel;
+                division = preferredArea.Division;
+            }
         }
 
-        if (customerChoices.Count > 0
-            && !customerChoices.Any(c => string.Equals(c.Value, customer.Trim(), StringComparison.OrdinalIgnoreCase)))
-        {
-            customer = customerChoices[0].Value;
-        }
+        var customerFormValue = selected?.Value
+            ?? $"{customer.Trim()}|{salesOrg}|{distChannel}|{division}";
 
         _logger.LogInformation(
-            "CreateOrder confirm step: customer={Customer} lines={LineCount} areas={AreaCount} customers={CustomerCount} by={User}",
-            customer, lines.Count, salesAreaChoices.Count, customerChoices.Count, requestingSapUser);
+            "CreateOrder confirm step: customer={Customer} area={Org}/{Chan}/{Div} lines={LineCount} areas={AreaCount} customers={CustomerCount} by={User}",
+            customer, salesOrg, distChannel, division, lines.Count, salesAreaChoices.Count, customerChoices.Count, requestingSapUser);
 
         return FunctionResult.Ok(new ConfirmCreateOrderResponse(
-            Customer: customer.Trim(),
+            Customer: customerFormValue,
             SalesOrg: salesOrg.Trim().ToUpperInvariant(),
             Currency: currency.Trim().ToUpperInvariant(),
             Plant: plant.Trim(),
