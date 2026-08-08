@@ -357,21 +357,29 @@ public class SalesOrderDetailCardTests
     {
         var response = new AISO.AiOrchestration.Functions.ConfirmCreateOrderResponse(
             Customer: "10100001",
-            SalesOrg: "1010",
+            SalesOrg: "TV01",
             Currency: "USD",
             Plant: "1010",
             Unit: "PC",
             Lines: new[] { new AISO.AiOrchestration.Functions.ConfirmCreateOrderLine("TG11", 2m) },
             DistChannel: "10",
-            Division: "00");
+            Division: "00",
+            SalesAreaChoices: new[]
+            {
+                new AISO.AiOrchestration.Functions.ConfirmCreateChoice("TV01 / 10 / 00", "TV01|10|00")
+            },
+            CustomerChoices: new[]
+            {
+                new AISO.AiOrchestration.Functions.ConfirmCreateChoice("10100001 · Demo (TV01/10/00)", "10100001")
+            });
 
         var attachment = TeamsCardBuilder.BuildConfirmCreateOrderCard(response);
         var json = JsonConvert.SerializeObject(attachment.Content);
 
-        Assert.Contains("distChannel", json);
-        Assert.Contains("division", json);
-        Assert.Contains("Distribution channel", json);
-        Assert.Contains("Division", json);
+        Assert.Contains("salesArea", json);
+        Assert.Contains("TV01|10|00", json);
+        Assert.Contains("Input.ChoiceSet", json);
+        Assert.Contains("10100001", json);
     }
 
     private static SalesOrder SampleOrder(bool withItems = false, SalesOrderStatus status = SalesOrderStatus.Blocked) =>

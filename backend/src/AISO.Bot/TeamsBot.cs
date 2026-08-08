@@ -1235,13 +1235,26 @@ public class TeamsBot : TeamsActivityHandler
                             : null;
                         var salesOrg = valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var orgToken)
                             ? orgToken.ToString()?.Trim()
-                            : "1010";
+                            : null;
                         var distChannel = valueObj.TryGetValue("distChannel", StringComparison.OrdinalIgnoreCase, out var distToken)
                             ? distToken.ToString()?.Trim()
-                            : (valueObj.TryGetValue("distributionChannel", StringComparison.OrdinalIgnoreCase, out distToken) ? distToken.ToString()?.Trim() : "10");
+                            : (valueObj.TryGetValue("distributionChannel", StringComparison.OrdinalIgnoreCase, out distToken) ? distToken.ToString()?.Trim() : null);
                         var division = valueObj.TryGetValue("division", StringComparison.OrdinalIgnoreCase, out var divToken)
                             ? divToken.ToString()?.Trim()
-                            : "00";
+                            : null;
+
+                        if (valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken)
+                            && SapSalesArea.TryParseKey(areaToken.ToString(), out var areaOrg, out var areaChan, out var areaDiv))
+                        {
+                            salesOrg = areaOrg;
+                            distChannel = areaChan;
+                            division = areaDiv;
+                        }
+
+                        salesOrg = string.IsNullOrWhiteSpace(salesOrg) ? "TV01" : salesOrg;
+                        distChannel = string.IsNullOrWhiteSpace(distChannel) ? "10" : distChannel;
+                        division = string.IsNullOrWhiteSpace(division) ? "00" : division;
+
                         var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var curToken)
                             ? curToken.ToString()?.Trim()
                             : "USD";
@@ -1294,6 +1307,22 @@ public class TeamsBot : TeamsActivityHandler
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
                                     "VALIDATION",
                                     "Customer ID and at least one material are required to create an order.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var customerOk = await _sap.IsCustomerValidForSalesAreaAsync(
+                            customer,
+                            salesOrg,
+                            distChannel,
+                            division,
+                            cancellationToken);
+                        if (customerOk == false)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "VALIDATION",
+                                    $"Customer {customer} is not valid for sales area {salesOrg}/{distChannel}/{division}.")),
                                 cancellationToken);
                             return;
                         }

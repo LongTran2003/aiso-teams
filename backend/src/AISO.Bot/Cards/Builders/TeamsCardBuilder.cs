@@ -152,14 +152,26 @@ internal static class TeamsCardBuilder
         decimal SlotQty(int i) =>
             i < lines.Count ? lines[i].Qty : (i == 0 ? 1m : 0m);
 
+        var salesAreaChoices = (draft.SalesAreaChoices ?? Array.Empty<ConfirmCreateChoice>())
+            .Select(c => new { title = c.Title, value = c.Value })
+            .ToList();
+        var customerChoices = (draft.CustomerChoices ?? Array.Empty<ConfirmCreateChoice>())
+            .Select(c => new { title = c.Title, value = c.Value })
+            .ToList();
+
         return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "confirm-create.json",
             new
             {
                 customer = draft.Customer,
-                salesOrg = string.IsNullOrWhiteSpace(draft.SalesOrg) ? "1010" : draft.SalesOrg,
+                salesOrg = string.IsNullOrWhiteSpace(draft.SalesOrg) ? "TV01" : draft.SalesOrg,
                 distChannel = string.IsNullOrWhiteSpace(draft.DistChannel) ? "10" : draft.DistChannel,
                 division = string.IsNullOrWhiteSpace(draft.Division) ? "00" : draft.Division,
+                salesArea = draft.SalesAreaKey,
+                useSalesAreaChoices = draft.UseSalesAreaChoices,
+                useCustomerChoices = draft.UseCustomerChoices,
+                salesAreaChoices,
+                customerChoices,
                 currency = string.IsNullOrWhiteSpace(draft.Currency) ? "USD" : draft.Currency,
                 plant = string.IsNullOrWhiteSpace(draft.Plant) ? "1010" : draft.Plant,
                 unit = string.IsNullOrWhiteSpace(draft.Unit) ? "PC" : draft.Unit,
