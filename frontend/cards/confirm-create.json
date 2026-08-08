@@ -18,7 +18,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "Up to 5 materials. Sales area & customer from SAP when available.",
+          "text": "Up to 5 materials. Leave unused lines blank.",
           "size": "Small",
           "isSubtle": true,
           "spacing": "None",
@@ -34,7 +34,6 @@
       "isRequired": true,
       "errorMessage": "Customer is required",
       "value": "${customer}",
-      "$when": "${useCustomerChoices}",
       "choices": [
         {
           "$data": "${customerChoices}",
@@ -44,16 +43,6 @@
       ]
     },
     {
-      "type": "Input.Text",
-      "id": "customer",
-      "label": "Customer ID",
-      "isRequired": true,
-      "errorMessage": "Customer ID is required",
-      "placeholder": "e.g. 10100001",
-      "value": "${customer}",
-      "$when": "${!useCustomerChoices}"
-    },
-    {
       "type": "Input.ChoiceSet",
       "id": "salesArea",
       "label": "Sales area (org / channel / division)",
@@ -61,7 +50,6 @@
       "isRequired": true,
       "errorMessage": "Sales area is required",
       "value": "${salesArea}",
-      "$when": "${useSalesAreaChoices}",
       "choices": [
         {
           "$data": "${salesAreaChoices}",
@@ -71,80 +59,11 @@
       ]
     },
     {
-      "type": "ColumnSet",
-      "spacing": "Small",
-      "$when": "${!useSalesAreaChoices}",
-      "columns": [
-        {
-          "type": "Column",
-          "width": "stretch",
-          "items": [
-            {
-              "type": "Input.Text",
-              "id": "salesOrg",
-              "label": "Sales org",
-              "placeholder": "e.g. TV01",
-              "value": "${salesOrg}"
-            }
-          ]
-        },
-        {
-          "type": "Column",
-          "width": "stretch",
-          "items": [
-            {
-              "type": "Input.ChoiceSet",
-              "id": "distChannel",
-              "label": "Distribution channel",
-              "style": "compact",
-              "value": "${distChannel}",
-              "choices": "${distChannelChoices}"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "ColumnSet",
-      "spacing": "Small",
-      "$when": "${!useSalesAreaChoices}",
-      "columns": [
-        {
-          "type": "Column",
-          "width": "stretch",
-          "items": [
-            {
-              "type": "Input.ChoiceSet",
-              "id": "division",
-              "label": "Division",
-              "style": "compact",
-              "value": "${division}",
-              "choices": "${divisionChoices}"
-            }
-          ]
-        },
-        {
-          "type": "Column",
-          "width": "stretch",
-          "items": [
-            {
-              "type": "Input.Text",
-              "id": "currency",
-              "label": "Currency",
-              "placeholder": "e.g. USD",
-              "value": "${currency}"
-            }
-          ]
-        }
-      ]
-    },
-    {
       "type": "Input.Text",
       "id": "currency",
       "label": "Currency",
       "placeholder": "e.g. USD",
-      "value": "${currency}",
-      "$when": "${useSalesAreaChoices}"
+      "value": "${currency}"
     },
     {
       "type": "TextBlock",

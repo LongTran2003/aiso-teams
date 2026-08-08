@@ -96,8 +96,8 @@ public class BilingualKeywordTests
         Assert.Contains("DXTR1000", createJson);
         Assert.Contains("ColumnSet", createJson);
         Assert.DoesNotContain("salesOrgCustom", createJson);
-        // Overload without SAP choices keeps text inputs (no ChoiceSet).
-        Assert.DoesNotContain("Input.ChoiceSet", createJson);
+        Assert.Contains("Input.ChoiceSet", createJson);
+        Assert.Contains("salesArea", createJson);
 
         var update = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmUpdateReferenceCard(
             "0000005001", "OLD", "NEW-PO");
