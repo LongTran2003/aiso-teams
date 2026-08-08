@@ -315,23 +315,22 @@ public class SapClient : ISapClient
         var url = $"SalesOrder('{formattedSo}')/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.updateSalesOrder?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
-        var changeRef = !string.IsNullOrWhiteSpace(dto.PurchaseOrderRef);
-        var changeDate = !string.IsNullOrWhiteSpace(dto.ReqDeliveryDate);
-        var reqDate = changeDate ? NormalizeSapDate(dto.ReqDeliveryDate!) : null;
-
+        // Align with ZAISO_A_UPDATE_SO: NEW_REFERENCE, REQUESTED_DELIVERY_DATE, ITEMS
+        // (no CHANGE_* flags — SAP updates a header field only when it is non-initial).
         var payload = new
         {
             REQUESTING_TEAMS_USER = dto.RequestingSapUser.Trim(),
-            CHANGE_REFERENCE = changeRef ? "X" : string.Empty,
-            NEW_REFERENCE = changeRef ? dto.PurchaseOrderRef!.Trim() : string.Empty,
-            CHANGE_REQ_DATE = changeDate ? "X" : string.Empty,
-            REQ_DELIV_DATE = reqDate,
+            NEW_REFERENCE = string.IsNullOrWhiteSpace(dto.PurchaseOrderRef)
+                ? string.Empty
+                : dto.PurchaseOrderRef.Trim(),
+            REQUESTED_DELIVERY_DATE = string.IsNullOrWhiteSpace(dto.ReqDeliveryDate)
+                ? null
+                : NormalizeSapDate(dto.ReqDeliveryDate),
             ITEMS = (dto.Items ?? Array.Empty<UpdateSalesOrderItemDto>()).Select(i => new
             {
                 ITEM_NO = PadItemNumber(i.ItemNumber),
                 MATERIAL = i.Material ?? string.Empty,
                 ORDER_QTY = i.OrderQty ?? 0m,
-                PLANT = i.Plant ?? string.Empty,
                 UNIT = i.Unit ?? string.Empty,
                 CHANGE_FLAG = (i.Operation ?? string.Empty).Trim().ToUpperInvariant()
             }).ToList()

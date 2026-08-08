@@ -156,23 +156,25 @@ public sealed record CreateSalesOrderItemDto
     public required string Unit { get; init; }
 }
 
-/// <summary>Payload for SAP <c>updateSalesOrder</c> (header + optional line ops).</summary>
+/// <summary>Payload for SAP <c>updateSalesOrder</c> (ZAISO_A_UPDATE_SO: NEW_REFERENCE, REQUESTED_DELIVERY_DATE, ITEMS).</summary>
 public sealed record UpdateSalesOrderDto
 {
     public required string SoNumber { get; init; }
     public required string RequestingSapUser { get; init; }
+    /// <summary>Maps to NEW_REFERENCE; omit/empty to leave PO reference unchanged.</summary>
     public string? PurchaseOrderRef { get; init; }
-    /// <summary>yyyy-MM-dd or empty to leave unchanged.</summary>
+    /// <summary>yyyy-MM-dd maps to REQUESTED_DELIVERY_DATE; omit/empty to leave unchanged.</summary>
     public string? ReqDeliveryDate { get; init; }
     public IReadOnlyList<UpdateSalesOrderItemDto> Items { get; init; } = [];
 }
 
 public sealed record UpdateSalesOrderItemDto
 {
-    /// <summary>I = insert, U = update, D = delete.</summary>
+    /// <summary>I = insert, U = update, D = delete (CHANGE_FLAG).</summary>
     public required string Operation { get; init; }
     public string? ItemNumber { get; init; }
     public string? Material { get; init; }
+    /// <summary>Not sent on update OData yet (ZAISO_S_SO_ITEM_UPDATE has no PLANT).</summary>
     public string? Plant { get; init; }
     public decimal? OrderQty { get; init; }
     public string? Unit { get; init; }
