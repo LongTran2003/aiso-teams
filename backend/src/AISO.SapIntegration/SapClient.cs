@@ -1146,6 +1146,163 @@ public class SapClient : ISapClient
         }
     }
 
+    public async Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default)
+    {
+        var url = new ODataQueryBuilder("SalesArea")
+            .AddCustomParam("sap-client", "324")
+            .Top(200)
+            .Build();
+
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (response.StatusCode is System.Net.HttpStatusCode.NotFound
+                or System.Net.HttpStatusCode.BadRequest)
+            {
+                _logger.LogWarning("SalesArea entity unavailable: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapSalesArea>();
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("SalesArea GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapSalesArea>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapSalesAreaDto>>(rawJson, JsonOptions);
+            if (result?.Value is null || result.Value.Count == 0)
+                return Array.Empty<SapSalesArea>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.SalesOrg)
+                            && !string.IsNullOrWhiteSpace(r.DistChannel)
+                            && !string.IsNullOrWhiteSpace(r.Division))
+                .Select(r => new SapSalesArea(
+                    r.SalesOrg!.Trim().ToUpperInvariant(),
+                    r.DistChannel!.Trim().ToUpperInvariant(),
+                    r.Division!.Trim().ToUpperInvariant()))
+                .GroupBy(a => a.Key, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .OrderBy(a => a.SalesOrg, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(a => a.DistChannel, StringComparer.OrdinalIgnoreCase)
+                .ThenBy(a => a.Division, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not SapODataException)
+        {
+            _logger.LogWarning(ex, "SalesArea lookup failed");
+            return Array.Empty<SapSalesArea>();
+        }
+    }
+
+    public async Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        string? division = null,
+        int top = 100,
+        CancellationToken ct = default)
+    {
+        var take = Math.Clamp(top, 1, 200);
+        var builder = new ODataQueryBuilder("ValidCustomer")
+            .AddCustomParam("sap-client", "324")
+            .Top(take);
+
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            builder.Filter("SalesOrg", "eq", salesOrg.Trim().ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(distChannel))
+            builder.Filter("DistChannel", "eq", distChannel.Trim().ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(division))
+            builder.Filter("Division", "eq", division.Trim().ToUpperInvariant());
+
+        var url = builder.Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (response.StatusCode is System.Net.HttpStatusCode.NotFound
+                or System.Net.HttpStatusCode.BadRequest)
+            {
+                _logger.LogWarning("ValidCustomer entity unavailable: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapValidCustomer>();
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("ValidCustomer GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapValidCustomer>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapValidCustomerDto>>(rawJson, JsonOptions);
+            if (result?.Value is null || result.Value.Count == 0)
+                return Array.Empty<SapValidCustomer>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.Customer)
+                            && !string.IsNullOrWhiteSpace(r.SalesOrg))
+                .Select(r => new SapValidCustomer(
+                    r.Customer!.Trim(),
+                    r.SalesOrg!.Trim().ToUpperInvariant(),
+                    (r.DistChannel ?? string.Empty).Trim().ToUpperInvariant(),
+                    (r.Division ?? string.Empty).Trim().ToUpperInvariant(),
+                    r.CustomerName))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not SapODataException)
+        {
+            _logger.LogWarning(ex, "ValidCustomer lookup failed");
+            return Array.Empty<SapValidCustomer>();
+        }
+    }
+
+    public async Task<bool?> IsCustomerValidForSalesAreaAsync(
+        string customer,
+        string salesOrg,
+        string distChannel,
+        string division,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(customer)
+            || string.IsNullOrWhiteSpace(salesOrg)
+            || string.IsNullOrWhiteSpace(distChannel)
+            || string.IsNullOrWhiteSpace(division))
+            return false;
+
+        var rows = await GetValidCustomersAsync(
+            salesOrg.Trim(),
+            distChannel.Trim(),
+            division.Trim(),
+            top: 50,
+            ct);
+
+        // Entity missing → empty list from soft-fail; treat as unknown.
+        if (rows.Count == 0)
+        {
+            // Distinguish "no match" vs "entity down": probe unfiltered top 1.
+            var any = await GetValidCustomersAsync(top: 1, ct: ct);
+            if (any.Count == 0)
+                return null;
+            return false;
+        }
+
+        var needle = customer.Trim().TrimStart('0');
+        if (string.IsNullOrEmpty(needle))
+            needle = customer.Trim();
+
+        return rows.Any(r =>
+        {
+            var id = r.Customer.Trim().TrimStart('0');
+            if (string.IsNullOrEmpty(id))
+                id = r.Customer.Trim();
+            return string.Equals(id, needle, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(r.Customer.Trim(), customer.Trim(), StringComparison.OrdinalIgnoreCase);
+        });
+    }
+
     public async Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(sapUserId))

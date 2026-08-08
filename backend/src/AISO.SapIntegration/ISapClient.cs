@@ -132,6 +132,73 @@ public interface ISapClient
     /// (<c>UserRole</c> / <c>ZAISO_USER_ROLE</c>). Null means the lookup was unavailable.
     /// </summary>
     Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default);
+
+    /// <summary>Valid sales areas from <c>SalesArea</c> (TVTA).</summary>
+    Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default);
+
+    /// <summary>Customers valid per sales area from <c>ValidCustomer</c> (KNVV).</summary>
+    Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        string? division = null,
+        int top = 100,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Whether customer is maintained for the sales area.
+    /// <c>null</c> = lookup unavailable (caller may proceed).
+    /// </summary>
+    Task<bool?> IsCustomerValidForSalesAreaAsync(
+        string customer,
+        string salesOrg,
+        string distChannel,
+        string division,
+        CancellationToken ct = default);
+}
+
+/// <summary>OData <c>SalesArea</c> row (VKORG / VTWEG / SPART).</summary>
+public sealed record SapSalesArea(string SalesOrg, string DistChannel, string Division)
+{
+    public string Key => $"{SalesOrg}|{DistChannel}|{Division}";
+    public string Label => $"{SalesOrg} / {DistChannel} / {Division}";
+
+    public static bool TryParseKey(string? key, out string salesOrg, out string distChannel, out string division)
+    {
+        salesOrg = distChannel = division = string.Empty;
+        if (string.IsNullOrWhiteSpace(key))
+            return false;
+
+        var parts = key.Split('|', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length != 3)
+            return false;
+
+        salesOrg = parts[0].ToUpperInvariant();
+        distChannel = parts[1].ToUpperInvariant();
+        division = parts[2].ToUpperInvariant();
+        return true;
+    }
+}
+
+/// <summary>OData <c>ValidCustomer</c> row (KNVV + name).</summary>
+public sealed record SapValidCustomer(
+    string Customer,
+    string SalesOrg,
+    string DistChannel,
+    string Division,
+    string? CustomerName = null)
+{
+    public string Label
+    {
+        get
+        {
+            var id = Customer.TrimStart('0');
+            if (string.IsNullOrEmpty(id))
+                id = Customer;
+            var name = string.IsNullOrWhiteSpace(CustomerName) ? null : CustomerName.Trim();
+            var area = $"{SalesOrg}/{DistChannel}/{Division}";
+            return name is null ? $"{id} ({area})" : $"{id} · {name} ({area})";
+        }
+    }
 }
 
 public sealed record CreateSalesOrderDto

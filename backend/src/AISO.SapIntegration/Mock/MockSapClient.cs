@@ -508,4 +508,64 @@ public sealed class MockSapClient : ISapClient
             || normalized.StartsWith("DEV-", StringComparison.Ordinal);
         return Task.FromResult<bool?>(known);
     }
+
+    public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default)
+    {
+        IReadOnlyList<SapSalesArea> areas =
+        [
+            new("TV01", "10", "00"),
+            new("FU24", "10", "00"),
+            new("UE00", "10", "00"),
+            new("UW00", "10", "00"),
+            new("DN00", "10", "00"),
+            new("DS00", "10", "00")
+        ];
+        return Task.FromResult(areas);
+    }
+
+    public Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        string? division = null,
+        int top = 100,
+        CancellationToken ct = default)
+    {
+        IEnumerable<SapValidCustomer> rows =
+        [
+            new("10100001", "TV01", "10", "00", "Domestic Customer US"),
+            new("10100002", "TV01", "10", "00", "Philly Bikes"),
+            new("10100001", "FU24", "10", "00", "Domestic Customer US"),
+            new("17100001", "FU24", "10", "00", "Customer FU24")
+        ];
+
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            rows = rows.Where(r => string.Equals(r.SalesOrg, salesOrg.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(distChannel))
+            rows = rows.Where(r => string.Equals(r.DistChannel, distChannel.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(division))
+            rows = rows.Where(r => string.Equals(r.Division, division.Trim(), StringComparison.OrdinalIgnoreCase));
+
+        return Task.FromResult<IReadOnlyList<SapValidCustomer>>(rows.Take(Math.Clamp(top, 1, 200)).ToList());
+    }
+
+    public async Task<bool?> IsCustomerValidForSalesAreaAsync(
+        string customer,
+        string salesOrg,
+        string distChannel,
+        string division,
+        CancellationToken ct = default)
+    {
+        var rows = await GetValidCustomersAsync(salesOrg, distChannel, division, top: 50, ct);
+        var needle = customer.Trim().TrimStart('0');
+        if (string.IsNullOrEmpty(needle))
+            needle = customer.Trim();
+
+        return rows.Any(r =>
+        {
+            var id = r.Customer.Trim().TrimStart('0');
+            if (string.IsNullOrEmpty(id))
+                id = r.Customer.Trim();
+            return string.Equals(id, needle, StringComparison.OrdinalIgnoreCase);
+        });
+    }
 }

@@ -237,6 +237,14 @@ public class ForceCancelRoutingTests
             => throw new NotImplementedException();
         public Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default)
             => throw new NotImplementedException();
+        public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default)
+            => throw new NotImplementedException();
+        public Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
+            string? salesOrg = null, string? distChannel = null, string? division = null, int top = 100, CancellationToken ct = default)
+            => throw new NotImplementedException();
+        public Task<bool?> IsCustomerValidForSalesAreaAsync(
+            string customer, string salesOrg, string distChannel, string division, CancellationToken ct = default)
+            => throw new NotImplementedException();
     }
 
     private sealed class NoopApprovals : IOrderApprovalService
