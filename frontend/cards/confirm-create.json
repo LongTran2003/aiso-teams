@@ -36,18 +36,68 @@
       "value": "${customer}"
     },
     {
-      "type": "Input.Text",
-      "id": "salesOrg",
-      "label": "Sales org",
-      "placeholder": "e.g. 1010",
-      "value": "${salesOrg}"
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "salesOrg",
+              "label": "Sales org",
+              "placeholder": "e.g. 1010",
+              "value": "${salesOrg}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "distChannel",
+              "label": "Distribution channel",
+              "placeholder": "e.g. 10",
+              "value": "${distChannel}"
+            }
+          ]
+        }
+      ]
     },
     {
-      "type": "Input.Text",
-      "id": "currency",
-      "label": "Currency",
-      "placeholder": "e.g. USD",
-      "value": "${currency}"
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "division",
+              "label": "Division",
+              "placeholder": "e.g. 00",
+              "value": "${division}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "currency",
+              "label": "Currency",
+              "placeholder": "e.g. USD",
+              "value": "${currency}"
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "TextBlock",

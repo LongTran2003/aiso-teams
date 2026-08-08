@@ -58,6 +58,8 @@ public sealed class CreateOrderFunction : IFunction
     {
         var customer = ReadString(parameters, "customer") ?? "10100001";
         var salesOrg = ReadString(parameters, "sales_org") ?? "1010";
+        var distChannel = ReadString(parameters, "dist_channel") ?? "10";
+        var division = ReadString(parameters, "division") ?? "00";
         var currency = ReadString(parameters, "currency") ?? "USD";
         var plant = "1010";
         var unit = "PC";
@@ -102,7 +104,9 @@ public sealed class CreateOrderFunction : IFunction
             Currency: currency.Trim().ToUpperInvariant(),
             Plant: plant.Trim(),
             Unit: unit.Trim().ToUpperInvariant(),
-            Lines: lines)));
+            Lines: lines,
+            DistChannel: distChannel.Trim(),
+            Division: division.Trim())));
     }
 
     private static string? ReadString(JsonElement element, string name) =>
@@ -120,7 +124,9 @@ public sealed record ConfirmCreateOrderResponse(
     string Currency,
     string Plant,
     string Unit,
-    IReadOnlyList<ConfirmCreateOrderLine> Lines)
+    IReadOnlyList<ConfirmCreateOrderLine> Lines,
+    string DistChannel = "10",
+    string Division = "00")
 {
     /// <summary>First line material (tests / legacy callers).</summary>
     public string Material => Lines.Count > 0 ? Lines[0].Material : string.Empty;

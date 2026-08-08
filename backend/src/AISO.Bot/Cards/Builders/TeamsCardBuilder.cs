@@ -158,6 +158,8 @@ internal static class TeamsCardBuilder
             {
                 customer = draft.Customer,
                 salesOrg = string.IsNullOrWhiteSpace(draft.SalesOrg) ? "1010" : draft.SalesOrg,
+                distChannel = string.IsNullOrWhiteSpace(draft.DistChannel) ? "10" : draft.DistChannel,
+                division = string.IsNullOrWhiteSpace(draft.Division) ? "00" : draft.Division,
                 currency = string.IsNullOrWhiteSpace(draft.Currency) ? "USD" : draft.Currency,
                 plant = string.IsNullOrWhiteSpace(draft.Plant) ? "1010" : draft.Plant,
                 unit = string.IsNullOrWhiteSpace(draft.Unit) ? "PC" : draft.Unit,
