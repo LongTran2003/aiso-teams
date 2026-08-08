@@ -411,118 +411,141 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD createSalesOrder.
-    " GIỮ NGUYÊN — đã fix lỗi CALL_FUNCTION_CONFLICT_LENG.
-    " KHÔNG dùng DATA(lv_requesting_user) = ... inline (gây suy luận sai kiểu).
-    " PHẢI khai báo tường minh TYPE char100 như dưới đây.
-    DATA: ls_header_in       TYPE bapisdhead1,
-          ls_header_inx      TYPE bapisdhead1x,
-          lt_partners        TYPE TABLE OF bapiparnr,
-          lt_items_in        TYPE TABLE OF bapiitemin,
-          lt_return          TYPE TABLE OF bapiret2,
-          lv_so_number       TYPE vbeln_va,
-          lv_timestamp       TYPE c LENGTH 14,
-          lv_audit_id        TYPE sysuuid_c32,
-          lv_requesting_user TYPE char100.
+  DATA: ls_header_in       TYPE bapisdhd1,
+        ls_header_inx      TYPE bapisdhd1x,
+        lt_partners        TYPE TABLE OF bapiparnr,
+        lt_items_in        TYPE TABLE OF bapisditm,
+        lt_items_inx       TYPE TABLE OF bapisditmx,
+        lt_schedules_in    TYPE TABLE OF bapischdl,
+        lt_schedules_inx   TYPE TABLE OF bapischdlx,
+        lt_return          TYPE TABLE OF bapiret2,
+        lv_so_number       TYPE vbeln_va,
+        lv_timestamp       TYPE c LENGTH 14,
+        lv_audit_id        TYPE sysuuid_c32,
+        lv_requesting_user TYPE char100,
+        lv_item_no         TYPE posnr_va.
 
-    LOOP AT keys INTO DATA(ls_key).
-      CLEAR: ls_header_in, ls_header_inx, lt_partners, lt_items_in, lt_return, lv_so_number.
+  LOOP AT keys INTO DATA(ls_key).
+    CLEAR: ls_header_in, ls_header_inx, lt_partners,
+           lt_items_in, lt_items_inx, lt_schedules_in, lt_schedules_inx,
+           lt_return, lv_so_number.
 
-      lv_requesting_user = ls_key-%param-requesting_teams_user.
-      DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
+    lv_requesting_user = ls_key-%param-requesting_teams_user.
+    DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
 
-      IF lv_requesting_user IS INITIAL.
-        APPEND VALUE #( %cid        = ls_key-%cid
-                         %fail-cause = if_abap_behv=>cause-unauthorized )
-               TO failed-salesorder.
-        APPEND VALUE #( %cid = ls_key-%cid
-                         %msg = new_message(
-                           id       = '00'
-                           number   = '001'
-                           severity = if_abap_behv_message=>severity-error
-                           v1       = 'Requesting user is required' ) )
-               TO reported-salesorder.
-        CONTINUE.
-      ENDIF.
+    IF lv_requesting_user IS INITIAL.
+      APPEND VALUE #( %cid        = ls_key-%cid
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+             TO failed-salesorder.
+      APPEND VALUE #( %cid = ls_key-%cid
+                       %msg = new_message(
+                         id       = '00'
+                         number   = '001'
+                         severity = if_abap_behv_message=>severity-error
+                         v1       = 'Requesting user is required' ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
 
-      ls_header_in-doc_type   = ls_key-%param-doc_type.
-      ls_header_in-sales_org  = ls_key-%param-sales_org.
-      ls_header_in-distr_chan = ls_key-%param-dist_channel.
-      ls_header_in-division   = ls_key-%param-division.
-      ls_header_in-currency   = ls_key-%param-currency.
+    ls_header_in-doc_type   = ls_key-%param-doc_type.
+    ls_header_in-sales_org  = ls_key-%param-sales_org.
+    ls_header_in-distr_chan = ls_key-%param-dist_channel.
+    ls_header_in-division   = ls_key-%param-division.
+    ls_header_in-currency   = ls_key-%param-currency.
 
-      ls_header_inx-doc_type   = 'X'.
-      ls_header_inx-sales_org  = 'X'.
-      ls_header_inx-distr_chan = 'X'.
-      ls_header_inx-division   = 'X'.
-      ls_header_inx-currency   = 'X'.
+    ls_header_inx-doc_type   = 'X'.
+    ls_header_inx-sales_org  = 'X'.
+    ls_header_inx-distr_chan = 'X'.
+    ls_header_inx-division   = 'X'.
+    ls_header_inx-currency   = 'X'.
+    ls_header_inx-updateflag = 'I'.
 
-      APPEND VALUE #( partn_role = 'AG' partn_numb = ls_key-%param-customer ) TO lt_partners.
+    APPEND VALUE #( partn_role = 'AG' partn_numb = ls_key-%param-customer ) TO lt_partners.
 
-      LOOP AT ls_key-%param-items INTO DATA(ls_item).
-        APPEND VALUE #( material   = ls_item-material
-                         plant      = ls_item-plant
-                         target_qty = ls_item-order_qty
-                         target_qu  = ls_item-unit ) TO lt_items_in.
-      ENDLOOP.
+    lv_item_no = 0.
+    LOOP AT ls_key-%param-items INTO DATA(ls_item).
+      lv_item_no = lv_item_no + 10.
 
-      CALL FUNCTION 'BAPI_SALESORDER_CREATEFROMDAT2'
-        EXPORTING
-          order_header_in  = ls_header_in
-          order_header_inx = ls_header_inx
-        IMPORTING
-          salesdocument    = lv_so_number
-        TABLES
-          return           = lt_return
-          order_partners   = lt_partners
-          order_items_in   = lt_items_in.
+      APPEND VALUE #( itm_number = lv_item_no
+                       material   = ls_item-material
+                       plant      = ls_item-plant
+                       target_qty = ls_item-order_qty
+                       target_qu  = ls_item-unit ) TO lt_items_in.
 
-      READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
-      IF sy-subrc = 0.
-        APPEND VALUE #( %cid        = ls_key-%cid
-                         %fail-cause = if_abap_behv=>cause-unspecific )
-               TO failed-salesorder.
-        APPEND VALUE #( %cid = ls_key-%cid
-                         %msg = new_message(
-                           id       = ls_error-id
-                           number   = ls_error-number
-                           severity = if_abap_behv_message=>severity-error
-                           v1       = ls_error-message_v1
-                           v2       = ls_error-message_v2
-                           v3       = ls_error-message_v3
-                           v4       = ls_error-message_v4 ) )
-               TO reported-salesorder.
-        CONTINUE.
-      ENDIF.
+      APPEND VALUE #( itm_number = lv_item_no
+                       material   = 'X'
+                       plant      = 'X'
+                       target_qty = 'X'
+                       target_qu  = 'X' ) TO lt_items_inx.
 
-      APPEND VALUE #(
-        mandt     = sy-mandt
-        so_number = lv_so_number
-        sap_user  = lv_requesting_user
-      ) TO lcl_buffer=>gt_so_map_db.
+      APPEND VALUE #( itm_number = lv_item_no
+                       req_qty    = ls_item-order_qty ) TO lt_schedules_in.
 
-      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
-
-      TRY.
-          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
-        CATCH cx_uuid_error.
-          CLEAR lv_audit_id.
-      ENDTRY.
-
-      APPEND VALUE #(
-        mandt       = sy-mandt
-        audit_id    = lv_audit_id
-        sap_user    = lv_requesting_user
-        actor_role  = lv_role
-        action_type = 'CREATE_SO'
-        so_number   = lv_so_number
-        status      = 'SUCCESS'
-        created_at  = lv_timestamp
-      ) TO lcl_buffer=>gt_audit_db.
-
-      APPEND VALUE #( %cid             = ls_key-%cid
-                       %param-SoNumber = lv_so_number ) TO result.
+      APPEND VALUE #( itm_number = lv_item_no
+                       req_qty    = 'X' ) TO lt_schedules_inx.
     ENDLOOP.
-  ENDMETHOD.
+
+    CALL FUNCTION 'BAPI_SALESORDER_CREATEFROMDAT2'
+      EXPORTING
+        order_header_in    = ls_header_in
+        order_header_inx   = ls_header_inx
+      IMPORTING
+        salesdocument      = lv_so_number
+      TABLES
+        return              = lt_return
+        order_partners      = lt_partners
+        order_items_in      = lt_items_in
+        order_items_inx     = lt_items_inx
+        order_schedules_in  = lt_schedules_in
+        order_schedules_inx = lt_schedules_inx.
+
+    READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
+    IF sy-subrc = 0.
+      APPEND VALUE #( %cid        = ls_key-%cid
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-salesorder.
+      APPEND VALUE #( %cid = ls_key-%cid
+                       %msg = new_message(
+                         id       = ls_error-id
+                         number   = ls_error-number
+                         severity = if_abap_behv_message=>severity-error
+                         v1       = ls_error-message_v1
+                         v2       = ls_error-message_v2
+                         v3       = ls_error-message_v3
+                         v4       = ls_error-message_v4 ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    APPEND VALUE #(
+      mandt     = sy-mandt
+      so_number = lv_so_number
+      sap_user  = lv_requesting_user
+    ) TO lcl_buffer=>gt_so_map_db.
+
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
+
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = lv_requesting_user
+      actor_role  = lv_role
+      action_type = 'CREATE_SO'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
+
+    APPEND VALUE #( %cid             = ls_key-%cid
+                     %param-SoNumber = lv_so_number ) TO result.
+  ENDLOOP.
+ENDMETHOD.
 
   METHOD cancelorder.
     " SỬA: Employee chỉ hủy được đơn của chính mình; Manager/Admin hủy được mọi đơn.
@@ -718,92 +741,134 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD updatesalesorder.
-    DATA: ls_header_in       TYPE bapisdh1,
-          ls_header_inx      TYPE bapisdh1x,
-          lt_return          TYPE TABLE OF bapiret2,
-          lv_timestamp       TYPE c LENGTH 14,
-          lv_audit_id        TYPE sysuuid_c32,
-          lv_so_number       TYPE vbeln_va,
-          lv_requesting_user TYPE char100.
+  DATA: ls_header_in       TYPE bapisdh1,
+        ls_header_inx      TYPE bapisdh1x,
+        lt_items_in        TYPE TABLE OF bapisditm,
+        lt_items_inx       TYPE TABLE OF bapisditmx,
+        lt_return          TYPE TABLE OF bapiret2,
+        lv_timestamp       TYPE c LENGTH 14,
+        lv_audit_id        TYPE sysuuid_c32,
+        lv_so_number       TYPE vbeln_va,
+        lv_requesting_user TYPE char100.
 
-    LOOP AT keys INTO DATA(ls_key).
-      lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
-      lv_requesting_user = ls_key-%param-requesting_teams_user.
-      DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
+  LOOP AT keys INTO DATA(ls_key).
+    lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
+    lv_requesting_user = ls_key-%param-requesting_teams_user.
+    DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
 
-      SELECT SINGLE sap_user FROM zaiso_so_map
-        INTO @DATA(lv_owner)
-        WHERE so_number = @lv_so_number.
+    SELECT SINGLE sap_user FROM zaiso_so_map
+      INTO @DATA(lv_owner)
+      WHERE so_number = @lv_so_number.
 
-      " Cùng logic với cancelOrder: Employee chỉ sửa đơn của mình, Manager/Admin sửa được mọi đơn.
-      IF lv_role = 'EMPLOYEE' AND lv_owner IS NOT INITIAL AND lv_owner <> lv_requesting_user.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unauthorized )
-               TO failed-salesorder.
-        APPEND VALUE #( %tky = ls_key-%tky
-                         %msg = new_message( id       = '00'
-                                              number   = '001'
-                                              severity = if_abap_behv_message=>severity-error
-                                              v1       = 'Only owner, Manager, or Admin can edit this order' ) )
-               TO reported-salesorder.
-        CONTINUE.
-      ENDIF.
+    IF lv_role = 'EMPLOYEE' AND lv_owner IS NOT INITIAL AND lv_owner <> lv_requesting_user.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Only owner, Manager, or Admin can edit this order' ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
 
-      CLEAR: ls_header_in, ls_header_inx, lt_return.
+    CLEAR: ls_header_in, ls_header_inx, lt_items_in, lt_items_inx, lt_return.
 
-      " TODO: xác nhận field thật — ví dụ hiện tại giả định 2 field sau:
-      ls_header_in-purch_no_c    = ls_key-%param-customer_reference.
-      ls_header_inx-purch_no_c   = 'X'.
-      ls_header_in-req_date_h    = ls_key-%param-requested_delivery_date.
-      ls_header_inx-req_date_h   = 'X'.
+    " --- Header fields (chỉ set khi có giá trị, tránh ghi đè rỗng ---
+    IF ls_key-%param-new_reference IS NOT INITIAL.
+      ls_header_in-purch_no_c  = ls_key-%param-new_reference.
+      ls_header_inx-purch_no_c = 'X'.
+    ENDIF.
 
-      CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
-        EXPORTING
-          salesdocument    = lv_so_number
-          order_header_in  = ls_header_in
-          order_header_inx = ls_header_inx
-        TABLES
-          return           = lt_return.
+    IF ls_key-%param-requested_delivery_date IS NOT INITIAL.
+      ls_header_in-req_date_h  = ls_key-%param-requested_delivery_date.
+      ls_header_inx-req_date_h = 'X'.
+    ENDIF.
 
-      READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
-      IF sy-subrc = 0.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unspecific )
-               TO failed-salesorder.
-        APPEND VALUE #( %tky = ls_key-%tky
-                         %msg = new_message( id       = ls_error-id
-                                              number   = ls_error-number
-                                              severity = if_abap_behv_message=>severity-error
-                                              v1       = ls_error-message_v1
-                                              v2       = ls_error-message_v2
-                                              v3       = ls_error-message_v3
-                                              v4       = ls_error-message_v4 ) )
-               TO reported-salesorder.
-        CONTINUE.
-      ENDIF.
+    ls_header_inx-updateflag = 'U'.
 
-      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+    " --- Items: xử lý theo change_flag I/U/D ---
+    LOOP AT ls_key-%param-items INTO DATA(ls_line).
+      CASE ls_line-change_flag.
+        WHEN 'I'.
+          APPEND VALUE #( itm_number = ls_line-item_no  " có thể trống, SAP tự gán
+                           material   = ls_line-material
+                           target_qty = ls_line-order_qty
+                           target_qu  = ls_line-unit )   TO lt_items_in.
+          APPEND VALUE #( itm_number = ls_line-item_no
+                           updateflag = 'I'
+                           material   = 'X'
+                           target_qty = 'X'
+                           target_qu  = 'X' )            TO lt_items_inx.
 
-      TRY.
-          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
-        CATCH cx_uuid_error.
-          CLEAR lv_audit_id.
-      ENDTRY.
+        WHEN 'U'.
+          APPEND VALUE #( itm_number = ls_line-item_no
+                           material   = ls_line-material
+                           target_qty = ls_line-order_qty
+                           target_qu  = ls_line-unit )   TO lt_items_in.
+          APPEND VALUE #( itm_number = ls_line-item_no
+                           updateflag = 'U'
+                           material   = 'X'
+                           target_qty = 'X'
+                           target_qu  = 'X' )            TO lt_items_inx.
 
-      APPEND VALUE #(
-        mandt       = sy-mandt
-        audit_id    = lv_audit_id
-        sap_user    = lv_requesting_user
-        actor_role  = lv_role
-        action_type = 'UPDATE_SO'
-        so_number   = lv_so_number
-        status      = 'SUCCESS'
-        created_at  = lv_timestamp
-      ) TO lcl_buffer=>gt_audit_db.
-
-      APPEND VALUE #( %tky = ls_key-%tky ) TO result.
+        WHEN 'D'.
+          APPEND VALUE #( itm_number = ls_line-item_no ) TO lt_items_in.
+          APPEND VALUE #( itm_number = ls_line-item_no
+                           updateflag = 'D' )            TO lt_items_inx.
+      ENDCASE.
     ENDLOOP.
-  ENDMETHOD.
+
+    CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
+      EXPORTING
+        salesdocument    = lv_so_number
+        order_header_in  = ls_header_in
+        order_header_inx = ls_header_inx
+      TABLES
+        order_item_in    = lt_items_in
+        order_item_inx   = lt_items_inx
+        return           = lt_return.
+
+    READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
+    IF sy-subrc = 0.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = ls_error-id
+                                            number   = ls_error-number
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = ls_error-message_v1
+                                            v2       = ls_error-message_v2
+                                            v3       = ls_error-message_v3
+                                            v4       = ls_error-message_v4 ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
+
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = lv_requesting_user
+      actor_role  = lv_role
+      action_type = 'UPDATE_SO'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
+
+    APPEND VALUE #( %tky = ls_key-%tky ) TO result.
+  ENDLOOP.
+ENDMETHOD.
 
   METHOD read.
     DATA(lt_keys) = keys.
