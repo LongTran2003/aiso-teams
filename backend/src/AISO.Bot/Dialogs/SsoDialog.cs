@@ -134,7 +134,8 @@ public class SsoDialog : ComponentDialog
             sapUsername,
             cancellationToken,
             role: assignment?.Role,
-            salesOrg: assignment?.SalesOrg);
+            salesOrg: assignment?.SalesOrg,
+            delegatedBy: assignment?.DelegatedBySapUser);
 
         if (assignment is not null)
             await _userMappingService.BindAssignmentTeamsUserAsync(assignment, teamsId, cancellationToken);

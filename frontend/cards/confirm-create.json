@@ -18,7 +18,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "Pick a customer (includes sales area). Up to 5 materials.",
+          "text": "Pick a customer (includes sales area). Up to 8 materials.",
           "size": "Small",
           "isSubtle": true,
           "spacing": "None",
@@ -204,6 +204,7 @@
         }
       ]
     },
+
     {
       "type": "ColumnSet",
       "spacing": "Small",
@@ -231,6 +232,102 @@
               "label": "Qty",
               "min": 0,
               "value": "${qty5}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "material6",
+              "label": "Material 6",
+              "placeholder": "Optional",
+              "value": "${material6}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty6",
+              "label": "Qty",
+              "min": 0,
+              "value": "${qty6}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "material7",
+              "label": "Material 7",
+              "placeholder": "Optional",
+              "value": "${material7}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty7",
+              "label": "Qty",
+              "min": 0,
+              "value": "${qty7}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "material8",
+              "label": "Material 8",
+              "placeholder": "Optional",
+              "value": "${material8}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty8",
+              "label": "Qty",
+              "min": 0,
+              "value": "${qty8}"
             }
           ]
         }

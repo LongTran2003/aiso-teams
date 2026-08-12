@@ -25,6 +25,9 @@ public class UserMapping
     /// <summary>Sales organization (VKORG) this user is scoped to. Used for Manager scoping. Nullable.</summary>
     public string? SalesOrg { get; set; }
 
+    /// <summary>SAP ID of the Manager who delegated their approval rights to this user.</summary>
+    public string? DelegatedBySapUser { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

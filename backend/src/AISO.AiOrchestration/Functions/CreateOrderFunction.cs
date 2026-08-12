@@ -12,7 +12,7 @@ namespace AISO.AiOrchestration.Functions;
 /// </summary>
 public sealed class CreateOrderFunction : IFunction
 {
-    public const int MaxLineSlots = 5;
+    public const int MaxLineSlots = 8;
 
     private readonly ISapClient _sap;
     private readonly IUserScopeLookup _scope;
@@ -91,8 +91,13 @@ public sealed class CreateOrderFunction : IFunction
                 var qty = 1m;
                 if (item.TryGetProperty("qty", out var q) && q.ValueKind == JsonValueKind.Number)
                     qty = q.GetDecimal();
-                if (qty < 1)
-                    qty = 1m;
+
+                if (qty <= 0)
+                {
+                    return FunctionResult.Fail(
+                        $"Material {material.Trim().ToUpperInvariant()} has invalid quantity ({qty}). Quantity must be greater than 0.",
+                        "VALIDATION");
+                }
 
                 plant = ReadString(item, "plant") ?? plant;
                 unit = ReadString(item, "unit") ?? unit;
@@ -104,7 +109,7 @@ public sealed class CreateOrderFunction : IFunction
         }
 
         if (lines.Count == 0)
-            lines.Add(new ConfirmCreateOrderLine("TG11", 1m));
+            return FunctionResult.Fail("At least one material with a valid quantity is required.", "VALIDATION");
 
         var areas = await _sap.GetSalesAreasAsync(ct);
         var customers = await _sap.GetValidCustomersAsync(

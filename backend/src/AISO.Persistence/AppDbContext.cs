@@ -24,6 +24,7 @@ public class AppDbContext : DbContext
             b.Property(x => x.SapUserId).HasMaxLength(64);
             b.Property(x => x.Role).HasConversion<string>().HasMaxLength(16).IsRequired();
             b.Property(x => x.SalesOrg).HasMaxLength(8);
+            b.Property(x => x.DelegatedBySapUser).HasMaxLength(64);
             b.HasIndex(x => x.TeamsUserId).IsUnique();
             // SapUserId uniqueness is enforced in link dialog (allow-list + app check).
             // DB unique index is skipped: demo DB may already contain duplicate links.
@@ -70,6 +71,7 @@ public class AppDbContext : DbContext
             b.Property(x => x.TeamsUserId).HasMaxLength(128);
             b.Property(x => x.Role).HasConversion<string>().HasMaxLength(16).IsRequired();
             b.Property(x => x.SalesOrg).HasMaxLength(8);
+            b.Property(x => x.DelegatedBySapUser).HasMaxLength(64);
             b.HasIndex(x => x.SapUserId).IsUnique();
             b.HasIndex(x => x.TeamsEmail)
                 .IsUnique()

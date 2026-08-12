@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 using AISO.Domain.Approvals;
 using AISO.Domain.SalesOrders;
 using AISO.Domain.Users;
@@ -17,17 +18,20 @@ public sealed class ApproveOrderFunction : IFunction
     private readonly IOrderApprovalService _approvals;
     private readonly IUserScopeLookup _scope;
     private readonly ILogger<ApproveOrderFunction> _logger;
+    private readonly Microsoft.Extensions.Configuration.IConfiguration _config;
 
     public ApproveOrderFunction(
         ISapClient sap,
         IOrderApprovalService approvals,
         IUserScopeLookup scope,
-        ILogger<ApproveOrderFunction> logger)
+        ILogger<ApproveOrderFunction> logger,
+        Microsoft.Extensions.Configuration.IConfiguration config)
     {
         _sap = sap;
         _approvals = approvals;
         _scope = scope;
         _logger = logger;
+        _config = config;
     }
 
     public string Name => "ApproveOrder";
@@ -73,7 +77,13 @@ public sealed class ApproveOrderFunction : IFunction
         {
             var role = await _scope.GetRoleBySapUserAsync(requestingSapUser, ct);
             var salesOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
+            var delegatedBy = await _scope.GetDelegatedBySapUserAsync(requestingSapUser, ct);
             var isAdmin = role == UserRole.Admin;
+
+            if (role < UserRole.Manager && string.IsNullOrWhiteSpace(delegatedBy))
+            {
+                return FunctionResult.Fail("Only Manager or Admin can approve release requests (or a delegated user).", "UNAUTHORIZED");
+            }
 
             var pending = await _approvals.GetPendingBySoNumberAsync(orderId, ct);
             if (pending is null)
@@ -102,6 +112,17 @@ public sealed class ApproveOrderFunction : IFunction
                 return FunctionResult.Fail(
                     SalesOrderWorkflow.BuildInvalidMaterialBlockedMessage("Approve / release"),
                     "VALIDATION");
+            }
+
+            if (!isAdmin && existing is not null)
+            {
+                var managerMax = _config.GetValue<decimal?>("ApprovalThresholds:ManagerMaxAmount");
+                if (managerMax.HasValue && existing.NetValue > managerMax.Value)
+                {
+                    return FunctionResult.Fail(
+                        $"Order value ({existing.NetValue:N2}) exceeds your approval threshold of {managerMax.Value:N2}.",
+                        "VALIDATION");
+                }
             }
 
             // Phase A: SAP approveOrder enforces ZAISO_USER_ROLE and performs release (no ownership).

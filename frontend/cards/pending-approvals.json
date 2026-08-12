@@ -103,6 +103,19 @@
           "columns": [
             {
               "type": "Column",
+              "width": "auto",
+              "verticalContentAlignment": "Center",
+              "items": [
+                {
+                  "type": "Input.Toggle",
+                  "id": "toggle_${orderId}",
+                  "title": "",
+                  "value": "false"
+                }
+              ]
+            },
+            {
+              "type": "Column",
               "width": "stretch",
               "items": [
                 {
@@ -187,6 +200,37 @@
             }
           ],
           "spacing": "Small"
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "spacing": "Large",
+      "$when": "${count > 0}",
+      "items": [
+        {
+          "type": "Input.Text",
+          "id": "bulk_comment",
+          "label": "Comment (optional)",
+          "placeholder": "Enter a comment for selected orders"
+        },
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.Submit",
+              "title": "Approve Selected",
+              "style": "positive",
+              "data": {
+                "msteams": {
+                  "type": "messageBack",
+                  "displayText": "Bulk approve selected orders",
+                  "text": "bulk approve selected orders"
+                },
+                "action": "bulk_approve_so"
+              }
+            }
+          ]
         }
       ]
     }
