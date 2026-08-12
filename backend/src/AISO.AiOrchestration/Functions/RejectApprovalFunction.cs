@@ -72,6 +72,12 @@ public sealed class RejectApprovalFunction : IFunction
         {
             var role = await _scope.GetRoleBySapUserAsync(requestingSapUser, ct);
             var salesOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
+            var delegatedBy = await _scope.GetDelegatedBySapUserAsync(requestingSapUser, ct);
+
+            if (role < UserRole.Manager && string.IsNullOrWhiteSpace(delegatedBy))
+            {
+                return FunctionResult.Fail("Only Manager or Admin can reject release requests (or a delegated user).", "UNAUTHORIZED");
+            }
 
             // Phase A: SAP role gate + audit (no SO reject BAPI).
             await _sap.RejectApprovalAsync(orderId, requestingSapUser, ct);

@@ -38,6 +38,7 @@ public static class ServiceCollectionExtensions
         // Maker-checker + admin
         services.AddSingleton<IFunction, RequestReleaseFunction>();
         services.AddSingleton<IFunction, ApproveOrderFunction>();
+        services.AddSingleton<IFunction, ApproveSelectedOrdersFunction>();
         services.AddSingleton<IFunction, RejectApprovalFunction>();
         services.AddSingleton<IFunction, GetPendingApprovalsFunction>();
         services.AddSingleton<IFunction, ViewAuditLogFunction>();

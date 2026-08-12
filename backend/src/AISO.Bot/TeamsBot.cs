@@ -18,6 +18,7 @@ using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Builder.Teams;
 using AISO.Bot.Dialogs;
 using AISO.Bot.Services;
+using Microsoft.Extensions.Configuration;
 
 namespace AISO.Bot;
 
@@ -33,6 +34,7 @@ public class TeamsBot : TeamsActivityHandler
     private readonly SsoDialog _dialog;
     private readonly UserMappingService _userMappingService;
     private readonly IBotUserAdminService _botUserAdmin;
+    private readonly Microsoft.Extensions.Configuration.IConfiguration _config;
 
     public TeamsBot(
         IFunctionDispatcher dispatcher,
@@ -44,7 +46,8 @@ public class TeamsBot : TeamsActivityHandler
         UserState userState,
         SsoDialog dialog,
         UserMappingService userMappingService,
-        IBotUserAdminService botUserAdmin)
+        IBotUserAdminService botUserAdmin,
+        Microsoft.Extensions.Configuration.IConfiguration config)
     {
         _dispatcher = dispatcher;
         _sap = sap;
@@ -56,6 +59,7 @@ public class TeamsBot : TeamsActivityHandler
         _dialog = dialog;
         _userMappingService = userMappingService;
         _botUserAdmin = botUserAdmin;
+        _config = config;
     }
 
     public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default)
@@ -852,6 +856,143 @@ public class TeamsBot : TeamsActivityHandler
                         return;
                     }
 
+                    if (string.Equals(action, "bulk_approve_so", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var comment = valueObj.TryGetValue("bulk_comment", StringComparison.OrdinalIgnoreCase, out var commentToken)
+                            ? commentToken.ToString()
+                            : null;
+
+                        var orderIds = new List<string>();
+                        foreach (var prop in valueObj.Properties())
+                        {
+                            if (prop.Name.StartsWith("toggle_", StringComparison.OrdinalIgnoreCase) &&
+                                string.Equals(prop.Value.ToString(), "true", StringComparison.OrdinalIgnoreCase))
+                            {
+                                orderIds.Add(prop.Name.Substring("toggle_".Length));
+                            }
+                        }
+
+                        if (orderIds.Count == 0)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "VALIDATION",
+                                    "Please select at least one order to approve.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "NOT_LINKED",
+                                    "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        var delegatedBy = await _userMappingService.GetDelegatedBySapUserAsync(teamsUserId, cancellationToken);
+
+                        if (role < UserRole.Manager && string.IsNullOrWhiteSpace(delegatedBy))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
+                                    "Only Manager or Admin can approve release requests (or a delegated user).",
+                                    role.ToString(),
+                                    UserRole.Manager.ToString())),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var managerSalesOrg = await _userMappingService.GetSalesOrgAsync(teamsUserId, cancellationToken);
+                        var isAdmin = role == UserRole.Admin;
+
+                        int successes = 0;
+                        var failures = new List<string>();
+
+                        foreach (var orderId in orderIds)
+                        {
+                            try
+                            {
+                                if (!await EnsureLifecycleActionAllowedAsync(turnContext, orderId, "Approve / release", cancellationToken, false))
+                                {
+                                    failures.Add($"{orderId}: Action not allowed or order is locked.");
+                                    continue;
+                                }
+
+                                var pending = await _approvals.GetPendingBySoNumberAsync(orderId, cancellationToken);
+                                if (pending is null)
+                                {
+                                    failures.Add($"{orderId}: No pending request found.");
+                                    continue;
+                                }
+
+                                if (!isAdmin
+                                    && !string.IsNullOrWhiteSpace(managerSalesOrg)
+                                    && !string.IsNullOrWhiteSpace(pending.SalesOrg)
+                                    && !string.Equals(pending.SalesOrg, managerSalesOrg, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    failures.Add($"{orderId}: Scope mismatch.");
+                                    continue;
+                                }
+
+                                var existing = await _sap.GetSalesOrderByIdAsync(pending.SoNumber, cancellationToken);
+                                if (!isAdmin && existing is not null)
+                                {
+                                    var managerMax = _config.GetValue<decimal?>("ApprovalThresholds:ManagerMaxAmount");
+                                    if (managerMax.HasValue && existing.NetValue > managerMax.Value)
+                                    {
+                                        failures.Add($"{orderId}: Order value ({existing.NetValue:N2}) exceeds threshold ({managerMax.Value:N2}).");
+                                        continue;
+                                    }
+                                }
+
+                                await _sap.ApproveOrderAsync(pending.SoNumber, linkedSapUsername, cancellationToken);
+                                await _approvals.ApproveAsync(pending.SoNumber, linkedSapUsername, managerSalesOrg, isAdmin, comment, cancellationToken);
+
+                                await _audit.LogAsync(new AuditEntry
+                                {
+                                    TeamsUserId = teamsUserId,
+                                    Action = "ApproveOrder",
+                                    ParametersJson = $"{{\"orderId\": \"{orderId}\"}}"
+                                }, cancellationToken);
+                                successes++;
+                            }
+                            catch (SapODataException sapEx)
+                            {
+                                failures.Add($"{orderId}: {sapEx.Message}");
+                            }
+                            catch (Exception ex)
+                            {
+                                failures.Add($"{orderId}: {ex.Message}");
+                            }
+                        }
+
+                        var summary = new System.Text.StringBuilder($"**Successfully approved: {successes}**\n\n");
+                        if (failures.Count > 0)
+                        {
+                            summary.AppendLine($"**Failed: {failures.Count}**");
+                            foreach (var fail in failures)
+                            {
+                                summary.AppendLine($"- {fail}");
+                            }
+                        }
+
+                        var summaryActivity = MessageFactory.Text(summary.ToString());
+                        await turnContext.SendActivityAsync(summaryActivity, cancellationToken);
+
+                        // Refresh pending approvals list
+                        var updatedPending = await _approvals.GetPendingAsync(isAdmin ? null : managerSalesOrg, cancellationToken);
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildPendingApprovalsCard(updatedPending, null, null)),
+                            cancellationToken);
+
+                        return;
+                    }
+
                     if (string.Equals(action, "approve_so_confirm", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
@@ -1297,8 +1438,18 @@ public class TeamsBot : TeamsActivityHandler
                             decimal qty = 1m;
                             if (valueObj.TryGetValue(qtyKey, StringComparison.OrdinalIgnoreCase, out var qtyToken))
                             {
-                                if (!decimal.TryParse(qtyToken.ToString(), out qty) || qty < 1)
-                                    qty = 1m;
+                                if (!decimal.TryParse(qtyToken.ToString(), out qty))
+                                    qty = 0m;
+                            }
+
+                            if (qty <= 0)
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "VALIDATION",
+                                        $"Material {material} has invalid quantity. Quantity must be greater than 0.")),
+                                    cancellationToken);
+                                return;
                             }
 
                             lineItems.Add(new CreateSalesOrderItemDto
@@ -1388,9 +1539,10 @@ public class TeamsBot : TeamsActivityHandler
                         }
                         catch (SapODataException sapEx)
                         {
-                            _logger.LogError(sapEx, "SAP error creating sales order");
+                            var errorCode = sapEx.IsValidationError ? "VALIDATION" : "SAP_ERROR";
+                            _logger.LogError(sapEx, "SAP error creating sales order (classified={ErrorCode})", errorCode);
                             await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(errorCode, sapEx.Message)),
                                 cancellationToken);
                         }
                         catch (Exception ex)
@@ -1604,12 +1756,12 @@ public class TeamsBot : TeamsActivityHandler
                                         return;
                                     }
 
-                                    if (qty is null or < 0)
+                                    if (qty is null or <= 0)
                                     {
                                         await turnContext.SendActivityAsync(
                                             MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
                                                 "VALIDATION",
-                                                "Quantity is required for line update/add.")),
+                                                "Quantity must be greater than 0 for line update/add.")),
                                             cancellationToken);
                                         return;
                                     }
@@ -1690,9 +1842,10 @@ public class TeamsBot : TeamsActivityHandler
                         }
                         catch (SapODataException sapEx)
                         {
-                            _logger.LogError(sapEx, "SAP error editing order {OrderId}", salesOrderId);
+                            var errorCode = sapEx.IsValidationError ? "VALIDATION" : "SAP_ERROR";
+                            _logger.LogError(sapEx, "SAP error editing order {OrderId} (classified={ErrorCode})", salesOrderId, errorCode);
                             await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(errorCode, sapEx.Message)),
                                 cancellationToken);
                         }
                         catch (Exception ex)

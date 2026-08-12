@@ -125,6 +125,20 @@ public sealed class EditOrderFunction : IFunction
             if (parameters.TryGetProperty("qty", out var qtyEl) && qtyEl.ValueKind == JsonValueKind.Number)
                 qty = qtyEl.GetDecimal();
 
+            if (lineOp is "I" or "U" && qty <= 0)
+            {
+                return FunctionResult.Fail(
+                    $"Quantity must be greater than 0 for line {lineOp switch { "I" => "insert", _ => "update" }}.",
+                    "VALIDATION");
+            }
+
+            if (lineOp is "I" && string.IsNullOrWhiteSpace(material))
+            {
+                return FunctionResult.Fail(
+                    "Material is required when inserting a new line item.",
+                    "VALIDATION");
+            }
+
             var linesSummary = existing.Items is { Count: > 0 }
                 ? string.Join("; ", existing.Items.Select(i =>
                     $"{TrimItem(i.ItemNumber)} · {i.Material} x {i.Quantity:0} {i.Unit}"))

@@ -101,6 +101,15 @@ public class UserMappingService
         return string.IsNullOrWhiteSpace(mapping?.SalesOrg) ? null : mapping.SalesOrg;
     }
 
+    public async Task<string?> GetDelegatedBySapUserAsync(string teamsUserId, CancellationToken cancellationToken = default)
+    {
+        var mapping = await _dbContext.UserMappings
+            .Where(u => u.TeamsUserId == teamsUserId)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        return string.IsNullOrWhiteSpace(mapping?.DelegatedBySapUser) ? null : mapping.DelegatedBySapUser;
+    }
+
     public async Task<string?> GetDisplayNameAsync(string teamsUserId, CancellationToken cancellationToken = default)
     {
         var mapping = await _dbContext.UserMappings
@@ -182,7 +191,8 @@ public class UserMappingService
         string sapUserId,
         CancellationToken cancellationToken = default,
         UserRole? role = null,
-        string? salesOrg = null)
+        string? salesOrg = null,
+        string? delegatedBy = null)
     {
         var normalizedSap = sapUserId.Trim().ToUpperInvariant();
         var mapping = await _dbContext.UserMappings
@@ -198,6 +208,7 @@ public class UserMappingService
                 SapUserId = normalizedSap,
                 Role = role ?? UserRole.Employee,
                 SalesOrg = NormalizeSalesOrg(salesOrg),
+                DelegatedBySapUser = delegatedBy,
                 CreatedAt = DateTimeOffset.UtcNow,
                 UpdatedAt = DateTimeOffset.UtcNow
             };
@@ -212,6 +223,8 @@ public class UserMappingService
                 mapping.Role = role.Value;
             if (salesOrg is not null || role.HasValue)
                 mapping.SalesOrg = NormalizeSalesOrg(salesOrg);
+            if (delegatedBy is not null)
+                mapping.DelegatedBySapUser = delegatedBy;
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

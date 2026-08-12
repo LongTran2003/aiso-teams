@@ -16,10 +16,14 @@ public static class RolePolicy
         {
             // Maker-checker: an Employee cannot release directly (they request release).
             // Releasing/approving an order requires at least Manager.
+            // ApproveOrder and GetPendingApprovals are lowered to Employee here to allow
+            // Delegated Employees to access them. The actual functions will enforce Manager or Delegate.
+            ["ApproveOrder"] = UserRole.Employee,
+            ["ApproveSelectedOrders"] = UserRole.Employee,
+            ["GetPendingApprovals"] = UserRole.Employee,
+            ["RejectApproval"] = UserRole.Employee,
+
             ["ReleaseOrder"] = UserRole.Manager,
-            ["ApproveOrder"] = UserRole.Manager,
-            ["RejectApproval"] = UserRole.Manager,
-            ["GetPendingApprovals"] = UserRole.Manager,
             ["ReassignOwner"] = UserRole.Manager,
 
             // Overrides and full audit are Admin-only.

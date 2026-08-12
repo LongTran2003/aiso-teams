@@ -36,4 +36,17 @@ public sealed class UserScopeLookup : IUserScopeLookup
 
         return string.IsNullOrWhiteSpace(salesOrg) ? null : salesOrg;
     }
+
+    public async Task<string?> GetDelegatedBySapUserAsync(string sapUserId, CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var delegatedBy = await db.UserMappings
+            .AsNoTracking()
+            .Where(u => u.SapUserId == sapUserId)
+            .OrderByDescending(u => u.UpdatedAt)
+            .Select(u => u.DelegatedBySapUser)
+            .FirstOrDefaultAsync(ct);
+
+        return string.IsNullOrWhiteSpace(delegatedBy) ? null : delegatedBy;
+    }
 }

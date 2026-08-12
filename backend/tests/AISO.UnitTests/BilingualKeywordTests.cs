@@ -279,7 +279,10 @@ public class BilingualKeywordTests
                     ? UserRole.Manager
                     : UserRole.Employee);
 
-        public Task<string?> GetSalesOrgBySapUserAsync(string sapUserId, CancellationToken ct = default)
-            => Task.FromResult<string?>("UE00");
+        public Task<string?> GetSalesOrgBySapUserAsync(string sapUserId, CancellationToken ct = default) =>
+            Task.FromResult<string?>("UE00");
+
+        public Task<string?> GetDelegatedBySapUserAsync(string sapUserId, CancellationToken ct = default) =>
+            Task.FromResult<string?>(null);
     }
 }

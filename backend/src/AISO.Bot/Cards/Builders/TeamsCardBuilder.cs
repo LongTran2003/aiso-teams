@@ -201,9 +201,14 @@ internal static class TeamsCardBuilder
                 material3 = SlotMaterial(2),
                 qty3 = SlotQty(2),
                 material4 = SlotMaterial(3),
-                qty4 = SlotQty(3),
                 material5 = SlotMaterial(4),
-                qty5 = SlotQty(4)
+                qty5 = SlotQty(4),
+                material6 = SlotMaterial(5),
+                qty6 = SlotQty(5),
+                material7 = SlotMaterial(6),
+                qty7 = SlotQty(6),
+                material8 = SlotMaterial(7),
+                qty8 = SlotQty(7)
             });
     }
 

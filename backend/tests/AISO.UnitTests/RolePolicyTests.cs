@@ -36,8 +36,6 @@ public class RolePolicyTests
 
     [Theory]
     [InlineData("ReleaseOrder")]
-    [InlineData("ApproveOrder")]
-    [InlineData("RejectApproval")]
     [InlineData("ReassignOwner")]
     public void Manager_CanRunApprovalActions(string function)
     {
@@ -45,6 +43,19 @@ public class RolePolicyTests
         Assert.False(RolePolicy.CanExecute(UserRole.Employee, function));
         Assert.True(RolePolicy.CanExecute(UserRole.Manager, function));
         Assert.True(RolePolicy.CanExecute(UserRole.Admin, function));
+    }
+
+    [Theory]
+    [InlineData("ApproveOrder")]
+    [InlineData("RejectApproval")]
+    [InlineData("GetPendingApprovals")]
+    [InlineData("ApproveSelectedOrders")]
+    public void DelegatedActions_AreAllowedForEmployeeAtPolicyLevel(string function)
+    {
+        // Allowed at the orchestration routing level so Employee can trigger them;
+        // actual delegation checks happen inside the function logic.
+        Assert.Equal(UserRole.Employee, RolePolicy.RequiredRole(function));
+        Assert.True(RolePolicy.CanExecute(UserRole.Employee, function));
     }
 
     [Theory]
@@ -65,13 +76,6 @@ public class RolePolicyTests
     public void Employee_CanRequestRelease()
     {
         Assert.True(RolePolicy.CanExecute(UserRole.Employee, "RequestRelease"));
-    }
-
-    [Fact]
-    public void GetPendingApprovals_RequiresManager()
-    {
-        Assert.False(RolePolicy.CanExecute(UserRole.Employee, "GetPendingApprovals"));
-        Assert.True(RolePolicy.CanExecute(UserRole.Manager, "GetPendingApprovals"));
     }
 
     [Theory]
