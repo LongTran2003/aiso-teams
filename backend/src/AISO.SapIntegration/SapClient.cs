@@ -751,10 +751,11 @@ public class SapClient : ISapClient
                        (!string.IsNullOrWhiteSpace(message) ? $"SAP message: {message}" : string.Empty);
             }
 
-            if (!string.IsNullOrWhiteSpace(message))
+            if (!string.IsNullOrWhiteSpace(message) && message.Length > 1)
                 return message!;
 
-            return $"SAP error {code}: {statusCode}";
+            var rawTruncated = TruncateRaw(errorBody, statusCode);
+            return $"SAP error {code ?? "UNKNOWN"}: {statusCode}. Raw: {rawTruncated}";
         }
         catch
         {
