@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using AISO.Domain.Kpi;
 using AISO.Domain.SalesOrders;
+using AISO.Domain.Approvals;
 using AISO.SapIntegration.Dtos;
 using Microsoft.Extensions.Logging;
 
@@ -1497,6 +1498,42 @@ public class SapClient : ISapClient
     /// Maps domain status to OData filters on SAP SalesOrder fields.
     /// OverallStatus (GBSTK): A=Open, B=Partially delivered, C=Complete/Delivered.
     /// </summary>
+    public async Task DelegateApprovalAsync(DelegateApprovalDto dto, CancellationToken ct = default)
+    {
+        var url = "UserRole/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.delegateApproval?sap-client=324&$format=json";
+        _logger.LogInformation("Calling SAP OData (delegateApproval): {Url}", url);
+
+        var payload = new
+        {
+            REQUESTING_TEAMS_USER = dto.RequestingTeamsUser,
+            DELEGATE_USER = dto.DelegateUser,
+            SALES_ORG = dto.SalesOrg ?? string.Empty,
+            VALID_FROM = dto.ValidFrom.ToString("yyyy-MM-dd"),
+            VALID_TO = dto.ValidTo.ToString("yyyy-MM-dd"),
+            REASON = dto.Reason ?? string.Empty
+        };
+
+        using var response = await SendPostRequestRawAsync(url, payload, ct);
+        var json = await response.Content.ReadAsStringAsync(ct);
+        _logger.LogDebug("SAP delegateApproval response: {Response}", json);
+    }
+
+    public async Task RevokeDelegationAsync(RevokeDelegationDto dto, CancellationToken ct = default)
+    {
+        var url = "UserRole/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.revokeDelegation?sap-client=324&$format=json";
+        _logger.LogInformation("Calling SAP OData (revokeDelegation): {Url}", url);
+
+        var payload = new
+        {
+            REQUESTING_TEAMS_USER = dto.RequestingTeamsUser,
+            DELEGATION_ID = dto.DelegationId
+        };
+
+        using var response = await SendPostRequestRawAsync(url, payload, ct);
+        var json = await response.Content.ReadAsStringAsync(ct);
+        _logger.LogDebug("SAP revokeDelegation response: {Response}", json);
+    }
+
     internal static void ApplyStatusFilter(ODataQueryBuilder builder, SalesOrderStatus status)
     {
         switch (status)

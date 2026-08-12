@@ -11,4 +11,6 @@ public interface IUserScopeLookup
     Task<string?> GetSalesOrgBySapUserAsync(string sapUserId, CancellationToken ct = default);
 
     Task<string?> GetDelegatedBySapUserAsync(string sapUserId, CancellationToken ct = default);
+
+    Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, CancellationToken ct = default);
 }

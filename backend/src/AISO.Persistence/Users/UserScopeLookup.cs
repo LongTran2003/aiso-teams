@@ -49,4 +49,22 @@ public sealed class UserScopeLookup : IUserScopeLookup
 
         return string.IsNullOrWhiteSpace(delegatedBy) ? null : delegatedBy;
     }
+    public async Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        var mappings = await db.UserMappings
+            .Where(u => u.SapUserId == delegateUser)
+            .ToListAsync(ct);
+
+        foreach (var mapping in mappings)
+        {
+            mapping.DelegatedBySapUser = delegatorUser;
+            mapping.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        if (mappings.Any())
+        {
+            await db.SaveChangesAsync(ct);
+        }
+    }
 }

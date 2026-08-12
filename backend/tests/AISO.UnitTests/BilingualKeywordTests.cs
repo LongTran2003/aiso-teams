@@ -284,5 +284,8 @@ public class BilingualKeywordTests
 
         public Task<string?> GetDelegatedBySapUserAsync(string sapUserId, CancellationToken ct = default) =>
             Task.FromResult<string?>(null);
+
+        public Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }

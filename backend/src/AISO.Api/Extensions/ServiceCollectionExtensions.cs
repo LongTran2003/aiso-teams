@@ -41,6 +41,8 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFunction, ApproveSelectedOrdersFunction>();
         services.AddSingleton<IFunction, RejectApprovalFunction>();
         services.AddSingleton<IFunction, GetPendingApprovalsFunction>();
+        services.AddSingleton<IFunction, DelegateApprovalFunction>();
+        services.AddSingleton<IFunction, RevokeDelegationFunction>();
         services.AddSingleton<IFunction, ViewAuditLogFunction>();
         services.AddSingleton<IFunction, ListBotUsersFunction>();
         services.AddSingleton<IFunction, ManageBotUserFunction>();

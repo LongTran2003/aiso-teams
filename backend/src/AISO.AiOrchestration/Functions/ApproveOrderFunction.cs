@@ -156,6 +156,11 @@ public sealed class ApproveOrderFunction : IFunction
         {
             return FunctionResult.Fail(ex.Message);
         }
+        catch (SapODataException ex)
+        {
+            _logger.LogWarning(ex, "SAP OData rejected approval for {OrderId}: {Message}", orderId, ex.Message);
+            return FunctionResult.Fail($"SAP từ chối duyệt đơn: {ex.Message}", "VALIDATION");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to approve order {OrderId}", orderId);

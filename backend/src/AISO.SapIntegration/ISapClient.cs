@@ -1,5 +1,6 @@
 using AISO.Domain.Kpi;
 using AISO.Domain.SalesOrders;
+using AISO.Domain.Approvals;
 
 namespace AISO.SapIntegration;
 
@@ -61,6 +62,20 @@ public interface ISapClient
         string soNumber,
         string requestingSapUser,
         string? reason = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Delegates approval authority to another SAP user via SAP <c>delegateApproval</c>.
+    /// </summary>
+    Task DelegateApprovalAsync(
+        DelegateApprovalDto dto,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Revokes an existing approval delegation via SAP <c>revokeDelegation</c>.
+    /// </summary>
+    Task RevokeDelegationAsync(
+        RevokeDelegationDto dto,
         CancellationToken ct = default);
 
     Task<SalesOrder> ReleaseOrderAsync(

@@ -1,5 +1,6 @@
 using AISO.Domain.Kpi;
 using AISO.Domain.SalesOrders;
+using AISO.Domain.Approvals;
 using Microsoft.Extensions.Logging;
 
 namespace AISO.SapIntegration.Mock;
@@ -570,5 +571,20 @@ public sealed class MockSapClient : ISapClient
             return string.Equals(id, stripped, StringComparison.OrdinalIgnoreCase)
                 || string.Equals(r.Customer.Trim(), raw, StringComparison.OrdinalIgnoreCase);
         });
+    }
+    public Task DelegateApprovalAsync(DelegateApprovalDto dto, CancellationToken ct = default)
+    {
+        _logger.LogInformation(
+            "MockSapClient: DelegateApprovalAsync called by {RequestingUser} to delegate {DelegateUser}",
+            dto.RequestingTeamsUser, dto.DelegateUser);
+        return Task.CompletedTask;
+    }
+
+    public Task RevokeDelegationAsync(RevokeDelegationDto dto, CancellationToken ct = default)
+    {
+        _logger.LogInformation(
+            "MockSapClient: RevokeDelegationAsync called by {RequestingUser} to revoke {DelegationId}",
+            dto.RequestingTeamsUser, dto.DelegationId);
+        return Task.CompletedTask;
     }
 }

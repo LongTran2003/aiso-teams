@@ -217,6 +217,11 @@ public class ForceCancelRoutingTests
             => throw new NotImplementedException();
         public Task<SalesOrder> ApproveOrderAsync(string soNumber, string requestingSapUser, CancellationToken ct = default)
             => throw new NotImplementedException();
+        public Task DelegateApprovalAsync(DelegateApprovalDto dto, CancellationToken ct = default)
+            => throw new NotImplementedException();
+        public Task RevokeDelegationAsync(RevokeDelegationDto dto, CancellationToken ct = default)
+            => throw new NotImplementedException();
+
         public Task<SalesOrder> RejectApprovalAsync(string soNumber, string requestingSapUser, CancellationToken ct = default)
             => throw new NotImplementedException();
         public Task<SalesOrder> ForceReleaseAsync(string soNumber, string requestingSapUser, string overrideReason, CancellationToken ct = default)
@@ -290,5 +295,8 @@ public class ForceCancelRoutingTests
 
         public Task<string?> GetDelegatedBySapUserAsync(string sapUserId, CancellationToken ct = default)
             => Task.FromResult<string?>(null);
+
+        public Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, CancellationToken ct = default)
+            => Task.CompletedTask;
     }
 }
