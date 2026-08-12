@@ -64,147 +64,166 @@ CLASS lhc_SalesOrder DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
       IMPORTING keys REQUEST requested_authorizations FOR SalesOrder RESULT result.
 
+    METHODS get_effective_role
+      IMPORTING iv_sap_user TYPE char100
+            iv_sales_org TYPE vkorg OPTIONAL
+      RETURNING VALUE(rv_role) TYPE zaiso_de_role.
+
 ENDCLASS.
 
 CLASS lhc_SalesOrder IMPLEMENTATION.
 
   METHOD approveorder.
-    DATA: lv_timestamp TYPE c LENGTH 14,
-          lv_audit_id  TYPE sysuuid_c32.
+  DATA: lv_timestamp TYPE c LENGTH 14,
+        lv_audit_id  TYPE sysuuid_c32.
 
-    LOOP AT keys INTO DATA(ls_key).
-      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
-      DATA(lv_requesting_user) = ls_key-%param-requesting_teams_user.
-      DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
+  LOOP AT keys INTO DATA(ls_key).
+    DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+    DATA(lv_requesting_user) = ls_key-%param-requesting_teams_user.
 
-      IF lv_role <> 'MANAGER' AND lv_role <> 'ADMIN'.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unauthorized )
-          TO failed-salesorder.
-        APPEND VALUE #( %tky = ls_key-%tky
-                         %msg = new_message(
-                           id       = '00'
-                           number   = '001'
-                           severity = if_abap_behv_message=>severity-error
-                           v1       = 'Only Manager/Admin can approve' ) )
-          TO reported-salesorder.
-        CONTINUE.
+    SELECT SINGLE vkorg FROM vbak
+      INTO @DATA(lv_vkorg)
+      WHERE vbeln = @lv_so_number.
+
+    DATA(lv_role) = get_effective_role( iv_sap_user = lv_requesting_user iv_sales_org = lv_vkorg ).
+    DATA(lv_base_role) = get_user_role( iv_sap_user = lv_requesting_user ).
+
+    IF lv_role <> 'MANAGER' AND lv_role <> 'ADMIN'.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+        TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Only Manager/Admin can approve' ) )
+        TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    SELECT posnr, matnr FROM vbap
+      INTO TABLE @DATA(lt_posnr)
+      WHERE vbeln = @lv_so_number.
+
+    IF lt_posnr IS INITIAL.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-not_found )
+        TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Sales order items not found' ) )
+        TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    DATA(lv_has_invalid_material) = abap_false.
+    LOOP AT lt_posnr INTO DATA(ls_check_item).
+      SELECT SINGLE matnr FROM mara
+        INTO @DATA(lv_matnr_exists)
+        WHERE matnr = @ls_check_item-matnr.
+      IF sy-subrc <> 0.
+        lv_has_invalid_material = abap_true.
+        EXIT.
       ENDIF.
-
-      SELECT posnr, matnr FROM vbap
-        INTO TABLE @DATA(lt_posnr)
-        WHERE vbeln = @lv_so_number.
-
-      IF lt_posnr IS INITIAL.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-not_found )
-          TO failed-salesorder.
-        APPEND VALUE #( %tky = ls_key-%tky
-                         %msg = new_message( id       = '00'
-                                              number   = '001'
-                                              severity = if_abap_behv_message=>severity-error
-                                              v1       = 'Sales order items not found' ) )
-          TO reported-salesorder.
-        CONTINUE.
-      ENDIF.
-
-      DATA(lv_has_invalid_material) = abap_false.
-      LOOP AT lt_posnr INTO DATA(ls_check_item).
-        SELECT SINGLE matnr FROM mara
-          INTO @DATA(lv_matnr_exists)
-          WHERE matnr = @ls_check_item-matnr.
-        IF sy-subrc <> 0.
-          lv_has_invalid_material = abap_true.
-          EXIT.
-        ENDIF.
-      ENDLOOP.
-
-      IF lv_has_invalid_material = abap_true.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unspecific )
-          TO failed-salesorder.
-        APPEND VALUE #( %tky = ls_key-%tky
-                         %msg = new_message( id       = '00'
-                                              number   = '001'
-                                              severity = if_abap_behv_message=>severity-error
-                                              v1       = 'Order has invalid material master data' ) )
-          TO reported-salesorder.
-        CONTINUE.
-      ENDIF.
-
-      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
-
-      TRY.
-          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
-        CATCH cx_uuid_error.
-          CLEAR lv_audit_id.
-      ENDTRY.
-
-      APPEND VALUE #(
-        mandt       = sy-mandt
-        audit_id    = lv_audit_id
-        sap_user    = lv_requesting_user
-        actor_role  = lv_role
-        action_type = 'APPROVE_SO'
-        so_number   = lv_so_number
-        status      = 'SUCCESS'
-        created_at  = lv_timestamp
-      ) TO lcl_buffer=>gt_audit_db.
-
-      APPEND VALUE #( so_number   = lv_so_number
-                       action_type = 'RELEASE' ) TO lcl_buffer=>gt_release_reject.
-
-      APPEND VALUE #( %tky     = ls_key-%tky
-                      SoNumber = lv_so_number ) TO result.
     ENDLOOP.
-  ENDMETHOD.
+
+    IF lv_has_invalid_material = abap_true.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+        TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Order has invalid material master data' ) )
+        TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
+
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = lv_requesting_user
+      actor_role  = lv_role
+      action_type = 'APPROVE_SO'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      remarks     = COND #( WHEN lv_base_role <> 'MANAGER' AND lv_base_role <> 'ADMIN'
+                             THEN 'Approved via delegation' ELSE '' )
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
+
+    APPEND VALUE #( so_number   = lv_so_number
+                     action_type = 'RELEASE' ) TO lcl_buffer=>gt_release_reject.
+
+    APPEND VALUE #( %tky     = ls_key-%tky
+                    SoNumber = lv_so_number ) TO result.
+  ENDLOOP.
+ENDMETHOD.
 
   METHOD rejectapproval.
-    DATA: lv_timestamp TYPE c LENGTH 14,
-          lv_audit_id  TYPE sysuuid_c32.
+  DATA: lv_timestamp TYPE c LENGTH 14,
+        lv_audit_id  TYPE sysuuid_c32.
 
-    LOOP AT keys INTO DATA(ls_key).
-      DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
-      DATA(lv_requesting_user) = ls_key-%param-requesting_teams_user.
-      DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
+  LOOP AT keys INTO DATA(ls_key).
+    DATA(lv_so_number) = |{ ls_key-SoNumber ALPHA = IN }|.
+    DATA(lv_requesting_user) = ls_key-%param-requesting_teams_user.
 
-      IF lv_role <> 'MANAGER' AND lv_role <> 'ADMIN'.
-        APPEND VALUE #( %tky        = ls_key-%tky
-                         %fail-cause = if_abap_behv=>cause-unauthorized )
-          TO failed-salesorder.
-        APPEND VALUE #( %tky = ls_key-%tky
-                         %msg = new_message(
-                           id       = '00'
-                           number   = '001'
-                           severity = if_abap_behv_message=>severity-error
-                           v1       = 'Only Manager/Admin can reject approval' ) )
-          TO reported-salesorder.
-        CONTINUE.
-      ENDIF.
+    SELECT SINGLE vkorg FROM vbak
+      INTO @DATA(lv_vkorg)
+      WHERE vbeln = @lv_so_number.
 
-      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+    DATA(lv_role) = get_effective_role( iv_sap_user = lv_requesting_user iv_sales_org = lv_vkorg ).
+    DATA(lv_base_role) = get_user_role( iv_sap_user = lv_requesting_user ).
 
-      TRY.
-          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
-        CATCH cx_uuid_error.
-          CLEAR lv_audit_id.
-      ENDTRY.
+    IF lv_role <> 'MANAGER' AND lv_role <> 'ADMIN'.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+        TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Only Manager/Admin can reject approval' ) )
+        TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
 
-      APPEND VALUE #(
-        mandt       = sy-mandt
-        audit_id    = lv_audit_id
-        sap_user    = lv_requesting_user
-        actor_role  = lv_role
-        action_type = 'REJECT_APPROVAL'
-        so_number   = lv_so_number
-        status      = 'SUCCESS'
-        created_at  = lv_timestamp
-      ) TO lcl_buffer=>gt_audit_db.
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
 
-      APPEND VALUE #( %tky     = ls_key-%tky
-                       SoNumber = lv_so_number ) TO result.
-    ENDLOOP.
-  ENDMETHOD.
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
+
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = lv_requesting_user
+      actor_role  = lv_role
+      action_type = 'REJECT_APPROVAL'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      remarks     = COND #( WHEN lv_base_role <> 'MANAGER' AND lv_base_role <> 'ADMIN'
+                             THEN 'Rejected via delegation' ELSE '' )
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
+
+    APPEND VALUE #( %tky     = ls_key-%tky
+                     SoNumber = lv_so_number ) TO result.
+  ENDLOOP.
+ENDMETHOD.
 
   METHOD reassignowner.
     DATA: lv_timestamp TYPE c LENGTH 14,
@@ -423,6 +442,7 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
         lv_timestamp       TYPE c LENGTH 14,
         lv_audit_id        TYPE sysuuid_c32,
         lv_requesting_user TYPE char100,
+        lv_customer        TYPE kunnr,
         lv_item_no         TYPE posnr_va.
 
   LOOP AT keys INTO DATA(ls_key).
@@ -447,6 +467,70 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
       CONTINUE.
     ENDIF.
 
+    " ALPHA conversion cho customer ID (khớp KUNNR có leading zero)
+    lv_customer = |{ ls_key-%param-customer ALPHA = IN }|.
+
+    " --- Validate customer tồn tại cho đúng sales area ---
+    SELECT SINGLE kunnr FROM knvv
+      INTO @DATA(lv_customer_exists)
+      WHERE kunnr = @lv_customer
+        AND vkorg = @ls_key-%param-sales_org
+        AND vtweg = @ls_key-%param-dist_channel
+        AND spart = @ls_key-%param-division.
+
+    IF sy-subrc <> 0.
+      APPEND VALUE #( %cid        = ls_key-%cid
+                       %fail-cause = if_abap_behv=>cause-not_found )
+             TO failed-salesorder.
+      APPEND VALUE #( %cid = ls_key-%cid
+                       %msg = new_message(
+                         id       = '00'
+                         number   = '001'
+                         severity = if_abap_behv_message=>severity-error
+                         v1       = |Customer { lv_customer } not maintained for this sales area| ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    " --- Validate material & plant cho từng dòng trước khi gọi BAPI ---
+    DATA(lv_has_invalid_item) = abap_false.
+    DATA(lv_invalid_detail)   = ''.
+    LOOP AT ls_key-%param-items INTO DATA(ls_check_item).
+      SELECT SINGLE matnr FROM mara
+        INTO @DATA(lv_matnr_exists)
+        WHERE matnr = @ls_check_item-material.
+      IF sy-subrc <> 0.
+        lv_has_invalid_item = abap_true.
+        lv_invalid_detail = |Material { ls_check_item-material } does not exist|.
+        EXIT.
+      ENDIF.
+
+      SELECT SINGLE werks FROM marc
+        INTO @DATA(lv_plant_exists)
+        WHERE matnr = @ls_check_item-material
+          AND werks = @ls_check_item-plant.
+      IF sy-subrc <> 0.
+        lv_has_invalid_item = abap_true.
+        lv_invalid_detail = |Material { ls_check_item-material } not extended to plant { ls_check_item-plant }|.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
+
+    IF lv_has_invalid_item = abap_true.
+      APPEND VALUE #( %cid        = ls_key-%cid
+                       %fail-cause = if_abap_behv=>cause-not_found )
+             TO failed-salesorder.
+      APPEND VALUE #( %cid = ls_key-%cid
+                       %msg = new_message(
+                         id       = '00'
+                         number   = '001'
+                         severity = if_abap_behv_message=>severity-error
+                         v1       = lv_invalid_detail ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+    " --- End validate ---
+
     ls_header_in-doc_type   = ls_key-%param-doc_type.
     ls_header_in-sales_org  = ls_key-%param-sales_org.
     ls_header_in-distr_chan = ls_key-%param-dist_channel.
@@ -460,7 +544,7 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
     ls_header_inx-currency   = 'X'.
     ls_header_inx-updateflag = 'I'.
 
-    APPEND VALUE #( partn_role = 'AG' partn_numb = ls_key-%param-customer ) TO lt_partners.
+    APPEND VALUE #( partn_role = 'AG' partn_numb = lv_customer ) TO lt_partners.
 
     lv_item_no = 0.
     LOOP AT ls_key-%param-items INTO DATA(ls_item).
@@ -546,7 +630,6 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
                      %param-SoNumber = lv_so_number ) TO result.
   ENDLOOP.
 ENDMETHOD.
-
   METHOD cancelorder.
     " SỬA: Employee chỉ hủy được đơn của chính mình; Manager/Admin hủy được mọi đơn.
     DATA: lt_items_in         TYPE TABLE OF bapisditm,
@@ -774,7 +857,33 @@ ENDMETHOD.
     ENDIF.
 
     CLEAR: ls_header_in, ls_header_inx, lt_items_in, lt_items_inx, lt_return.
+    " --- Validate material cho dòng Insert/Update trước khi gọi BAPI ---
+    DATA(lv_has_invalid_item) = abap_false.
+    DATA(lv_invalid_detail)   = ''.
+    LOOP AT ls_key-%param-items INTO DATA(ls_check_line) WHERE change_flag = 'I' OR change_flag = 'U'.
+      SELECT SINGLE matnr FROM mara
+        INTO @DATA(lv_matnr_exists)
+        WHERE matnr = @ls_check_line-material.
+      IF sy-subrc <> 0.
+        lv_has_invalid_item = abap_true.
+        lv_invalid_detail = |Material { ls_check_line-material } does not exist|.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
 
+    IF lv_has_invalid_item = abap_true.
+      APPEND VALUE #( %tky        = ls_key-%tky
+                       %fail-cause = if_abap_behv=>cause-not_found )
+             TO failed-salesorder.
+      APPEND VALUE #( %tky = ls_key-%tky
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = lv_invalid_detail ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+    " --- End validate ---
     " --- Header fields (chỉ set khi có giá trị, tránh ghi đè rỗng ---
     IF ls_key-%param-new_reference IS NOT INITIAL.
       ls_header_in-purch_no_c  = ls_key-%param-new_reference.
@@ -1180,6 +1289,27 @@ ENDMETHOD.
         %action-forceRelease    = if_abap_behv=>auth-allowed
         %action-updateSalesOrder = if_abap_behv=>auth-allowed ) ).
   ENDMETHOD.
+  METHOD get_effective_role.
+  rv_role = get_user_role( iv_sap_user = iv_sap_user ).
+
+  " Nếu đã là Manager/Admin thì không cần check delegation
+  IF rv_role = 'MANAGER' OR rv_role = 'ADMIN'.
+    RETURN.
+  ENDIF.
+
+  " Kiểm tra có delegation active nào gán quyền Manager cho user này không
+  SELECT SINGLE delegate_user FROM zaiso_delegation
+    INTO @DATA(lv_delegate_exists)
+    WHERE delegate_user = @iv_sap_user
+      AND sales_org     = @iv_sales_org
+      AND status        = 'A'
+      AND valid_from   <= @sy-datum
+      AND valid_to     >= @sy-datum.
+
+  IF sy-subrc = 0.
+    rv_role = 'MANAGER'.
+  ENDIF.
+ENDMETHOD.
 ENDCLASS.
 
 CLASS lsc_zbp_i_aiso_so_header DEFINITION INHERITING FROM cl_abap_behavior_saver_failed.
