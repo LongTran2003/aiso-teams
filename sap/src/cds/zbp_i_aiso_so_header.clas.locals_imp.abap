@@ -460,9 +460,7 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
     ls_header_inx-currency   = 'X'.
     ls_header_inx-updateflag = 'I'.
 
-    " KUNNR must be ALPHA-converted; OData/Teams may send 100323 instead of 0000100323.
-    DATA(lv_customer) = CONV kunnr( |{ ls_key-%param-customer ALPHA = IN }| ).
-    APPEND VALUE #( partn_role = 'AG' partn_numb = lv_customer ) TO lt_partners.
+    APPEND VALUE #( partn_role = 'AG' partn_numb = ls_key-%param-customer ) TO lt_partners.
 
     lv_item_no = 0.
     LOOP AT ls_key-%param-items INTO DATA(ls_item).

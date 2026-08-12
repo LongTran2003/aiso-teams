@@ -11,4 +11,6 @@ define service ZSD_AISO_SALES_ORDER {
   expose ZI_AISO_USER_ROLE as UserRole;
   expose ZI_AISO_VALID_CUSTOMER as ValidCustomer;
   expose ZI_AISO_SALES_AREA as SalesArea;
+  expose ZI_AISO_VALID_MATERIAL as ValidMaterial;
+  expose ZI_AISO_VALID_MATERIAL_PLANT as ValidMaterialPlant;
 }
