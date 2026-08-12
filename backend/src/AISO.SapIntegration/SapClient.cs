@@ -743,6 +743,9 @@ public class SapClient : ISapClient
                 .OrderByDescending(m => m.Length)
                 .FirstOrDefault();
 
+            if (!string.IsNullOrWhiteSpace(message) && message.Length > 1)
+                return message!;
+
             if (string.Equals(code, "RAISE_SHORTDUMP", StringComparison.OrdinalIgnoreCase))
             {
                 return $"SAP encountered an internal error (ABAP Short Dump). " +
@@ -751,10 +754,8 @@ public class SapClient : ISapClient
                        (!string.IsNullOrWhiteSpace(message) ? $"SAP message: {message}" : string.Empty);
             }
 
-            if (!string.IsNullOrWhiteSpace(message))
-                return message!;
-
-            return $"SAP error {code}: {statusCode}";
+            var rawTruncated = TruncateRaw(errorBody, statusCode);
+            return $"SAP error {code ?? "UNKNOWN"}: {statusCode}. Raw: {rawTruncated}";
         }
         catch
         {
