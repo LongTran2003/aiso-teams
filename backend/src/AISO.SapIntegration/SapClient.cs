@@ -711,7 +711,7 @@ public class SapClient : ISapClient
             using var doc = System.Text.Json.JsonDocument.Parse(errorBody);
             if (!doc.RootElement.TryGetProperty("error", out var errorObj))
             {
-                return TruncateRaw(errorBody, statusCode);
+                return BuildFallbackMessage(null, statusCode);
             }
 
             var candidates = new List<string>();
@@ -722,9 +722,10 @@ public class SapClient : ISapClient
                 ? c.GetString()
                 : null;
 
-            // Prefer the most specific (longest) business message from details.
+            // Prefer the most specific (longest) business message from details,
+            // but filter out single-char placeholders like "M" (SAP message class).
             var message = candidates
-                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .Where(m => !string.IsNullOrWhiteSpace(m) && m.Length > 1)
                 .OrderByDescending(m => m.Length)
                 .FirstOrDefault();
 
@@ -736,18 +737,35 @@ public class SapClient : ISapClient
                        (!string.IsNullOrWhiteSpace(message) ? $"SAP message: {message}" : string.Empty);
             }
 
-            if (!string.IsNullOrWhiteSpace(message) && message.Length > 1)
+            if (!string.IsNullOrWhiteSpace(message))
                 return message!;
 
-            var rawTruncated = TruncateRaw(errorBody, statusCode);
-            return $"SAP error {code ?? "UNKNOWN"}: {statusCode}. Raw: {rawTruncated}";
+            return BuildFallbackMessage(code, statusCode);
         }
         catch
         {
             // JSON parse failed, fall through
         }
 
-        return TruncateRaw(errorBody, statusCode);
+        return BuildFallbackMessage(null, statusCode);
+    }
+
+    /// <summary>
+    /// Builds a user-friendly fallback message without exposing raw JSON.
+    /// </summary>
+    private static string BuildFallbackMessage(string? sapCode, int statusCode)
+    {
+        var codeDisplay = !string.IsNullOrWhiteSpace(sapCode) ? sapCode : "UNKNOWN";
+        return statusCode switch
+        {
+            400 => $"SAP rejected the request (error code: {codeDisplay}). Please verify the input data and try again.",
+            401 or 403 => $"SAP authorization failed (error code: {codeDisplay}). Please check your permissions or contact your admin.",
+            404 => $"The requested SAP resource was not found (error code: {codeDisplay}). Please verify the endpoint configuration or contact your admin.",
+            409 => $"SAP reported a conflict (error code: {codeDisplay}). The record may have been modified by another user. Please try again.",
+            500 => $"SAP encountered an internal server error (error code: {codeDisplay}). Please try again later or contact the SAP team.",
+            502 or 503 or 504 => $"SAP service is temporarily unavailable (HTTP {statusCode}, error code: {codeDisplay}). Please try again in a few minutes.",
+            _ => $"SAP could not complete this request (HTTP {statusCode}, error code: {codeDisplay}). Please try again or contact your admin."
+        };
     }
 
     private static void CollectAllMessages(JsonElement element, List<string> sink)
@@ -785,9 +803,6 @@ public class SapClient : ISapClient
             }
         }
     }
-
-    private static string TruncateRaw(string errorBody, int statusCode) =>
-        $"SAP returned HTTP {statusCode}. Raw response: {errorBody[..Math.Min(errorBody.Length, 200)]}";
 
     // -----------------------------------------------------------------------
     // KPI methods
