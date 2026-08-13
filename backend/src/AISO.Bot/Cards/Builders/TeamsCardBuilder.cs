@@ -58,10 +58,46 @@ internal static class TeamsCardBuilder
             new
             {
                 errorCode,
-                errorMessage,
+                errorMessage = SanitizeErrorMessage(errorMessage),
                 title = title ?? TitleForErrorCode(errorCode),
                 summary = summary ?? SummaryForErrorCode(errorCode)
             });
+
+    /// <summary>
+    /// Strips raw JSON, stack traces, and other overly technical content
+    /// from error messages before showing them to users.
+    /// </summary>
+    private static string SanitizeErrorMessage(string? message)
+    {
+        if (string.IsNullOrWhiteSpace(message))
+            return "An unexpected error occurred. Please try again or contact your admin.";
+
+        var msg = message.Trim();
+
+        // Strip anything after "Raw response:" or "Raw:"
+        var rawIdx = msg.IndexOf("Raw response:", StringComparison.OrdinalIgnoreCase);
+        if (rawIdx < 0)
+            rawIdx = msg.IndexOf("Raw:", StringComparison.OrdinalIgnoreCase);
+        if (rawIdx > 0)
+            msg = msg[..rawIdx].TrimEnd(' ', '.', ',');
+
+        // If the message looks like it's mostly JSON, replace it entirely
+        if (msg.TrimStart().StartsWith("{") || msg.TrimStart().StartsWith("["))
+            return "SAP could not complete this request. Please try again or contact your admin.";
+
+        // If the message contains a stack trace (common in .NET exceptions), truncate it
+        var stackIdx = msg.IndexOf("   at ", StringComparison.Ordinal);
+        if (stackIdx < 0)
+            stackIdx = msg.IndexOf("  at ", StringComparison.Ordinal);
+        if (stackIdx > 0)
+            msg = msg[..stackIdx].TrimEnd();
+
+        // Ensure message isn't empty after stripping
+        if (string.IsNullOrWhiteSpace(msg))
+            return "An unexpected error occurred. Please try again or contact your admin.";
+
+        return msg;
+    }
 
     private static string TitleForErrorCode(string errorCode) => errorCode.ToUpperInvariant() switch
     {
