@@ -716,22 +716,7 @@ public class SapClient : ISapClient
 
             var candidates = new List<string>();
 
-            CollectMessage(errorObj, "message", candidates);
-
-            if (errorObj.TryGetProperty("details", out var details)
-                && details.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var detail in details.EnumerateArray())
-                    CollectMessage(detail, "message", candidates);
-            }
-
-            if (errorObj.TryGetProperty("innererror", out var inner)
-                && inner.TryGetProperty("errordetails", out var innerDetails)
-                && innerDetails.ValueKind == JsonValueKind.Array)
-            {
-                foreach (var detail in innerDetails.EnumerateArray())
-                    CollectMessage(detail, "message", candidates);
-            }
+            CollectAllMessages(errorObj, candidates);
 
             var code = errorObj.TryGetProperty("code", out var c) && c.ValueKind == JsonValueKind.String
                 ? c.GetString()
@@ -765,26 +750,39 @@ public class SapClient : ISapClient
         return TruncateRaw(errorBody, statusCode);
     }
 
-    private static void CollectMessage(JsonElement parent, string propertyName, List<string> sink)
+    private static void CollectAllMessages(JsonElement element, List<string> sink)
     {
-        if (!parent.TryGetProperty(propertyName, out var messageEl))
-            return;
-
-        if (messageEl.ValueKind == JsonValueKind.String)
+        if (element.ValueKind == JsonValueKind.Object)
         {
-            var s = messageEl.GetString();
-            if (!string.IsNullOrWhiteSpace(s))
-                sink.Add(s.Trim());
-            return;
+            if (element.TryGetProperty("message", out var msgEl))
+            {
+                if (msgEl.ValueKind == JsonValueKind.String)
+                {
+                    var s = msgEl.GetString();
+                    if (!string.IsNullOrWhiteSpace(s))
+                        sink.Add(s.Trim());
+                }
+                else if (msgEl.ValueKind == JsonValueKind.Object
+                         && msgEl.TryGetProperty("value", out var valEl)
+                         && valEl.ValueKind == JsonValueKind.String)
+                {
+                    var s = valEl.GetString();
+                    if (!string.IsNullOrWhiteSpace(s))
+                        sink.Add(s.Trim());
+                }
+            }
+
+            foreach (var prop in element.EnumerateObject())
+            {
+                CollectAllMessages(prop.Value, sink);
+            }
         }
-
-        if (messageEl.ValueKind == JsonValueKind.Object
-            && messageEl.TryGetProperty("value", out var valueEl)
-            && valueEl.ValueKind == JsonValueKind.String)
+        else if (element.ValueKind == JsonValueKind.Array)
         {
-            var s = valueEl.GetString();
-            if (!string.IsNullOrWhiteSpace(s))
-                sink.Add(s.Trim());
+            foreach (var item in element.EnumerateArray())
+            {
+                CollectAllMessages(item, sink);
+            }
         }
     }
 
