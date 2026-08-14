@@ -1,4 +1,4 @@
-"""
+﻿"""
 Groq API Orchestrator (OpenAI-compatible SDK).
 Kiến trúc:
   - Nạp system prompt từ prompts/system_prompt.txt
@@ -406,6 +406,7 @@ class AIOrchestrator:
             "ForwardOrder",
         }
         order_list_tools = {"GetSalesOrders", "GetOverdueOrders"}
+        admin_tools = {"ManageBotUser", "PreAssignUser", "ListBotUsers", "ViewAuditLog"}
 
         # Từ khóa định vị nhóm (gồm cả Tiếng Việt không dấu và synonyms)
         kpi_keywords = [
@@ -444,6 +445,7 @@ class AIOrchestrator:
             "place",
             "generate",
         ]
+        admin_keywords = ["user", "users", "role", "sales org", "audit", "log", "add user", "thêm user", "pre assign", "allow list", "nhật ký"]
         order_list_keywords = [
             "danh sách",
             "danh sach",
@@ -477,6 +479,10 @@ class AIOrchestrator:
         if any(kw in msg_lower for kw in order_list_keywords):
             selected_names.update(order_list_tools)
             selected_names.update(order_op_tools)
+
+        # 3.5. Khớp nhóm Admin
+        if any(kw in msg_lower for kw in admin_keywords):
+            selected_names.update(admin_tools)
 
         # 4. Nếu không khớp nhóm đặc trưng nào hoặc khớp thao tác đơn lẻ, mặc định dùng Fallback (Op + List)
         if not selected_names or any(
