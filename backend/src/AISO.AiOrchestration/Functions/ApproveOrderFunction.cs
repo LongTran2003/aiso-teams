@@ -116,12 +116,10 @@ public sealed class ApproveOrderFunction : IFunction
 
             if (!isAdmin && existing is not null)
             {
-                var managerMax = _config.GetValue<decimal?>("ApprovalThresholds:ManagerMaxAmount");
-                if (managerMax.HasValue && existing.NetValue > managerMax.Value)
+                var thresholdError = ApprovalThresholdHelper.CheckThreshold(_config, existing.NetValue, existing.Currency);
+                if (thresholdError is not null)
                 {
-                    return FunctionResult.Fail(
-                        $"Order value ({existing.NetValue:N2}) exceeds your approval threshold of {managerMax.Value:N2}.",
-                        "VALIDATION");
+                    return FunctionResult.Fail(thresholdError, "VALIDATION");
                 }
             }
 
