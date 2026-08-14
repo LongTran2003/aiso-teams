@@ -1,4 +1,4 @@
-﻿"""
+"""
 Groq API Orchestrator (OpenAI-compatible SDK).
 Kiến trúc:
   - Nạp system prompt từ prompts/system_prompt.txt
@@ -445,7 +445,19 @@ class AIOrchestrator:
             "place",
             "generate",
         ]
-        admin_keywords = ["user", "users", "role", "sales org", "audit", "log", "add user", "thêm user", "pre assign", "allow list", "nhật ký"]
+        admin_keywords = [
+            "user",
+            "users",
+            "role",
+            "sales org",
+            "audit",
+            "log",
+            "add user",
+            "thêm user",
+            "pre assign",
+            "allow list",
+            "nhật ký",
+        ]
         order_list_keywords = [
             "danh sách",
             "danh sach",
