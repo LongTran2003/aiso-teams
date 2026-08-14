@@ -130,10 +130,10 @@ public sealed class ApproveSelectedOrdersFunction : IFunction
 
                 if (!isAdmin && existing is not null)
                 {
-                    var managerMax = _config.GetValue<decimal?>("ApprovalThresholds:ManagerMaxAmount");
-                    if (managerMax.HasValue && existing.NetValue > managerMax.Value)
+                    var thresholdError = ApprovalThresholdHelper.CheckThreshold(_config, existing.NetValue, existing.Currency);
+                    if (thresholdError is not null)
                     {
-                        failures.Add($"{orderId}: Order value ({existing.NetValue:N2}) exceeds threshold ({managerMax.Value:N2}).");
+                        failures.Add($"{orderId}: {thresholdError}");
                         continue;
                     }
                 }

@@ -942,10 +942,10 @@ public class TeamsBot : TeamsActivityHandler
                                 var existing = await _sap.GetSalesOrderByIdAsync(pending.SoNumber, cancellationToken);
                                 if (!isAdmin && existing is not null)
                                 {
-                                    var managerMax = _config.GetValue<decimal?>("ApprovalThresholds:ManagerMaxAmount");
-                                    if (managerMax.HasValue && existing.NetValue > managerMax.Value)
+                                    var thresholdError = AISO.Domain.Approvals.ApprovalThresholdHelper.CheckThreshold(_config, existing.NetValue, existing.Currency);
+                                    if (thresholdError is not null)
                                     {
-                                        failures.Add($"{orderId}: Order value ({existing.NetValue:N2}) exceeds threshold ({managerMax.Value:N2}).");
+                                        failures.Add($"{orderId}: {thresholdError}");
                                         continue;
                                     }
                                 }
