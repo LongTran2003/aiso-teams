@@ -23,4 +23,15 @@ public interface IBotUserAdminService
         UserRole role,
         string? salesOrg,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Pre-assigns a Teams email to an SAP User ID in <c>sap_link_assignments</c>.
+    /// Used before the user has linked the bot.
+    /// </summary>
+    Task<BotUserSummary> PreAssignAccessAsync(
+        string sapUserId,
+        string teamsEmail,
+        UserRole role,
+        string? salesOrg,
+        CancellationToken ct = default);
 }

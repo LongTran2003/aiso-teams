@@ -95,6 +95,62 @@ public sealed class BotUserAdminService : IBotUserAdminService
         return ToSummary(mapping, assignment is not null);
     }
 
+    public async Task<BotUserSummary> PreAssignAccessAsync(
+        string sapUserId,
+        string teamsEmail,
+        UserRole role,
+        string? salesOrg,
+        CancellationToken ct = default)
+    {
+        var normalizedSap = NormalizeSap(sapUserId);
+        var normalizedEmail = teamsEmail.Trim().ToLowerInvariant();
+        var org = NormalizeSalesOrg(salesOrg, role);
+
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+        var existingBySap = await db.SapLinkAssignments
+            .FirstOrDefaultAsync(a => a.SapUserId == normalizedSap, ct);
+        if (existingBySap is not null && existingBySap.TeamsEmail != normalizedEmail)
+        {
+            throw new InvalidOperationException($"SAP ID {normalizedSap} is already assigned to a different email ({existingBySap.TeamsEmail}).");
+        }
+
+        var existingByEmail = await db.SapLinkAssignments
+            .FirstOrDefaultAsync(a => a.TeamsEmail == normalizedEmail, ct);
+        if (existingByEmail is not null && existingByEmail.SapUserId != normalizedSap)
+        {
+            throw new InvalidOperationException($"Email {normalizedEmail} is already assigned to a different SAP ID ({existingByEmail.SapUserId}).");
+        }
+
+        if (existingBySap is not null)
+        {
+            existingBySap.Role = role;
+            existingBySap.SalesOrg = org;
+            existingBySap.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+        else
+        {
+            db.SapLinkAssignments.Add(new SapLinkAssignment
+            {
+                SapUserId = normalizedSap,
+                TeamsEmail = normalizedEmail,
+                Role = role,
+                SalesOrg = org,
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow
+            });
+        }
+
+        await db.SaveChangesAsync(ct);
+        
+        return new BotUserSummary(
+            normalizedSap,
+            normalizedSap, // No display name yet
+            role,
+            org,
+            true);
+    }
+
     private static BotUserSummary ToSummary(UserMapping mapping, bool hasAssignment) =>
         new(
             mapping.SapUserId ?? string.Empty,
