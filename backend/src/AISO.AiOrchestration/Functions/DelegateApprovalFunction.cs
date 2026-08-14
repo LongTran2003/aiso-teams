@@ -63,6 +63,12 @@ public class DelegateApprovalFunction : IFunction
         if (string.IsNullOrWhiteSpace(delegateUser) || string.IsNullOrWhiteSpace(validFrom) || string.IsNullOrWhiteSpace(validTo))
             return FunctionResult.Fail("Vui lòng cung cấp đủ thông tin người được ủy quyền và thời hạn.");
 
+        var delegateRole = await _scope.GetRoleBySapUserAsync(delegateUser, ct);
+        if (delegateRole < UserRole.Manager)
+        {
+            return FunctionResult.Fail("Không thể uỷ quyền cho nhân viên (Employee). Chỉ uỷ quyền được cho Manager hoặc Admin.", "VALIDATION");
+        }
+
         var fromDate = DateTimeOffset.Parse(validFrom);
         var toDate = DateTimeOffset.Parse(validTo);
         var salesOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);

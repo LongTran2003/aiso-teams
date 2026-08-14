@@ -21,37 +21,47 @@ public sealed class UserScopeLookup : IUserScopeLookup
             .OrderByDescending(u => u.UpdatedAt)
             .FirstOrDefaultAsync(ct);
 
-        return mapping?.Role ?? UserRole.Employee;
+        if (mapping is not null)
+            return mapping.Role;
+
+        var assignment = await db.SapLinkAssignments
+            .AsNoTracking()
+            .Where(a => a.SapUserId == sapUserId)
+            .FirstOrDefaultAsync(ct);
+
+        return assignment?.Role ?? UserRole.Employee;
     }
 
     public async Task<string?> GetSalesOrgBySapUserAsync(string sapUserId, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
-        var salesOrg = await db.UserMappings
+        var mapping = await db.UserMappings
             .AsNoTracking()
             .Where(u => u.SapUserId == sapUserId)
             .OrderByDescending(u => u.UpdatedAt)
-            .Select(u => u.SalesOrg)
             .FirstOrDefaultAsync(ct);
 
-        return string.IsNullOrWhiteSpace(salesOrg) ? null : salesOrg;
+        return mapping?.SalesOrg;
     }
 
     public async Task<string?> GetDelegatedBySapUserAsync(string sapUserId, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
-        var delegatedBy = await db.UserMappings
+        var mapping = await db.UserMappings
             .AsNoTracking()
             .Where(u => u.SapUserId == sapUserId)
             .OrderByDescending(u => u.UpdatedAt)
-            .Select(u => u.DelegatedBySapUser)
             .FirstOrDefaultAsync(ct);
+
+        var delegatedBy = mapping?.DelegatedBySapUser;
 
         return string.IsNullOrWhiteSpace(delegatedBy) ? null : delegatedBy;
     }
+
     public async Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        
         var mappings = await db.UserMappings
             .Where(u => u.SapUserId == delegateUser)
             .ToListAsync(ct);
@@ -62,7 +72,17 @@ public sealed class UserScopeLookup : IUserScopeLookup
             mapping.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
-        if (mappings.Any())
+        var assignments = await db.SapLinkAssignments
+            .Where(a => a.SapUserId == delegateUser)
+            .ToListAsync(ct);
+
+        foreach (var assignment in assignments)
+        {
+            assignment.DelegatedBySapUser = delegatorUser;
+            assignment.UpdatedAt = DateTimeOffset.UtcNow;
+        }
+
+        if (mappings.Count > 0 || assignments.Count > 0)
         {
             await db.SaveChangesAsync(ct);
         }
