@@ -1,0 +1,28 @@
+{
+  "name": "PreAssignUser",
+  "description": "Admin only: adds a user's Teams email to the allow-list for a specific SAP User ID. Use this when adding a new user to the system. Required inputs: teams_email, sap_user_id, role, sales_org.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "teams_email": {
+        "type": "string",
+        "description": "The Microsoft Teams email of the user (e.g. user@domain.com)."
+      },
+      "sap_user_id": {
+        "type": "string",
+        "description": "SAP user id to assign (e.g. DEV-250)."
+      },
+      "role": {
+        "type": "string",
+        "enum": ["Employee", "Manager", "Admin"],
+        "description": "Role to grant."
+      },
+      "sales_org": {
+        "type": "string",
+        "description": "Sales Organization (e.g. TV01). Null for Admin or if none."
+      }
+    },
+    "required": ["teams_email", "sap_user_id", "role"],
+    "additionalProperties": false
+  }
+}
