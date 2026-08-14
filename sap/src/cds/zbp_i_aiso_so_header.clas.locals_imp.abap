@@ -769,21 +769,31 @@ ENDMETHOD.
 
     LOOP AT keys INTO DATA(ls_key).
       lv_so_number = |{ ls_key-SoNumber ALPHA = IN }|.
+      DATA(lv_requesting_user) = ls_key-%param-requesting_teams_user.    " ← FIX 3: lưu biến để dùng lại
 
       SELECT SINGLE sap_user FROM zaiso_so_map
         INTO @DATA(lv_owner)
         WHERE so_number = @lv_so_number.
 
-      IF lv_owner IS NOT INITIAL AND lv_owner <> ls_key-%param-requesting_teams_user.
+      IF lv_owner IS NOT INITIAL AND lv_owner <> lv_requesting_user.
         APPEND VALUE #( %tky        = ls_key-%tky
                          %fail-cause = if_abap_behv=>cause-unauthorized )
                TO failed-salesorder.
+        " ← FIX 1: Thêm %msg vào reported (trước đây thiếu → gây 500)
+        APPEND VALUE #( %tky = ls_key-%tky
+                         %msg = new_message(
+                           id       = '00'
+                           number   = '001'
+                           severity = if_abap_behv_message=>severity-error
+                           v1       = 'Only order owner can update reference' ) )
+               TO reported-salesorder.
         CONTINUE.
       ENDIF.
 
       CLEAR: ls_header_in, ls_header_inx, lt_return.
       ls_header_in-purch_no_c  = ls_key-%param-new_reference.
       ls_header_inx-purch_no_c = 'X'.
+      ls_header_inx-updateflag = 'U'.    " ← FIX 4: Thêm updateflag
 
       CALL FUNCTION 'BAPI_SALESORDER_CHANGE'
         EXPORTING
@@ -793,11 +803,23 @@ ENDMETHOD.
         TABLES
           return           = lt_return.
 
-      READ TABLE lt_return WITH KEY type = 'E' TRANSPORTING NO FIELDS.
+      " ← FIX 1: Đọc error message thay vì TRANSPORTING NO FIELDS
+      READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
       IF sy-subrc = 0.
         APPEND VALUE #( %tky        = ls_key-%tky
                          %fail-cause = if_abap_behv=>cause-unspecific )
                TO failed-salesorder.
+        " ← FIX 1: Thêm %msg vào reported (trước đây thiếu → gây 500)
+        APPEND VALUE #( %tky = ls_key-%tky
+                         %msg = new_message(
+                           id       = ls_error-id
+                           number   = ls_error-number
+                           severity = if_abap_behv_message=>severity-error
+                           v1       = ls_error-message_v1
+                           v2       = ls_error-message_v2
+                           v3       = ls_error-message_v3
+                           v4       = ls_error-message_v4 ) )
+               TO reported-salesorder.
         CONTINUE.
       ENDIF.
 
@@ -812,7 +834,8 @@ ENDMETHOD.
       APPEND VALUE #(
         mandt       = sy-mandt
         audit_id    = lv_audit_id
-        sap_user    = sy-uname
+        sap_user    = lv_requesting_user    " ← FIX 3: dùng requesting_user thay vì sy-uname
+        actor_role  = get_user_role( iv_sap_user = lv_requesting_user )    " ← FIX 2: thêm actor_role
         action_type = 'UPDATE_REF_SO'
         so_number   = lv_so_number
         status      = 'SUCCESS'
