@@ -24,24 +24,42 @@ public sealed class BotUserAdminService : IBotUserAdminService
 
         var mappings = await db.UserMappings
             .Where(u => !string.IsNullOrWhiteSpace(u.SapUserId))
-            .OrderBy(u => u.DisplayName)
-            .ThenBy(u => u.SapUserId)
             .ToListAsync(ct);
 
-        var sapIds = mappings
-            .Select(m => m.SapUserId!)
-            .Distinct(StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        var assignments = await db.SapLinkAssignments
+            .ToListAsync(ct);
 
-        var assigned = await db.SapLinkAssignments
-            .Where(a => sapIds.Contains(a.SapUserId))
+        var assignedSapIds = assignments
             .Select(a => a.SapUserId)
-            .ToListAsync(ct);
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        var assignedSet = assigned.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var mappedSapIds = mappings
+            .Select(m => m.SapUserId!)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-        return mappings
-            .Select(m => ToSummary(m, assignedSet.Contains(m.SapUserId!)))
+        var summaries = new List<BotUserSummary>();
+
+        foreach (var m in mappings)
+        {
+            summaries.Add(ToSummary(m, assignedSapIds.Contains(m.SapUserId!)));
+        }
+
+        foreach (var a in assignments)
+        {
+            if (!mappedSapIds.Contains(a.SapUserId))
+            {
+                summaries.Add(new BotUserSummary(
+                    a.SapUserId,
+                    a.TeamsEmail ?? a.SapUserId,
+                    a.Role,
+                    a.SalesOrg,
+                    true));
+            }
+        }
+
+        return summaries
+            .OrderBy(s => s.DisplayName)
+            .ThenBy(s => s.SapUserId)
             .ToList();
     }
 
