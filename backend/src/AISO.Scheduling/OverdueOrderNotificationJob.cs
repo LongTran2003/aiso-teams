@@ -39,8 +39,6 @@ public class OverdueOrderNotificationJob : BackgroundService
             var delay = nextRun - now;
             _logger.LogInformation("Next OverdueOrderNotificationJob scheduled in {Delay}", delay);
             
-            // For testing/demonstration purposes, we might want to run it immediately once or use a smaller interval.
-            // But we'll stick to a 24h schedule here.
             await Task.Delay(delay, stoppingToken);
 
             if (!stoppingToken.IsCancellationRequested)

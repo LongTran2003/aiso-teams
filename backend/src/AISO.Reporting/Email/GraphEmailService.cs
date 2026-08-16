@@ -25,6 +25,7 @@ public class GraphEmailService : IEmailService
         if (string.IsNullOrEmpty(tenantId) || string.IsNullOrEmpty(clientId) || string.IsNullOrEmpty(clientSecret))
         {
             _logger.LogWarning("Missing Azure AD credentials. Emails will not be sent.");
+            return;
         }
 
         var options = new ClientSecretCredentialOptions
@@ -40,7 +41,7 @@ public class GraphEmailService : IEmailService
     {
         if (_graphClient == null)
         {
-            _logger.LogWarning("GraphClient is null. Skipping email to {ToAddress}", toAddress);
+            _logger.LogWarning("Cannot send email. GraphClient is not initialized due to missing credentials.");
             return;
         }
 
