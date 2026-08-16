@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "RevokeDelegation",
   "description": "Revokes an existing approval delegation in SAP and local database.",
   "parameters": {

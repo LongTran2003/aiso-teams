@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "ForceDelegateApproval",
   "description": "Emergency override: forces a delegation on behalf of another user. Requires Admin role.",
   "parameters": {

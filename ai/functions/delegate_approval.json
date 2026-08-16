@@ -1,4 +1,4 @@
-﻿{
+{
   "name": "DelegateApproval",
   "description": "Delegates the user's approval authority to another employee in SAP and local database.",
   "parameters": {
