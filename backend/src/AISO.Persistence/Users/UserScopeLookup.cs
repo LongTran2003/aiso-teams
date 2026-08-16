@@ -58,7 +58,7 @@ public sealed class UserScopeLookup : IUserScopeLookup
         return string.IsNullOrWhiteSpace(delegatedBy) ? null : delegatedBy;
     }
 
-    public async Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, CancellationToken ct = default)
+    public async Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, DateTimeOffset? validTo = null, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         
@@ -69,6 +69,7 @@ public sealed class UserScopeLookup : IUserScopeLookup
         foreach (var mapping in mappings)
         {
             mapping.DelegatedBySapUser = delegatorUser;
+            mapping.DelegatedValidTo = validTo;
             mapping.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
@@ -79,6 +80,7 @@ public sealed class UserScopeLookup : IUserScopeLookup
         foreach (var assignment in assignments)
         {
             assignment.DelegatedBySapUser = delegatorUser;
+            assignment.DelegatedValidTo = validTo;
             assignment.UpdatedAt = DateTimeOffset.UtcNow;
         }
 

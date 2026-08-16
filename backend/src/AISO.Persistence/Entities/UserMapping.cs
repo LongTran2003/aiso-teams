@@ -28,6 +28,9 @@ public class UserMapping
     /// <summary>SAP ID of the Manager who delegated their approval rights to this user.</summary>
     public string? DelegatedBySapUser { get; set; }
 
+    /// <summary>Expiration date of the delegation.</summary>
+    public DateTimeOffset? DelegatedValidTo { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

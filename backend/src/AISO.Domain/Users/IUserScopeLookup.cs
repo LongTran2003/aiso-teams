@@ -12,5 +12,5 @@ public interface IUserScopeLookup
 
     Task<string?> GetDelegatedBySapUserAsync(string sapUserId, CancellationToken ct = default);
 
-    Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, CancellationToken ct = default);
+    Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, DateTimeOffset? validTo = null, CancellationToken ct = default);
 }

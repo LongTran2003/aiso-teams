@@ -49,6 +49,7 @@ try
     }
 
     // --- Application Services Setup ---
+    builder.Services.AddHostedService<AISO.Api.Services.DelegationCleanupService>();
     builder.Services
         .AddBotServices(builder.Configuration)
         .AddPersistence(builder.Configuration)

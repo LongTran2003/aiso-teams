@@ -4,18 +4,23 @@ using System.Text.Json.Serialization;
 using AISO.Domain.Approvals;
 using AISO.Domain.Users;
 using AISO.SapIntegration;
+using Microsoft.Extensions.Logging;
 
 namespace AISO.AiOrchestration.Functions;
 
-public class DelegateApprovalFunction : IFunction
+public class ForceDelegateApprovalFunction : IFunction
 {
-    public string Name => "DelegateApproval";
-    public string Description => "Delegates the user's approval authority to another employee in SAP and local database.";
+    public string Name => "ForceDelegateApproval";
+    public string Description => "Emergency override: forces a delegation on behalf of another user.";
 
     public string ParametersJsonSchema => """
         {
           "type": "object",
           "properties": {
+            "delegatorUser": {
+              "type": "string",
+              "description": "SAP User ID of the manager whose rights are being delegated."
+            },
             "delegateUser": {
               "type": "string",
               "description": "SAP User ID of the employee receiving the delegation."
@@ -32,22 +37,24 @@ public class DelegateApprovalFunction : IFunction
             },
             "reason": {
               "type": "string",
-              "description": "Optional reason for delegation."
+              "description": "Reason for emergency delegation."
             }
           },
-          "required": ["delegateUser", "validFrom", "validTo"]
+          "required": ["delegatorUser", "delegateUser", "validFrom", "validTo"]
         }
         """;
 
-    public UserRole MinimumRole => UserRole.Manager;
+    public UserRole MinimumRole => UserRole.Admin;
 
     private readonly ISapClient _sapClient;
     private readonly IUserScopeLookup _scope;
+    private readonly ILogger<ForceDelegateApprovalFunction> _logger;
 
-    public DelegateApprovalFunction(ISapClient sapClient, IUserScopeLookup scope)
+    public ForceDelegateApprovalFunction(ISapClient sapClient, IUserScopeLookup scope, ILogger<ForceDelegateApprovalFunction> logger)
     {
         _sapClient = sapClient;
         _scope = scope;
+        _logger = logger;
     }
 
     public async Task<FunctionResult> ExecuteAsync(
@@ -55,58 +62,41 @@ public class DelegateApprovalFunction : IFunction
         string requestingSapUser,
         CancellationToken ct)
     {
+        var delegatorUser = parameters.TryGetProperty("delegatorUser", out var dOrg) ? dOrg.GetString() : null;
         var delegateUser = parameters.TryGetProperty("delegateUser", out var dUser) ? dUser.GetString() : null;
         var validFrom = parameters.TryGetProperty("validFrom", out var vFrom) ? vFrom.GetString() : null;
         var validTo = parameters.TryGetProperty("validTo", out var vTo) ? vTo.GetString() : null;
         var reason = parameters.TryGetProperty("reason", out var r) ? r.GetString() : null;
 
-        if (string.IsNullOrWhiteSpace(delegateUser) || string.IsNullOrWhiteSpace(validFrom) || string.IsNullOrWhiteSpace(validTo))
-            return FunctionResult.Fail("Vui lòng cung cấp đủ thông tin người được ủy quyền và thời hạn.");
-
-        var delegateRole = await _scope.GetRoleBySapUserAsync(delegateUser, ct);
-        if (delegateRole < UserRole.Manager)
-        {
-            return FunctionResult.Fail("Không thể uỷ quyền cho nhân viên (Employee). Chỉ uỷ quyền được cho Manager hoặc Admin.", "VALIDATION");
-        }
+        if (string.IsNullOrWhiteSpace(delegatorUser) || string.IsNullOrWhiteSpace(delegateUser) || string.IsNullOrWhiteSpace(validFrom) || string.IsNullOrWhiteSpace(validTo))
+            return FunctionResult.Fail("Vui lòng cung cấp đủ thông tin người uỷ quyền, người nhận và thời hạn.");
 
         var fromDate = DateTimeOffset.Parse(validFrom);
         var toDate = DateTimeOffset.Parse(validTo);
-
-        // Chống uỷ quyền bắc cầu (No chain delegation)
-        var delegatorIsDelegate = await _scope.GetDelegatedBySapUserAsync(requestingSapUser, ct);
-        if (delegatorIsDelegate != null)
-        {
-            return FunctionResult.Fail("Không thể uỷ quyền vì bạn đang nhận uỷ quyền từ người khác (Cấm uỷ quyền bắc cầu).", "VALIDATION");
-        }
-
-        var delegateeIsDelegate = await _scope.GetDelegatedBySapUserAsync(delegateUser, ct);
-        if (delegateeIsDelegate != null)
-        {
-            return FunctionResult.Fail($"Không thể uỷ quyền cho {delegateUser} vì họ đang nhận uỷ quyền của người khác.", "VALIDATION");
-        }
-
-        var salesOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
+        var salesOrg = await _scope.GetSalesOrgBySapUserAsync(delegatorUser, ct);
 
         var dto = new DelegateApprovalDto(
-            RequestingTeamsUser: requestingSapUser,
+            RequestingTeamsUser: delegatorUser, // Pretend to be the delegator
             DelegateUser: delegateUser,
             SalesOrg: salesOrg,
             ValidFrom: fromDate,
             ValidTo: toDate,
-            Reason: reason);
+            Reason: reason ?? $"Force delegated by Admin {requestingSapUser}");
 
         try
         {
+            _logger.LogWarning("EMERGENCY OVERRIDE: Admin {Admin} is forcing delegation from {Delegator} to {Delegatee}", requestingSapUser, delegatorUser, delegateUser);
             await _sapClient.DelegateApprovalAsync(dto, ct);
 
             // Cập nhật local DB
-            await _scope.SetDelegatedBySapUserAsync(delegateUser, requestingSapUser, toDate, ct);
+            await _scope.SetDelegatedBySapUserAsync(delegateUser, delegatorUser, toDate, ct);
 
             return FunctionResult.Ok(new
             {
-                action = "Delegated",
+                action = "ForceDelegated",
+                delegatorUser,
                 delegateUser,
-                message = $"Đã ủy quyền thành công cho {delegateUser} từ {fromDate:dd/MM/yyyy} đến {toDate:dd/MM/yyyy}."
+                message = $"Đã thực hiện uỷ quyền khẩn cấp quyền của {delegatorUser} sang cho {delegateUser} từ {fromDate:dd/MM/yyyy} đến {toDate:dd/MM/yyyy}."
             });
         }
         catch (SapODataException ex)
@@ -115,7 +105,7 @@ public class DelegateApprovalFunction : IFunction
         }
         catch (Exception ex)
         {
-            return FunctionResult.Fail($"Lỗi khi ủy quyền: {ex.Message}");
+            return FunctionResult.Fail($"Lỗi khi uỷ quyền khẩn cấp: {ex.Message}");
         }
     }
 }

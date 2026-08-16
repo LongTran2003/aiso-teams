@@ -459,6 +459,8 @@ class AIOrchestrator:
             "ủy quyền",
             "thu hồi",
             "thu hoi",
+            "force delegate",
+            "cưỡng chế",
             "user",
             "users",
             "role",

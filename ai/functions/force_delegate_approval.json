@@ -1,0 +1,37 @@
+﻿{
+  "name": "ForceDelegateApproval",
+  "description": "Emergency override: forces a delegation on behalf of another user. Requires Admin role.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "delegatorUser": {
+        "type": "string",
+        "description": "SAP User ID of the manager whose rights are being delegated."
+      },
+      "delegateUser": {
+        "type": "string",
+        "description": "SAP User ID of the employee receiving the delegation."
+      },
+      "validFrom": {
+        "type": "string",
+        "format": "date",
+        "description": "Start date of delegation in YYYY-MM-DD format."
+      },
+      "validTo": {
+        "type": "string",
+        "format": "date",
+        "description": "End date of delegation in YYYY-MM-DD format."
+      },
+      "reason": {
+        "type": "string",
+        "description": "Reason for emergency delegation."
+      }
+    },
+    "required": [
+      "delegatorUser",
+      "delegateUser",
+      "validFrom",
+      "validTo"
+    ]
+  }
+}
