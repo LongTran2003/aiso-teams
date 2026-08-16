@@ -217,7 +217,7 @@ public class SapClient : ISapClient
                 ITEM_NO = ((index + 1) * 10).ToString().PadLeft(6, '0'),
                 MATERIAL = i.Material,
                 PLANT = i.Plant,
-                ORDER_QTY = i.OrderQty,
+                ORDER_QTY = i.OrderQty.ToString("F3", System.Globalization.CultureInfo.InvariantCulture),
                 UNIT = i.Unit
             }).ToList()
         };
@@ -344,7 +344,7 @@ public class SapClient : ISapClient
             {
                 ITEM_NO = PadItemNumber(i.ItemNumber),
                 MATERIAL = i.Material ?? string.Empty,
-                ORDER_QTY = i.OrderQty ?? 0m,
+                ORDER_QTY = (i.OrderQty ?? 0m).ToString("F3", System.Globalization.CultureInfo.InvariantCulture),
                 UNIT = i.Unit ?? string.Empty,
                 CHANGE_FLAG = (i.Operation ?? string.Empty).Trim().ToUpperInvariant()
             }).ToList()
