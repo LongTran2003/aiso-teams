@@ -172,6 +172,14 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    public static IServiceCollection AddReportingServices(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.AddSingleton<AISO.Domain.Notifications.IEmailService, AISO.Reporting.Email.GraphEmailService>();
+        return services;
+    }
+
     public static IServiceCollection AddCustomHealthChecks(
         this IServiceCollection services,
         IConfiguration configuration)

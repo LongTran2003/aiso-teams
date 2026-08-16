@@ -49,12 +49,16 @@ try
     }
 
     // --- Application Services Setup ---
+    // Background services
     builder.Services.AddHostedService<AISO.Api.Services.DelegationCleanupService>();
+    builder.Services.AddHostedService<AISO.Scheduling.OverdueOrderNotificationJob>();
+
     builder.Services
         .AddBotServices(builder.Configuration)
         .AddPersistence(builder.Configuration)
         .AddSapIntegration(builder.Configuration)
         .AddAiOrchestration(builder.Configuration)
+        .AddReportingServices(builder.Configuration)
         .AddCustomHealthChecks(builder.Configuration);
 
     var app = builder.Build();

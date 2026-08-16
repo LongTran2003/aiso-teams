@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 
 using AISO.Domain.Approvals;
 using AISO.Domain.Users;
+using AISO.Domain.Notifications;
 using AISO.SapIntegration;
 
 namespace AISO.AiOrchestration.Functions;
@@ -43,11 +44,13 @@ public class DelegateApprovalFunction : IFunction
 
     private readonly ISapClient _sapClient;
     private readonly IUserScopeLookup _scope;
+    private readonly IEmailService _emailService;
 
-    public DelegateApprovalFunction(ISapClient sapClient, IUserScopeLookup scope)
+    public DelegateApprovalFunction(ISapClient sapClient, IUserScopeLookup scope, IEmailService emailService)
     {
         _sapClient = sapClient;
         _scope = scope;
+        _emailService = emailService;
     }
 
     public async Task<FunctionResult> ExecuteAsync(
@@ -61,7 +64,7 @@ public class DelegateApprovalFunction : IFunction
         var reason = parameters.TryGetProperty("reason", out var r) ? r.GetString() : null;
 
         if (string.IsNullOrWhiteSpace(delegateUser) || string.IsNullOrWhiteSpace(validFrom) || string.IsNullOrWhiteSpace(validTo))
-            return FunctionResult.Fail("Vui lòng cung cấp đủ thông tin người được ủy quyền và thời hạn.");
+            return FunctionResult.Fail("Vui lòng cung cấp đủ thông tin người được uỷ quyền và thời hạn.");
 
         var delegateRole = await _scope.GetRoleBySapUserAsync(delegateUser, ct);
         if (delegateRole < UserRole.Manager)
@@ -102,11 +105,30 @@ public class DelegateApprovalFunction : IFunction
             // Cập nhật local DB
             await _scope.SetDelegatedBySapUserAsync(delegateUser, requestingSapUser, toDate, ct);
 
+            // Send Email Notification
+            var delegateEmail = await _scope.GetEmailBySapUserAsync(delegateUser, ct);
+            if (!string.IsNullOrEmpty(delegateEmail))
+            {
+                string subject = $"Thông báo uỷ quyền phê duyệt từ {requestingSapUser}";
+                string html = $@"
+                    <h2>Thông báo uỷ quyền phê duyệt</h2>
+                    <p>Chào bạn,</p>
+                    <p>Bạn vừa được <b>{requestingSapUser}</b> uỷ quyền phê duyệt các đơn hàng SAP (Sales Org: {salesOrg ?? "All"}).</p>
+                    <ul>
+                        <li><b>Thời gian bắt đầu:</b> {fromDate:dd/MM/yyyy}</li>
+                        <li><b>Thời gian kết thúc:</b> {toDate:dd/MM/yyyy}</li>
+                        <li><b>Lý do:</b> {reason ?? "Không có"}</li>
+                    </ul>
+                    <p>Vui lòng đăng nhập vào ứng dụng AISO Teams Bot để xử lý các yêu cầu phê duyệt trong thời gian này.</p>
+                ";
+                await _emailService.SendEmailAsync(delegateEmail, subject, html, ct);
+            }
+
             return FunctionResult.Ok(new
             {
                 action = "Delegated",
                 delegateUser,
-                message = $"Đã ủy quyền thành công cho {delegateUser} từ {fromDate:dd/MM/yyyy} đến {toDate:dd/MM/yyyy}."
+                message = $"Đã uỷ quyền thành công cho {delegateUser} từ {fromDate:dd/MM/yyyy} đến {toDate:dd/MM/yyyy}."
             });
         }
         catch (SapODataException ex)
@@ -115,7 +137,7 @@ public class DelegateApprovalFunction : IFunction
         }
         catch (Exception ex)
         {
-            return FunctionResult.Fail($"Lỗi khi ủy quyền: {ex.Message}");
+            return FunctionResult.Fail($"Lỗi khi uỷ quyền: {ex.Message}");
         }
     }
 }

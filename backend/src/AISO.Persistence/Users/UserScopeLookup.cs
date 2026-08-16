@@ -47,15 +47,33 @@ public sealed class UserScopeLookup : IUserScopeLookup
     public async Task<string?> GetDelegatedBySapUserAsync(string sapUserId, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
-        var mapping = await db.UserMappings
-            .AsNoTracking()
+        
+        var delegatedBy = await db.UserMappings
             .Where(u => u.SapUserId == sapUserId)
-            .OrderByDescending(u => u.UpdatedAt)
+            .Select(u => u.DelegatedBySapUser)
             .FirstOrDefaultAsync(ct);
 
-        var delegatedBy = mapping?.DelegatedBySapUser;
+        if (string.IsNullOrWhiteSpace(delegatedBy))
+        {
+            delegatedBy = await db.SapLinkAssignments
+                .Where(a => a.SapUserId == sapUserId)
+                .Select(a => a.DelegatedBySapUser)
+                .FirstOrDefaultAsync(ct);
+        }
 
         return string.IsNullOrWhiteSpace(delegatedBy) ? null : delegatedBy;
+    }
+
+    public async Task<string?> GetEmailBySapUserAsync(string sapUserId, CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+        var email = await db.SapLinkAssignments
+            .Where(a => a.SapUserId == sapUserId)
+            .Select(a => a.TeamsEmail)
+            .FirstOrDefaultAsync(ct);
+
+        return string.IsNullOrWhiteSpace(email) ? null : email;
     }
 
     public async Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, DateTimeOffset? validTo = null, CancellationToken ct = default)
