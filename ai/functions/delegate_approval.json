@@ -1,0 +1,32 @@
+﻿{
+  "name": "DelegateApproval",
+  "description": "Delegates the user's approval authority to another employee in SAP and local database.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "delegateUser": {
+        "type": "string",
+        "description": "SAP User ID of the employee receiving the delegation."
+      },
+      "validFrom": {
+        "type": "string",
+        "format": "date",
+        "description": "Start date of delegation in YYYY-MM-DD format."
+      },
+      "validTo": {
+        "type": "string",
+        "format": "date",
+        "description": "End date of delegation in YYYY-MM-DD format."
+      },
+      "reason": {
+        "type": "string",
+        "description": "Optional reason for delegation."
+      }
+    },
+    "required": [
+      "delegateUser",
+      "validFrom",
+      "validTo"
+    ]
+  }
+}

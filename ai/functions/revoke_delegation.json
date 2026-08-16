@@ -1,0 +1,17 @@
+﻿{
+  "name": "RevokeDelegation",
+  "description": "Revokes an existing approval delegation in SAP and local database.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "delegationId": {
+        "type": "string",
+        "description": "The unique ID of the delegation to revoke."
+      },
+      "delegateUser": {
+        "type": "string",
+        "description": "The SAP User ID of the delegate (fallback if delegation ID is not known)."
+      }
+    }
+  }
+}

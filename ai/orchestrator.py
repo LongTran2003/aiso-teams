@@ -406,7 +406,14 @@ class AIOrchestrator:
             "ForwardOrder",
         }
         order_list_tools = {"GetSalesOrders", "GetOverdueOrders"}
-        admin_tools = {"ManageBotUser", "PreAssignUser", "ListBotUsers", "ViewAuditLog"}
+        admin_tools = {
+            "ManageBotUser",
+            "PreAssignUser",
+            "ListBotUsers",
+            "ViewAuditLog",
+            "DelegateApproval",
+            "RevokeDelegation",
+        }
 
         # Từ khóa định vị nhóm (gồm cả Tiếng Việt không dấu và synonyms)
         kpi_keywords = [
@@ -446,6 +453,12 @@ class AIOrchestrator:
             "generate",
         ]
         admin_keywords = [
+            "delegate",
+            "revoke",
+            "uỷ quyền",
+            "ủy quyền",
+            "thu hồi",
+            "thu hoi",
             "user",
             "users",
             "role",
