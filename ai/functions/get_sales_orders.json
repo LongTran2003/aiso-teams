@@ -1,39 +1,76 @@
 {
   "name": "GetSalesOrders",
-  "description": "Retrieve sales orders list from SAP based on optional filters. All params optional. For phrases like 'my sales orders', 'show my orders', 'đơn của tôi', 'xem danh sách đơn hàng của tôi' set ownedByMe=true. For 'recent orders', 'show open orders', 'show all open orders' without 'my'/'của tôi', do NOT set ownedByMe. Do NOT use for pending approvals — use GetPendingApprovals instead.",
+  "description": "Retrieve sales orders list from SAP based on optional filters. All params optional. For phrases like 'my sales orders', 'show my orders', 'đơn của tôi', 'xem danh sách đơn hàng của tôi' set ownedByMe=true. For 'recent orders', 'đơn hàng gần đây', 'show open orders' without 'my'/'của tôi', do NOT set ownedByMe. Do NOT use for pending approvals - use GetPendingApprovals instead.",
   "parameters": {
     "type": "object",
     "properties": {
       "customerIdOrName": {
-        "type": ["string", "null"],
-        "description": "Customer ID (exact match on Customer, e.g. '1000') or partial customer name (contains on CustomerName, e.g. 'Philly Bikes')."
+        "type": [
+          "string",
+          "null"
+        ],
+        "description": "Customer ID (exact match on Customer, e.g. '1000') or partial customer name (contains on CustomerName, e.g. 'Philly Bikes'). Do NOT include time modifiers like 'recent', 'gần đây', 'mới nhất' as part of the customer name."
       },
       "fromDate": {
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "format": "date",
         "description": "Start date YYYY-MM-DD."
       },
       "toDate": {
-        "type": ["string", "null"],
+        "type": [
+          "string",
+          "null"
+        ],
         "format": "date",
         "description": "End date YYYY-MM-DD."
       },
       "status": {
-        "type": ["string", "null"],
-        "enum": ["Open", "Blocked", "PartiallyDelivered", "Delivered", "Invoiced", "Cancelled", null],
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "Open",
+          "Blocked",
+          "PartiallyDelivered",
+          "Delivered",
+          "Invoiced",
+          "Cancelled",
+          null
+        ],
         "description": "Order status filter."
       },
       "salesOrg": {
-        "type": ["string", "null"],
-        "enum": ["TV01", "FU24", "UE00", "UW00", "DN00", "DS00", null],
+        "type": [
+          "string",
+          "null"
+        ],
+        "enum": [
+          "TV01",
+          "FU24",
+          "UE00",
+          "UW00",
+          "DN00",
+          "DS00",
+          null
+        ],
         "description": "Sales organization code filter."
       },
       "ownedByMe": {
-        "type": ["boolean", "null"],
+        "type": [
+          "boolean",
+          "null"
+        ],
         "description": "True = only orders owned by the requesting SAP user (OwnerSapUser). Use for my/của tôi."
       },
       "top": {
-        "type": ["integer", "null"],
+        "type": [
+          "integer",
+          "null"
+        ],
         "minimum": 1,
         "maximum": 50,
         "description": "Max records to return."
