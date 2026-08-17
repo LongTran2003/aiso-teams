@@ -73,6 +73,13 @@ CLASS lhc_SalesOrder DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS get_instance_authorizations FOR INSTANCE AUTHORIZATION
       IMPORTING keys REQUEST requested_authorizations FOR SalesOrder RESULT result.
 
+    METHODS check_delegation_limit
+  IMPORTING iv_sap_user   TYPE char100
+            iv_sales_org  TYPE vkorg
+            iv_net_amount TYPE netwr
+            iv_currency   TYPE waerk
+  RETURNING VALUE(rv_exceeded) TYPE abap_bool.
+
 ENDCLASS.
 
 CLASS lhc_SalesOrder IMPLEMENTATION.
@@ -104,6 +111,31 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
           TO reported-salesorder.
         CONTINUE.
       ENDIF.
+      " --- Defense-in-depth: nếu đang duyệt qua delegation, check giới hạn tiền ---
+    IF lv_base_role <> 'MANAGER' AND lv_base_role <> 'ADMIN'.
+      SELECT SINGLE netwr, waerk FROM vbak
+        INTO @DATA(ls_amount_check)
+        WHERE vbeln = @lv_so_number.
+
+      DATA(lv_limit_exceeded) = check_delegation_limit(
+        iv_sap_user   = lv_requesting_user
+        iv_sales_org  = lv_vkorg
+        iv_net_amount = ls_amount_check-netwr
+        iv_currency   = ls_amount_check-waerk ).
+
+      IF lv_limit_exceeded = abap_true.
+        APPEND VALUE #( %tky        = ls_key-%tky
+                         %fail-cause = if_abap_behv=>cause-unauthorized )
+               TO failed-salesorder.
+        APPEND VALUE #( %tky = ls_key-%tky
+                         %msg = new_message( id       = '00'
+                                              number   = '001'
+                                              severity = if_abap_behv_message=>severity-error
+                                              v1       = 'Release is not allowed: order amount exceeds your delegation limit' ) )
+               TO reported-salesorder.
+        CONTINUE.
+      ENDIF.
+    ENDIF.
 
       SELECT posnr, matnr FROM vbap
         INTO TABLE @DATA(lt_posnr)
@@ -1137,6 +1169,35 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
         %action-forceRelease     = if_abap_behv=>auth-allowed
         %action-updateSalesOrder = if_abap_behv=>auth-allowed ) ).
   ENDMETHOD.
+
+  METHOD check_delegation_limit.
+  rv_exceeded = abap_false.
+
+  SELECT SINGLE max_amount, currency FROM zaiso_delegation
+    INTO @DATA(ls_delegation)
+    WHERE delegate_user = @iv_sap_user
+      AND sales_org     = @iv_sales_org
+      AND status        = 'A'
+      AND valid_from   <= @sy-datum
+      AND valid_to     >= @sy-datum.
+
+  IF sy-subrc <> 0.
+    RETURN.
+  ENDIF.
+
+  IF ls_delegation-max_amount IS INITIAL OR ls_delegation-max_amount <= 0.
+    RETURN.
+  ENDIF.
+
+  " So sánh cùng currency; nếu khác currency, coi như không check (tránh so sai đơn vị tiền)
+  IF ls_delegation-currency IS NOT INITIAL AND ls_delegation-currency <> iv_currency.
+    RETURN.
+  ENDIF.
+
+  IF iv_net_amount > ls_delegation-max_amount.
+    rv_exceeded = abap_true.
+  ENDIF.
+ENDMETHOD.
 
 ENDCLASS.
 
