@@ -111,69 +111,71 @@ CLASS lhc_UserRole IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD delegateapproval.
-    DATA: lv_timestamp     TYPE c LENGTH 14,
-          lv_delegation_id TYPE sysuuid_c32.
+  DATA: lv_timestamp     TYPE c LENGTH 14,
+        lv_delegation_id TYPE sysuuid_c32.
 
-    LOOP AT keys INTO DATA(ls_key).
-      DATA(lv_delegator) = ls_key-%param-requesting_teams_user.
-      DATA(lv_role)      = get_user_role( iv_sap_user = lv_delegator ).
+  LOOP AT keys INTO DATA(ls_key).
+    DATA(lv_delegator) = ls_key-%param-requesting_teams_user.
+    DATA(lv_role)      = get_user_role( iv_sap_user = lv_delegator ).
 
-      IF lv_role <> 'MANAGER' AND lv_role <> 'ADMIN'.
-        APPEND VALUE #( %cid        = ls_key-%cid
-                         %fail-cause = if_abap_behv=>cause-unauthorized )
-               TO failed-userrole.
-        APPEND VALUE #( %cid = ls_key-%cid
-                         %msg = new_message( id       = '00'
-                                              number   = '001'
-                                              severity = if_abap_behv_message=>severity-error
-                                              v1       = 'Only Manager/Admin can delegate approval' ) )
-               TO reported-userrole.
-        CONTINUE.
-      ENDIF.
+    IF lv_role <> 'MANAGER' AND lv_role <> 'ADMIN'.
+      APPEND VALUE #( %cid        = ls_key-%cid
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+             TO failed-userrole.
+      APPEND VALUE #( %cid = ls_key-%cid
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Only Manager/Admin can delegate approval' ) )
+             TO reported-userrole.
+      CONTINUE.
+    ENDIF.
 
-      IF ls_key-%param-valid_to < ls_key-%param-valid_from.
-        APPEND VALUE #( %cid        = ls_key-%cid
-                         %fail-cause = if_abap_behv=>cause-unspecific )
-               TO failed-userrole.
-        APPEND VALUE #( %cid = ls_key-%cid
-                         %msg = new_message( id       = '00'
-                                              number   = '001'
-                                              severity = if_abap_behv_message=>severity-error
-                                              v1       = 'Valid to must be after valid from' ) )
-               TO reported-userrole.
-        CONTINUE.
-      ENDIF.
+    IF ls_key-%param-valid_to < ls_key-%param-valid_from.
+      APPEND VALUE #( %cid        = ls_key-%cid
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-userrole.
+      APPEND VALUE #( %cid = ls_key-%cid
+                       %msg = new_message( id       = '00'
+                                            number   = '001'
+                                            severity = if_abap_behv_message=>severity-error
+                                            v1       = 'Valid to must be after valid from' ) )
+             TO reported-userrole.
+      CONTINUE.
+    ENDIF.
 
-      TRY.
-          lv_delegation_id = cl_system_uuid=>create_uuid_c32_static( ).
-        CATCH cx_uuid_error.
-          CLEAR lv_delegation_id.
-      ENDTRY.
+    TRY.
+        lv_delegation_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_delegation_id.
+    ENDTRY.
 
-      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
 
-      INSERT zaiso_delegation FROM @( VALUE #( client         = sy-mandt
-                                                delegation_id  = lv_delegation_id
-                                                delegator_user = lv_delegator
-                                                delegate_user  = ls_key-%param-delegate_user
-                                                sales_org      = ls_key-%param-sales_org
-                                                valid_from     = ls_key-%param-valid_from
-                                                valid_to       = ls_key-%param-valid_to
-                                                reason         = ls_key-%param-reason
-                                                status         = 'A'
-                                                created_at     = lv_timestamp ) ).
+    INSERT zaiso_delegation FROM @( VALUE #( client         = sy-mandt
+                                              delegation_id  = lv_delegation_id
+                                              delegator_user = lv_delegator
+                                              delegate_user  = ls_key-%param-delegate_user
+                                              sales_org      = ls_key-%param-sales_org
+                                              valid_from     = ls_key-%param-valid_from
+                                              valid_to       = ls_key-%param-valid_to
+                                              reason         = ls_key-%param-reason
+                                              max_amount     = ls_key-%param-max_amount
+                                              currency       = ls_key-%param-currency
+                                              status         = 'A'
+                                              created_at     = lv_timestamp ) ).
 
-      INSERT zaiso_audit FROM @( VALUE #( mandt       = sy-mandt
-                                           audit_id    = lv_delegation_id
-                                           sap_user    = lv_delegator
-                                           actor_role  = lv_role
-                                           action_type = 'DELEGATE_APPROVAL'
-                                           so_number   = ''
-                                           status      = 'SUCCESS'
-                                           remarks     = |{ lv_delegator } to { ls_key-%param-delegate_user } org { ls_key-%param-sales_org }|
-                                           created_at  = lv_timestamp ) ).
-    ENDLOOP.
-  ENDMETHOD.
+    INSERT zaiso_audit FROM @( VALUE #( mandt       = sy-mandt
+                                         audit_id    = lv_delegation_id
+                                         sap_user    = lv_delegator
+                                         actor_role  = lv_role
+                                         action_type = 'DELEGATE_APPROVAL'
+                                         so_number   = ''
+                                         status      = 'SUCCESS'
+                                         remarks     = |{ lv_delegator } to { ls_key-%param-delegate_user } org { ls_key-%param-sales_org }|
+                                         created_at  = lv_timestamp ) ).
+  ENDLOOP.
+ENDMETHOD.
 
   METHOD revokedelegation.
     LOOP AT keys INTO DATA(ls_key).

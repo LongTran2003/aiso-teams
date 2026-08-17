@@ -16,6 +16,18 @@
      <ENTRY>AISO - SO Ownership Forward History</ENTRY>
      <LENGTH>35</LENGTH>
     </item>
+    <item>
+     <ID>S</ID>
+     <KEY>SO_SONUM</KEY>
+     <ENTRY>Sales Order Number</ENTRY>
+     <LENGTH>26</LENGTH>
+    </item>
+    <item>
+     <ID>S</ID>
+     <KEY>SO_USER</KEY>
+     <ENTRY>Microsoft Teams User ID</ENTRY>
+     <LENGTH>31</LENGTH>
+    </item>
    </TPOOL>
   </asx:values>
  </asx:abap>

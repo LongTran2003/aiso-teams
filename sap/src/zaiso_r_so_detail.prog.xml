@@ -16,6 +16,12 @@
      <ENTRY>AISO - Sales Order Detail + Items</ENTRY>
      <LENGTH>33</LENGTH>
     </item>
+    <item>
+     <ID>S</ID>
+     <KEY>P_VBELN</KEY>
+     <ENTRY>Sales Order Number</ENTRY>
+     <LENGTH>26</LENGTH>
+    </item>
    </TPOOL>
   </asx:values>
  </asx:abap>
