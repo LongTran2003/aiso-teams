@@ -31,6 +31,9 @@ public class UserMapping
     /// <summary>Expiration date of the delegation.</summary>
     public DateTimeOffset? DelegatedValidTo { get; set; }
 
+    /// <summary>The maximum order amount this user is allowed to approve (partial delegation).</summary>
+    public decimal? DelegationMaxAmount { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 }

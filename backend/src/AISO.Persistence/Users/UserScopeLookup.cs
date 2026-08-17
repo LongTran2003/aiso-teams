@@ -64,6 +64,35 @@ public sealed class UserScopeLookup : IUserScopeLookup
         return string.IsNullOrWhiteSpace(delegatedBy) ? null : delegatedBy;
     }
 
+    public async Task<DelegationInfo> GetDelegationInfoAsync(string sapUserId, CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+        
+        var mapping = await db.UserMappings
+            .AsNoTracking()
+            .Where(u => u.SapUserId == sapUserId)
+            .Select(u => new { u.DelegatedBySapUser, u.DelegationMaxAmount })
+            .FirstOrDefaultAsync(ct);
+
+        if (mapping != null && !string.IsNullOrWhiteSpace(mapping.DelegatedBySapUser))
+        {
+            return new DelegationInfo(mapping.DelegatedBySapUser, mapping.DelegationMaxAmount);
+        }
+
+        var assignment = await db.SapLinkAssignments
+            .AsNoTracking()
+            .Where(a => a.SapUserId == sapUserId)
+            .Select(a => new { a.DelegatedBySapUser, a.DelegationMaxAmount })
+            .FirstOrDefaultAsync(ct);
+
+        if (assignment != null && !string.IsNullOrWhiteSpace(assignment.DelegatedBySapUser))
+        {
+            return new DelegationInfo(assignment.DelegatedBySapUser, assignment.DelegationMaxAmount);
+        }
+
+        return new DelegationInfo(null, null);
+    }
+
     public async Task<string?> GetEmailBySapUserAsync(string sapUserId, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
@@ -76,7 +105,7 @@ public sealed class UserScopeLookup : IUserScopeLookup
         return string.IsNullOrWhiteSpace(email) ? null : email;
     }
 
-    public async Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, DateTimeOffset? validTo = null, CancellationToken ct = default)
+    public async Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, DateTimeOffset? validTo = null, decimal? maxAmount = null, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
         
@@ -88,6 +117,7 @@ public sealed class UserScopeLookup : IUserScopeLookup
         {
             mapping.DelegatedBySapUser = delegatorUser;
             mapping.DelegatedValidTo = validTo;
+            mapping.DelegationMaxAmount = maxAmount;
             mapping.UpdatedAt = DateTimeOffset.UtcNow;
         }
 
@@ -99,6 +129,7 @@ public sealed class UserScopeLookup : IUserScopeLookup
         {
             assignment.DelegatedBySapUser = delegatorUser;
             assignment.DelegatedValidTo = validTo;
+            assignment.DelegationMaxAmount = maxAmount;
             assignment.UpdatedAt = DateTimeOffset.UtcNow;
         }
 

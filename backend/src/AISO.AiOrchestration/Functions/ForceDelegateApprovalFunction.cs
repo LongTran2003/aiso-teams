@@ -70,6 +70,8 @@ public class ForceDelegateApprovalFunction : IFunction
         var validFrom = parameters.TryGetProperty("validFrom", out var vFrom) ? vFrom.GetString() : null;
         var validTo = parameters.TryGetProperty("validTo", out var vTo) ? vTo.GetString() : null;
         var reason = parameters.TryGetProperty("reason", out var r) ? r.GetString() : null;
+        decimal? maxAmount = parameters.TryGetProperty("maxAmount", out var amt) && amt.ValueKind == JsonValueKind.Number 
+                             ? amt.GetDecimal() : null;
 
         if (string.IsNullOrWhiteSpace(delegatorUser) || string.IsNullOrWhiteSpace(delegateUser) || string.IsNullOrWhiteSpace(validFrom) || string.IsNullOrWhiteSpace(validTo))
             return FunctionResult.Fail("Vui lòng cung cấp đủ thông tin người uỷ quyền, người nhận và thời hạn.");
@@ -84,7 +86,8 @@ public class ForceDelegateApprovalFunction : IFunction
             SalesOrg: salesOrg,
             ValidFrom: fromDate,
             ValidTo: toDate,
-            Reason: reason ?? $"Force delegated by Admin {requestingSapUser}");
+            Reason: reason ?? $"Force delegated by Admin {requestingSapUser}",
+            MaxAmount: maxAmount);
 
         try
         {
@@ -92,7 +95,7 @@ public class ForceDelegateApprovalFunction : IFunction
             await _sapClient.DelegateApprovalAsync(dto, ct);
 
             // Cập nhật local DB
-            await _scope.SetDelegatedBySapUserAsync(delegateUser, delegatorUser, toDate, ct);
+            await _scope.SetDelegatedBySapUserAsync(delegateUser, delegatorUser, toDate, maxAmount, ct);
 
             // Send Email Notification
             var delegateEmail = await _scope.GetEmailBySapUserAsync(delegateUser, ct);
@@ -106,6 +109,7 @@ public class ForceDelegateApprovalFunction : IFunction
                     <ul>
                         <li><b>Thời gian bắt đầu:</b> {fromDate:dd/MM/yyyy}</li>
                         <li><b>Thời gian kết thúc:</b> {toDate:dd/MM/yyyy}</li>
+                        <li><b>Hạn mức tối đa:</b> {(maxAmount.HasValue ? maxAmount.Value.ToString("N0") : "Không giới hạn")}</li>
                         <li><b>Lý do Admin ghi chú:</b> {reason ?? "Không có"}</li>
                     </ul>
                     <p>Vui lòng đăng nhập vào ứng dụng AISO Teams Bot để xử lý các yêu cầu phê duyệt trong thời gian này.</p>
@@ -118,7 +122,8 @@ public class ForceDelegateApprovalFunction : IFunction
                 action = "ForceDelegated",
                 delegatorUser,
                 delegateUser,
-                message = $"Đã thực hiện uỷ quyền khẩn cấp quyền của {delegatorUser} sang cho {delegateUser} từ {fromDate:dd/MM/yyyy} đến {toDate:dd/MM/yyyy}."
+                maxAmount,
+                message = $"Đã thực hiện uỷ quyền khẩn cấp quyền của {delegatorUser} sang cho {delegateUser} từ {fromDate:dd/MM/yyyy} đến {toDate:dd/MM/yyyy}." + (maxAmount.HasValue ? $" Hạn mức: {maxAmount.Value:N0}" : "")
             });
         }
         catch (SapODataException ex)

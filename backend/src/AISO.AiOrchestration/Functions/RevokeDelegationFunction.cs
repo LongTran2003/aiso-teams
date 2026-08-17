@@ -61,7 +61,7 @@ public class RevokeDelegationFunction : IFunction
             // Cập nhật local DB
             if (!string.IsNullOrWhiteSpace(delegateUser))
             {
-                await _scope.SetDelegatedBySapUserAsync(delegateUser, null, null, ct);
+                await _scope.SetDelegatedBySapUserAsync(delegateUser, null, null, null, ct);
             }
 
             return FunctionResult.Ok(new

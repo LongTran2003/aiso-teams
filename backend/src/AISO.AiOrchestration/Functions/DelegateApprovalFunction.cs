@@ -62,6 +62,8 @@ public class DelegateApprovalFunction : IFunction
         var validFrom = parameters.TryGetProperty("validFrom", out var vFrom) ? vFrom.GetString() : null;
         var validTo = parameters.TryGetProperty("validTo", out var vTo) ? vTo.GetString() : null;
         var reason = parameters.TryGetProperty("reason", out var r) ? r.GetString() : null;
+        decimal? maxAmount = parameters.TryGetProperty("maxAmount", out var amt) && amt.ValueKind == JsonValueKind.Number 
+                             ? amt.GetDecimal() : null;
 
         if (string.IsNullOrWhiteSpace(delegateUser) || string.IsNullOrWhiteSpace(validFrom) || string.IsNullOrWhiteSpace(validTo))
             return FunctionResult.Fail("Vui lòng cung cấp đủ thông tin người được uỷ quyền và thời hạn.");
@@ -76,14 +78,14 @@ public class DelegateApprovalFunction : IFunction
         var toDate = DateTimeOffset.Parse(validTo);
 
         // Chống uỷ quyền bắc cầu (No chain delegation)
-        var delegatorIsDelegate = await _scope.GetDelegatedBySapUserAsync(requestingSapUser, ct);
-        if (delegatorIsDelegate != null)
+        var delegatorInfo = await _scope.GetDelegationInfoAsync(requestingSapUser, ct);
+        if (delegatorInfo.DelegatorSapUser != null)
         {
             return FunctionResult.Fail("Không thể uỷ quyền vì bạn đang nhận uỷ quyền từ người khác (Cấm uỷ quyền bắc cầu).", "VALIDATION");
         }
 
-        var delegateeIsDelegate = await _scope.GetDelegatedBySapUserAsync(delegateUser, ct);
-        if (delegateeIsDelegate != null)
+        var delegateeInfo = await _scope.GetDelegationInfoAsync(delegateUser, ct);
+        if (delegateeInfo.DelegatorSapUser != null)
         {
             return FunctionResult.Fail($"Không thể uỷ quyền cho {delegateUser} vì họ đang nhận uỷ quyền của người khác.", "VALIDATION");
         }
@@ -96,14 +98,15 @@ public class DelegateApprovalFunction : IFunction
             SalesOrg: salesOrg,
             ValidFrom: fromDate,
             ValidTo: toDate,
-            Reason: reason);
+            Reason: reason,
+            MaxAmount: maxAmount);
 
         try
         {
             await _sapClient.DelegateApprovalAsync(dto, ct);
 
             // Cập nhật local DB
-            await _scope.SetDelegatedBySapUserAsync(delegateUser, requestingSapUser, toDate, ct);
+            await _scope.SetDelegatedBySapUserAsync(delegateUser, requestingSapUser, toDate, maxAmount, ct);
 
             // Send Email Notification
             var delegateEmail = await _scope.GetEmailBySapUserAsync(delegateUser, ct);
@@ -117,6 +120,7 @@ public class DelegateApprovalFunction : IFunction
                     <ul>
                         <li><b>Thời gian bắt đầu:</b> {fromDate:dd/MM/yyyy}</li>
                         <li><b>Thời gian kết thúc:</b> {toDate:dd/MM/yyyy}</li>
+                        <li><b>Hạn mức tối đa:</b> {(maxAmount.HasValue ? maxAmount.Value.ToString("N0") : "Không giới hạn")}</li>
                         <li><b>Lý do:</b> {reason ?? "Không có"}</li>
                     </ul>
                     <p>Vui lòng đăng nhập vào ứng dụng AISO Teams Bot để xử lý các yêu cầu phê duyệt trong thời gian này.</p>
@@ -128,7 +132,8 @@ public class DelegateApprovalFunction : IFunction
             {
                 action = "Delegated",
                 delegateUser,
-                message = $"Đã uỷ quyền thành công cho {delegateUser} từ {fromDate:dd/MM/yyyy} đến {toDate:dd/MM/yyyy}."
+                maxAmount,
+                message = $"Đã uỷ quyền thành công cho {delegateUser} từ {fromDate:dd/MM/yyyy} đến {toDate:dd/MM/yyyy}." + (maxAmount.HasValue ? $" Hạn mức: {maxAmount.Value:N0}" : "")
             });
         }
         catch (SapODataException ex)

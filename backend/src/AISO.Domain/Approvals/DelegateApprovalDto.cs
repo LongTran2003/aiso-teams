@@ -8,4 +8,5 @@ public record DelegateApprovalDto(
     string? SalesOrg,
     DateTimeOffset ValidFrom,
     DateTimeOffset ValidTo,
-    string? Reason);
+    string? Reason,
+    decimal? MaxAmount = null);

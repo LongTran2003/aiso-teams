@@ -77,10 +77,10 @@ public sealed class ApproveOrderFunction : IFunction
         {
             var role = await _scope.GetRoleBySapUserAsync(requestingSapUser, ct);
             var salesOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
-            var delegatedBy = await _scope.GetDelegatedBySapUserAsync(requestingSapUser, ct);
+            var delegationInfo = await _scope.GetDelegationInfoAsync(requestingSapUser, ct);
             var isAdmin = role == UserRole.Admin;
 
-            if (role < UserRole.Manager && string.IsNullOrWhiteSpace(delegatedBy))
+            if (role < UserRole.Manager && string.IsNullOrWhiteSpace(delegationInfo.DelegatorSapUser))
             {
                 return FunctionResult.Fail("Only Manager or Admin can approve release requests (or a delegated user).", "UNAUTHORIZED");
             }
@@ -116,6 +116,17 @@ public sealed class ApproveOrderFunction : IFunction
 
             if (!isAdmin && existing is not null)
             {
+                if (!string.IsNullOrWhiteSpace(delegationInfo.DelegatorSapUser) && delegationInfo.MaxAmount.HasValue)
+                {
+                    if (existing.NetValue > delegationInfo.MaxAmount.Value)
+                    {
+                        return FunctionResult.Fail(
+                            $"Bạn đang phê duyệt dưới quyền uỷ quyền nhưng hạn mức uỷ quyền của bạn chỉ là {delegationInfo.MaxAmount.Value:N0} {existing.Currency}. " +
+                            $"Đơn hàng {existing.SoNumber} có giá trị {existing.NetValue:N0} {existing.Currency}, vượt quá hạn mức.",
+                            "VALIDATION");
+                    }
+                }
+
                 var thresholdError = ApprovalThresholdHelper.CheckThreshold(_config, existing.NetValue, existing.Currency);
                 if (thresholdError is not null)
                 {

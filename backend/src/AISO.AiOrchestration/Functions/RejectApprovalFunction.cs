@@ -72,9 +72,10 @@ public sealed class RejectApprovalFunction : IFunction
         {
             var role = await _scope.GetRoleBySapUserAsync(requestingSapUser, ct);
             var salesOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
-            var delegatedBy = await _scope.GetDelegatedBySapUserAsync(requestingSapUser, ct);
+            var delegationInfo = await _scope.GetDelegationInfoAsync(requestingSapUser, ct);
+            var isAdmin = role == UserRole.Admin;
 
-            if (role < UserRole.Manager && string.IsNullOrWhiteSpace(delegatedBy))
+            if (role < UserRole.Manager && string.IsNullOrWhiteSpace(delegationInfo.DelegatorSapUser))
             {
                 return FunctionResult.Fail("Only Manager or Admin can reject release requests (or a delegated user).", "UNAUTHORIZED");
             }

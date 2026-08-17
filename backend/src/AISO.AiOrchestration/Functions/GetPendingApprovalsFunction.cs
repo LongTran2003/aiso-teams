@@ -40,9 +40,9 @@ public sealed class GetPendingApprovalsFunction : IFunction
     public async Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
     {
         var role = await _scope.GetRoleBySapUserAsync(requestingSapUser, ct);
-        var delegatedBy = await _scope.GetDelegatedBySapUserAsync(requestingSapUser, ct);
+        var delegationInfo = await _scope.GetDelegationInfoAsync(requestingSapUser, ct);
 
-        if (role < UserRole.Manager && string.IsNullOrWhiteSpace(delegatedBy))
+        if (role < UserRole.Manager && string.IsNullOrWhiteSpace(delegationInfo.DelegatorSapUser))
         {
             return FunctionResult.Fail("Only Manager or Admin can view pending approvals (or a delegated user).", "UNAUTHORIZED");
         }
