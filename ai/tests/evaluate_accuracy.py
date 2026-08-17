@@ -26,7 +26,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 AI_DIR = SCRIPT_DIR.parent
 ENV_PATH = AI_DIR / ".env"
 FUNCTIONS_DIR = AI_DIR / "functions"
-# Eval uses the condensed prompt (no few-shot) to stay within qwen-3.6-27b
+# Eval uses the condensed prompt (no few-shot) to stay within llama-3.1-8b-instant
 # 6K TPM limit. Production uses the full system_prompt.txt with few-shot examples.
 SYSTEM_PROMPT_PATH = AI_DIR / "prompts" / "system_prompt_eval.txt"
 SYSTEM_PROMPT_FALLBACK_PATH = AI_DIR / "prompts" / "system_prompt.txt"
@@ -48,7 +48,7 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 def _load_system_prompt() -> str:
     """
     Load condensed eval prompt (system_prompt_eval.txt) to fit within
-    qwen-3.6-27b 6K TPM limit. Falls back to full system_prompt.txt
+    llama-3.1-8b-instant 6K TPM limit. Falls back to full system_prompt.txt
     if the eval file is missing.
     """
     for path in (SYSTEM_PROMPT_PATH, SYSTEM_PROMPT_FALLBACK_PATH):
@@ -758,7 +758,7 @@ def run_evaluation(
         client = OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
         system_prompt = _load_system_prompt()
         tools = load_tools()
-        model_name = os.getenv("GROQ_MODEL", "qwen-3.6-27b")
+        model_name = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
         print(f"Running evaluation using model: {model_name}\n")
     except (OSError, ValueError, openai.OpenAIError) as e:
         print(f"Failed to initialize API client: {e}", file=sys.stderr)
