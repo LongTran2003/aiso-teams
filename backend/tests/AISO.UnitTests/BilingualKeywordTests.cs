@@ -285,7 +285,13 @@ public class BilingualKeywordTests
         public Task<string?> GetDelegatedBySapUserAsync(string sapUserId, CancellationToken ct = default) =>
             Task.FromResult<string?>(null);
 
-        public Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, CancellationToken ct = default)
+        public Task<string?> GetEmailBySapUserAsync(string sapUserId, CancellationToken ct = default) =>
+            Task.FromResult<string?>(null);
+
+        public Task<AISO.Domain.Users.DelegationInfo> GetDelegationInfoAsync(string sapUserId, CancellationToken ct = default) =>
+            Task.FromResult(new AISO.Domain.Users.DelegationInfo(null, null));
+
+        public Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, DateTimeOffset? validTo = null, decimal? maxAmount = null, CancellationToken ct = default)
             => Task.CompletedTask;
     }
 }

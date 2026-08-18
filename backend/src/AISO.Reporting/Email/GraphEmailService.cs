@@ -9,7 +9,7 @@ namespace AISO.Reporting.Email;
 
 public class GraphEmailService : IEmailService
 {
-    private readonly GraphServiceClient _graphClient;
+    private readonly GraphServiceClient? _graphClient;
     private readonly string _senderEmail;
     private readonly ILogger<GraphEmailService> _logger;
 

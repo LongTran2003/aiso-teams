@@ -331,7 +331,7 @@ public class SapClient : ISapClient
 
         // Align with ZAISO_A_UPDATE_SO: NEW_REFERENCE, REQUESTED_DELIVERY_DATE, ITEMS
         // (no CHANGE_* flags — SAP updates a header field only when it is non-initial).
-        var payload = new Dictionary<string, object>
+        var payload = new Dictionary<string, object?>
         {
             ["REQUESTING_TEAMS_USER"] = dto.RequestingSapUser.Trim(),
             ["ITEMS"] = (dto.Items ?? Array.Empty<UpdateSalesOrderItemDto>()).Select(i => new
