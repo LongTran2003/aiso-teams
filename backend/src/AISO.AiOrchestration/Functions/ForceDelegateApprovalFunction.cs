@@ -70,7 +70,7 @@ public class ForceDelegateApprovalFunction : IFunction
         var validFrom = parameters.TryGetProperty("validFrom", out var vFrom) ? vFrom.GetString() : null;
         var validTo = parameters.TryGetProperty("validTo", out var vTo) ? vTo.GetString() : null;
         var reason = parameters.TryGetProperty("reason", out var r) ? r.GetString() : null;
-        decimal? maxAmount = parameters.TryGetProperty("maxAmount", out var amt) && amt.ValueKind == JsonValueKind.Number 
+        decimal? maxAmount = parameters.TryGetProperty("maxAmount", out var amt) && amt.ValueKind == JsonValueKind.Number
                              ? amt.GetDecimal() : null;
 
         if (string.IsNullOrWhiteSpace(delegatorUser) || string.IsNullOrWhiteSpace(delegateUser) || string.IsNullOrWhiteSpace(validFrom) || string.IsNullOrWhiteSpace(validTo))

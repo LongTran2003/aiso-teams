@@ -16,7 +16,7 @@ public static class ApprovalThresholdHelper
 
         var currencyKey = $"ApprovalThresholds:ManagerMaxAmount:{currency.ToUpperInvariant()}";
         var currencyThreshold = config.GetValue<decimal?>(currencyKey);
-        
+
         if (currencyThreshold.HasValue)
             return currencyThreshold;
 
@@ -31,12 +31,12 @@ public static class ApprovalThresholdHelper
     public static string? CheckThreshold(IConfiguration config, decimal netValue, string? currency)
     {
         var threshold = GetThreshold(config, currency);
-        
+
         if (threshold.HasValue && netValue > threshold.Value)
         {
             return $"Order value ({netValue:N2}) exceeds threshold ({threshold.Value:N2} {currency}).";
         }
-        
+
         return null;
     }
 }

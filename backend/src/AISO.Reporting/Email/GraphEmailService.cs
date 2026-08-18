@@ -16,7 +16,7 @@ public class GraphEmailService : IEmailService
     public GraphEmailService(IConfiguration configuration, ILogger<GraphEmailService> logger)
     {
         _logger = logger;
-        
+
         var tenantId = configuration["MicrosoftAppTenantId"];
         var clientId = configuration["MicrosoftAppId"];
         var clientSecret = configuration["MicrosoftAppPassword"];
@@ -74,7 +74,7 @@ public class GraphEmailService : IEmailService
             await _graphClient.Users[_senderEmail]
                 .SendMail
                 .PostAsync(requestBody, cancellationToken: ct);
-            
+
             _logger.LogInformation("Successfully sent email to {ToAddress} with subject: {Subject}", toAddress, subject);
         }
         catch (Exception ex)
