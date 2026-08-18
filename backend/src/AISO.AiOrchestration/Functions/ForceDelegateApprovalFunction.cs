@@ -39,6 +39,14 @@ public class ForceDelegateApprovalFunction : IFunction
             "reason": {
               "type": "string",
               "description": "Reason for emergency delegation."
+            },
+            "maxAmount": {
+              "type": "number",
+              "description": "Optional maximum approval amount limit."
+            },
+            "currency": {
+              "type": "string",
+              "description": "Currency code for the max amount (e.g. VND, USD). Default is VND."
             }
           },
           "required": ["delegatorUser", "delegateUser", "validFrom", "validTo"]
@@ -70,6 +78,7 @@ public class ForceDelegateApprovalFunction : IFunction
         var validFrom = parameters.TryGetProperty("validFrom", out var vFrom) ? vFrom.GetString() : null;
         var validTo = parameters.TryGetProperty("validTo", out var vTo) ? vTo.GetString() : null;
         var reason = parameters.TryGetProperty("reason", out var r) ? r.GetString() : null;
+        var currency = parameters.TryGetProperty("currency", out var c) ? c.GetString()?.ToUpperInvariant() ?? "VND" : "VND";
         decimal? maxAmount = parameters.TryGetProperty("maxAmount", out var amt) && amt.ValueKind == JsonValueKind.Number
                              ? amt.GetDecimal() : null;
 
@@ -87,7 +96,8 @@ public class ForceDelegateApprovalFunction : IFunction
             ValidFrom: fromDate,
             ValidTo: toDate,
             Reason: reason ?? $"Force delegated by Admin {requestingSapUser}",
-            MaxAmount: maxAmount);
+            MaxAmount: maxAmount,
+            Currency: currency);
 
         try
         {

@@ -34,6 +34,14 @@ public class DelegateApprovalFunction : IFunction
             "reason": {
               "type": "string",
               "description": "Optional reason for delegation."
+            },
+            "maxAmount": {
+              "type": "number",
+              "description": "Optional maximum approval amount limit."
+            },
+            "currency": {
+              "type": "string",
+              "description": "Currency code for the max amount (e.g. VND, USD). Default is VND."
             }
           },
           "required": ["delegateUser", "validFrom", "validTo"]
@@ -62,6 +70,7 @@ public class DelegateApprovalFunction : IFunction
         var validFrom = parameters.TryGetProperty("validFrom", out var vFrom) ? vFrom.GetString() : null;
         var validTo = parameters.TryGetProperty("validTo", out var vTo) ? vTo.GetString() : null;
         var reason = parameters.TryGetProperty("reason", out var r) ? r.GetString() : null;
+        var currency = parameters.TryGetProperty("currency", out var c) ? c.GetString()?.ToUpperInvariant() ?? "VND" : "VND";
         decimal? maxAmount = parameters.TryGetProperty("maxAmount", out var amt) && amt.ValueKind == JsonValueKind.Number
                              ? amt.GetDecimal() : null;
 
@@ -99,7 +108,8 @@ public class DelegateApprovalFunction : IFunction
             ValidFrom: fromDate,
             ValidTo: toDate,
             Reason: reason,
-            MaxAmount: maxAmount);
+            MaxAmount: maxAmount,
+            Currency: currency);
 
         try
         {
