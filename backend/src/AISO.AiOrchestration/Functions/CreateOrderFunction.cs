@@ -31,7 +31,7 @@ public sealed class CreateOrderFunction : IFunction
     public string Name => "CreateOrder";
 
     public string Description =>
-        "ALWAYS call this function IMMEDIATELY when the user asks to create a sales order, even if they do not provide customer ID or materials. " +
+        "DO NOT ASK THE USER FOR MISSING DETAILS. ALWAYS call this function IMMEDIATELY with empty parameters when the user asks to create an order. " +
         "It returns an interactive form for the user to fill out the missing details.";
 
     public string ParametersJsonSchema => """
@@ -105,6 +105,11 @@ public sealed class CreateOrderFunction : IFunction
                     material.Trim().ToUpperInvariant(),
                     qty));
             }
+        }
+
+        if (lines.Count == 0)
+        {
+            lines.Add(new ConfirmCreateOrderLine("TG11", 1m));
         }
 
         var areas = await _sap.GetSalesAreasAsync(ct);
