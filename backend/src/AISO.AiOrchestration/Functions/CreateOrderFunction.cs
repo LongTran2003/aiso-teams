@@ -53,8 +53,7 @@ public sealed class CreateOrderFunction : IFunction
                   "qty": { "type": "number", "description": "Order quantity." },
                   "plant": { "type": "string", "description": "Plant (e.g. '1010')." },
                   "unit": { "type": "string", "description": "Unit of measure (e.g. 'PC')." }
-                },
-                "required": ["material", "qty"]
+                }
               }
             }
           }
