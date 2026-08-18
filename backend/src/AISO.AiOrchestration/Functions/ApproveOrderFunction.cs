@@ -121,8 +121,8 @@ public sealed class ApproveOrderFunction : IFunction
                     if (existing.NetValue > delegationInfo.MaxAmount.Value)
                     {
                         return FunctionResult.Fail(
-                            $"Bạn đang phê duyệt dưới quyền uỷ quyền nhưng hạn mức uỷ quyền của bạn chỉ là {delegationInfo.MaxAmount.Value:N0} {existing.Currency}. " +
-                            $"Đơn hàng {existing.SoNumber} có giá trị {existing.NetValue:N0} {existing.Currency}, vượt quá hạn mức.",
+                            $"You are approving as a delegate, but your maximum allowed amount is only {delegationInfo.MaxAmount.Value:N0} {existing.Currency}. " +
+                            $"Order {existing.SoNumber} has a net value of {existing.NetValue:N0} {existing.Currency}, which exceeds your limit.",
                             "VALIDATION");
                     }
                 }
@@ -168,7 +168,7 @@ public sealed class ApproveOrderFunction : IFunction
         catch (SapODataException ex)
         {
             _logger.LogWarning(ex, "SAP OData rejected approval for {OrderId}: {Message}", orderId, ex.Message);
-            return FunctionResult.Fail($"SAP từ chối duyệt đơn: {ex.Message}", "VALIDATION");
+            return FunctionResult.Fail($"SAP rejected approval: {ex.Message}", "VALIDATION");
         }
         catch (Exception ex)
         {

@@ -74,7 +74,7 @@ public class ForceDelegateApprovalFunction : IFunction
                              ? amt.GetDecimal() : null;
 
         if (string.IsNullOrWhiteSpace(delegatorUser) || string.IsNullOrWhiteSpace(delegateUser) || string.IsNullOrWhiteSpace(validFrom) || string.IsNullOrWhiteSpace(validTo))
-            return FunctionResult.Fail("Vui lòng cung cấp đủ thông tin người uỷ quyền, người nhận và thời hạn.");
+            return FunctionResult.Fail("Please provide the delegator, delegatee, and valid dates.");
 
         var fromDate = DateTimeOffset.Parse(validFrom);
         var toDate = DateTimeOffset.Parse(validTo);
@@ -101,18 +101,17 @@ public class ForceDelegateApprovalFunction : IFunction
             var delegateEmail = await _scope.GetEmailBySapUserAsync(delegateUser, ct);
             if (!string.IsNullOrEmpty(delegateEmail))
             {
-                string subject = $"[Cưỡng Chế] Thông báo nhận uỷ quyền phê duyệt từ hệ thống";
+                string subject = $"[Emergency] Delegation Notice from System";
                 string html = $@"
-                    <h2>Thông báo uỷ quyền khẩn cấp (Emergency Delegation)</h2>
-                    <p>Chào bạn,</p>
-                    <p>Hệ thống vừa tự động chuyển giao quyền phê duyệt của <b>{delegatorUser}</b> sang cho bạn. Thao tác này được thực hiện bởi Admin <b>{requestingSapUser}</b>.</p>
+                    <h2>Emergency Delegation Notice</h2>
+                    <p>The system has automatically delegated <b>{delegatorUser}</b>'s approval authority to you. This action was performed by Admin <b>{requestingSapUser}</b>.</p>
                     <ul>
-                        <li><b>Thời gian bắt đầu:</b> {fromDate:dd/MM/yyyy}</li>
-                        <li><b>Thời gian kết thúc:</b> {toDate:dd/MM/yyyy}</li>
-                        <li><b>Hạn mức tối đa:</b> {(maxAmount.HasValue ? maxAmount.Value.ToString("N0") : "Không giới hạn")}</li>
-                        <li><b>Lý do Admin ghi chú:</b> {reason ?? "Không có"}</li>
+                        <li><b>Start Date:</b> {fromDate:dd/MM/yyyy}</li>
+                        <li><b>End Date:</b> {toDate:dd/MM/yyyy}</li>
+                        <li><b>Max Amount:</b> {(maxAmount.HasValue ? maxAmount.Value.ToString("N0") : "Unlimited")}</li>
+                        <li><b>Admin Reason:</b> {reason ?? "None"}</li>
                     </ul>
-                    <p>Vui lòng đăng nhập vào ứng dụng AISO Teams Bot để xử lý các yêu cầu phê duyệt trong thời gian này.</p>
+                    <p>Please log in to the AISO Teams Bot to process approval requests during this period.</p>
                 ";
                 await _emailService.SendEmailAsync(delegateEmail, subject, html, ct);
             }
@@ -123,16 +122,16 @@ public class ForceDelegateApprovalFunction : IFunction
                 delegatorUser,
                 delegateUser,
                 maxAmount,
-                message = $"Đã thực hiện uỷ quyền khẩn cấp quyền của {delegatorUser} sang cho {delegateUser} từ {fromDate:dd/MM/yyyy} đến {toDate:dd/MM/yyyy}." + (maxAmount.HasValue ? $" Hạn mức: {maxAmount.Value:N0}" : "")
+                message = $"Successfully forced delegation from {delegatorUser} to {delegateUser} from {fromDate:dd/MM/yyyy} to {toDate:dd/MM/yyyy}." + (maxAmount.HasValue ? $" Max Amount: {maxAmount.Value:N0}" : "")
             });
         }
         catch (SapODataException ex)
         {
-            return FunctionResult.Fail($"SAP từ chối uỷ quyền: {ex.Message}", "VALIDATION");
+            return FunctionResult.Fail($"SAP rejected delegation: {ex.Message}", "VALIDATION");
         }
         catch (Exception ex)
         {
-            return FunctionResult.Fail($"Lỗi khi uỷ quyền khẩn cấp: {ex.Message}");
+            return FunctionResult.Fail($"Error during emergency delegation: {ex.Message}");
         }
     }
 }

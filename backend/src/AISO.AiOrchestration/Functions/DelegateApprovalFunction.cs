@@ -66,28 +66,28 @@ public class DelegateApprovalFunction : IFunction
                              ? amt.GetDecimal() : null;
 
         if (string.IsNullOrWhiteSpace(delegateUser) || string.IsNullOrWhiteSpace(validFrom) || string.IsNullOrWhiteSpace(validTo))
-            return FunctionResult.Fail("Vui lòng cung cấp đủ thông tin người được uỷ quyền và thời hạn.");
+            return FunctionResult.Fail("Please provide the delegate user, valid from, and valid to dates.");
 
         var delegateRole = await _scope.GetRoleBySapUserAsync(delegateUser, ct);
         if (delegateRole < UserRole.Manager)
         {
-            return FunctionResult.Fail("Không thể uỷ quyền cho nhân viên (Employee). Chỉ uỷ quyền được cho Manager hoặc Admin.", "VALIDATION");
+            return FunctionResult.Fail("Cannot delegate to an Employee. Delegation is only allowed for Managers or Admins.", "VALIDATION");
         }
 
         var fromDate = DateTimeOffset.Parse(validFrom);
         var toDate = DateTimeOffset.Parse(validTo);
 
-        // Chống uỷ quyền bắc cầu (No chain delegation)
+        // Prevent chain delegation
         var delegatorInfo = await _scope.GetDelegationInfoAsync(requestingSapUser, ct);
         if (delegatorInfo.DelegatorSapUser != null)
         {
-            return FunctionResult.Fail("Không thể uỷ quyền vì bạn đang nhận uỷ quyền từ người khác (Cấm uỷ quyền bắc cầu).", "VALIDATION");
+            return FunctionResult.Fail("Cannot delegate because you are currently acting as a delegate (Chain delegation is prohibited).", "VALIDATION");
         }
 
         var delegateeInfo = await _scope.GetDelegationInfoAsync(delegateUser, ct);
         if (delegateeInfo.DelegatorSapUser != null)
         {
-            return FunctionResult.Fail($"Không thể uỷ quyền cho {delegateUser} vì họ đang nhận uỷ quyền của người khác.", "VALIDATION");
+            return FunctionResult.Fail($"Cannot delegate to {delegateUser} because they are currently acting as a delegate for someone else.", "VALIDATION");
         }
 
         var salesOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
@@ -106,24 +106,24 @@ public class DelegateApprovalFunction : IFunction
             await _sapClient.DelegateApprovalAsync(dto, ct);
 
             // Cập nhật local DB
+            // Update local DB
             await _scope.SetDelegatedBySapUserAsync(delegateUser, requestingSapUser, toDate, maxAmount, ct);
 
             // Send Email Notification
             var delegateEmail = await _scope.GetEmailBySapUserAsync(delegateUser, ct);
             if (!string.IsNullOrEmpty(delegateEmail))
             {
-                string subject = $"Thông báo uỷ quyền phê duyệt từ {requestingSapUser}";
+                string subject = $"Delegation Notice from {requestingSapUser}";
                 string html = $@"
-                    <h2>Thông báo uỷ quyền phê duyệt</h2>
-                    <p>Chào bạn,</p>
-                    <p>Bạn vừa được <b>{requestingSapUser}</b> uỷ quyền phê duyệt các đơn hàng SAP (Sales Org: {salesOrg ?? "All"}).</p>
+                    <h2>Delegation Notice</h2>
+                    <p>You have been delegated by <b>{requestingSapUser}</b> to approve SAP orders (Sales Org: {salesOrg ?? "All"}).</p>
                     <ul>
-                        <li><b>Thời gian bắt đầu:</b> {fromDate:dd/MM/yyyy}</li>
-                        <li><b>Thời gian kết thúc:</b> {toDate:dd/MM/yyyy}</li>
-                        <li><b>Hạn mức tối đa:</b> {(maxAmount.HasValue ? maxAmount.Value.ToString("N0") : "Không giới hạn")}</li>
-                        <li><b>Lý do:</b> {reason ?? "Không có"}</li>
+                        <li><b>Start Date:</b> {fromDate:dd/MM/yyyy}</li>
+                        <li><b>End Date:</b> {toDate:dd/MM/yyyy}</li>
+                        <li><b>Max Amount:</b> {(maxAmount.HasValue ? maxAmount.Value.ToString("N0") : "Unlimited")}</li>
+                        <li><b>Reason:</b> {reason ?? "None"}</li>
                     </ul>
-                    <p>Vui lòng đăng nhập vào ứng dụng AISO Teams Bot để xử lý các yêu cầu phê duyệt trong thời gian này.</p>
+                    <p>Please log in to the AISO Teams Bot to process approval requests during this period.</p>
                 ";
                 await _emailService.SendEmailAsync(delegateEmail, subject, html, ct);
             }
@@ -133,16 +133,16 @@ public class DelegateApprovalFunction : IFunction
                 action = "Delegated",
                 delegateUser,
                 maxAmount,
-                message = $"Đã uỷ quyền thành công cho {delegateUser} từ {fromDate:dd/MM/yyyy} đến {toDate:dd/MM/yyyy}." + (maxAmount.HasValue ? $" Hạn mức: {maxAmount.Value:N0}" : "")
+                message = $"Successfully delegated to {delegateUser} from {fromDate:dd/MM/yyyy} to {toDate:dd/MM/yyyy}." + (maxAmount.HasValue ? $" Max Amount: {maxAmount.Value:N0}" : "")
             });
         }
         catch (SapODataException ex)
         {
-            return FunctionResult.Fail($"SAP từ chối uỷ quyền: {ex.Message}", "VALIDATION");
+            return FunctionResult.Fail($"SAP rejected delegation: {ex.Message}", "VALIDATION");
         }
         catch (Exception ex)
         {
-            return FunctionResult.Fail($"Lỗi khi uỷ quyền: {ex.Message}");
+            return FunctionResult.Fail($"Error delegating: {ex.Message}");
         }
     }
 }

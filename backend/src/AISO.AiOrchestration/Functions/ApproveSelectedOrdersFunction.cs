@@ -134,7 +134,7 @@ public sealed class ApproveSelectedOrdersFunction : IFunction
                     {
                         if (existing.NetValue > delegationInfo.MaxAmount.Value)
                         {
-                            failures.Add($"{orderId}: Vượt quá hạn mức uỷ quyền ({delegationInfo.MaxAmount.Value:N0} {existing.Currency}).");
+                            failures.Add($"{orderId}: Exceeds delegation max amount limit ({delegationInfo.MaxAmount.Value:N0} {existing.Currency}).");
                             continue;
                         }
                     }
