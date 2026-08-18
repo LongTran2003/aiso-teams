@@ -120,7 +120,7 @@ public class DelegateApprovalFunction : IFunction
                     <ul>
                         <li><b>Start Date:</b> {fromDate:dd/MM/yyyy}</li>
                         <li><b>End Date:</b> {toDate:dd/MM/yyyy}</li>
-                        <li><b>Max Amount:</b> {(maxAmount.HasValue ? maxAmount.Value.ToString("N0") : "Unlimited")}</li>
+                        <li><b>Max Amount:</b> {(maxAmount.HasValue ? $"{maxAmount.Value:N0} {dto.Currency}" : "Unlimited")}</li>
                         <li><b>Reason:</b> {reason ?? "None"}</li>
                     </ul>
                     <p>Please log in to the AISO Teams Bot to process approval requests during this period.</p>
@@ -133,7 +133,7 @@ public class DelegateApprovalFunction : IFunction
                 action = "Delegated",
                 delegateUser,
                 maxAmount,
-                message = $"Successfully delegated to {delegateUser} from {fromDate:dd/MM/yyyy} to {toDate:dd/MM/yyyy}." + (maxAmount.HasValue ? $" Max Amount: {maxAmount.Value:N0}" : "")
+                message = $"Successfully delegated to {delegateUser} from {fromDate:dd/MM/yyyy} to {toDate:dd/MM/yyyy}." + (maxAmount.HasValue ? $" Max Amount: {maxAmount.Value:N0} {dto.Currency}" : "")
             });
         }
         catch (SapODataException ex)
