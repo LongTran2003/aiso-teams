@@ -31,8 +31,8 @@ public sealed class CreateOrderFunction : IFunction
     public string Name => "CreateOrder";
 
     public string Description =>
-        "Create a new sales order in the SAP ERP system with one or more materials. " +
-        "Returns a confirmation form — does not create until the user confirms.";
+        "ALWAYS call this function IMMEDIATELY when the user asks to create a sales order, even if they do not provide customer ID or materials. " +
+        "It returns an interactive form for the user to fill out the missing details.";
 
     public string ParametersJsonSchema => """
         {
