@@ -331,16 +331,10 @@ public class SapClient : ISapClient
 
         // Align with ZAISO_A_UPDATE_SO: NEW_REFERENCE, REQUESTED_DELIVERY_DATE, ITEMS
         // (no CHANGE_* flags — SAP updates a header field only when it is non-initial).
-        var payload = new
+        var payload = new Dictionary<string, object>
         {
-            REQUESTING_TEAMS_USER = dto.RequestingSapUser.Trim(),
-            NEW_REFERENCE = string.IsNullOrWhiteSpace(dto.PurchaseOrderRef)
-                ? string.Empty
-                : dto.PurchaseOrderRef.Trim(),
-            REQUESTED_DELIVERY_DATE = string.IsNullOrWhiteSpace(dto.ReqDeliveryDate)
-                ? null
-                : NormalizeSapDate(dto.ReqDeliveryDate),
-            ITEMS = (dto.Items ?? Array.Empty<UpdateSalesOrderItemDto>()).Select(i => new
+            ["REQUESTING_TEAMS_USER"] = dto.RequestingSapUser.Trim(),
+            ["ITEMS"] = (dto.Items ?? Array.Empty<UpdateSalesOrderItemDto>()).Select(i => new
             {
                 ITEM_NO = PadItemNumber(i.ItemNumber),
                 MATERIAL = i.Material ?? string.Empty,
@@ -349,6 +343,12 @@ public class SapClient : ISapClient
                 CHANGE_FLAG = (i.Operation ?? string.Empty).Trim().ToUpperInvariant()
             }).ToList()
         };
+
+        if (!string.IsNullOrWhiteSpace(dto.PurchaseOrderRef))
+            payload["NEW_REFERENCE"] = dto.PurchaseOrderRef.Trim();
+
+        if (!string.IsNullOrWhiteSpace(dto.ReqDeliveryDate))
+            payload["REQUESTED_DELIVERY_DATE"] = NormalizeSapDate(dto.ReqDeliveryDate);
 
         try
         {
