@@ -1529,7 +1529,7 @@ public class SapClient : ISapClient
             VALID_FROM = dto.ValidFrom.ToString("yyyy-MM-dd"),
             VALID_TO = dto.ValidTo.ToString("yyyy-MM-dd"),
             REASON = dto.Reason ?? string.Empty,
-            MAX_AMOUNT = dto.MaxAmount ?? 0m
+            MAX_AMOUNT = (dto.MaxAmount ?? 0m).ToString(System.Globalization.CultureInfo.InvariantCulture)
         };
 
         using var response = await SendPostRequestRawAsync(url, payload, ct);
