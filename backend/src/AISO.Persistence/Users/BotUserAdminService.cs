@@ -160,7 +160,7 @@ public sealed class BotUserAdminService : IBotUserAdminService
         }
 
         await db.SaveChangesAsync(ct);
-        
+
         return new BotUserSummary(
             normalizedSap,
             normalizedSap, // No display name yet

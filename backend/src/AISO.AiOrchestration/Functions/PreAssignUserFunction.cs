@@ -91,7 +91,8 @@ public sealed class PreAssignUserFunction : IFunction
         try
         {
             var summary = await _users.PreAssignAccessAsync(sapUserId, email, role, salesOrg, ct);
-            return FunctionResult.Ok(new {
+            return FunctionResult.Ok(new
+            {
                 Message = $"Successfully allowed list for {email} -> {sapUserId}.",
                 User = summary
             });

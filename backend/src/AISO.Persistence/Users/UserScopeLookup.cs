@@ -47,7 +47,7 @@ public sealed class UserScopeLookup : IUserScopeLookup
     public async Task<string?> GetDelegatedBySapUserAsync(string sapUserId, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
-        
+
         var delegatedBy = await db.UserMappings
             .Where(u => u.SapUserId == sapUserId)
             .Select(u => u.DelegatedBySapUser)
@@ -67,7 +67,7 @@ public sealed class UserScopeLookup : IUserScopeLookup
     public async Task<DelegationInfo> GetDelegationInfoAsync(string sapUserId, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
-        
+
         var mapping = await db.UserMappings
             .AsNoTracking()
             .Where(u => u.SapUserId == sapUserId)
@@ -108,7 +108,7 @@ public sealed class UserScopeLookup : IUserScopeLookup
     public async Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, DateTimeOffset? validTo = null, decimal? maxAmount = null, CancellationToken ct = default)
     {
         await using var db = await _dbFactory.CreateDbContextAsync(ct);
-        
+
         var mappings = await db.UserMappings
             .Where(u => u.SapUserId == delegateUser)
             .ToListAsync(ct);

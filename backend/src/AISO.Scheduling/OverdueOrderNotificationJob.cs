@@ -27,7 +27,7 @@ public class OverdueOrderNotificationJob : BackgroundService
         while (!stoppingToken.IsCancellationRequested)
         {
             var now = DateTimeOffset.Now;
-            
+
             // Run every day at 8:00 AM (for demo purposes, we will check if it's 8:00 AM)
             // Note: Since this is a simple demo background service, we just sleep until the next 8:00 AM.
             var nextRun = now.Date.AddHours(8);
@@ -38,7 +38,7 @@ public class OverdueOrderNotificationJob : BackgroundService
 
             var delay = nextRun - now;
             _logger.LogInformation("Next OverdueOrderNotificationJob scheduled in {Delay}", delay);
-            
+
             await Task.Delay(delay, stoppingToken);
 
             if (!stoppingToken.IsCancellationRequested)
@@ -112,7 +112,7 @@ public class OverdueOrderNotificationJob : BackgroundService
     private async Task SendOverdueEmailAsync(IEmailService emailService, string email, string salesOrg, IReadOnlyList<OverdueOrder> orders, CancellationToken ct)
     {
         string subject = $"[Cảnh Báo] Báo cáo đơn hàng quá hạn - {salesOrg} ({DateTime.Now:dd/MM/yyyy})";
-        
+
         var rows = string.Join("\n", orders.Select(o => $@"
             <tr>
                 <td style='border: 1px solid #ddd; padding: 8px;'>{o.SoNumber}</td>
