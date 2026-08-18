@@ -82,18 +82,14 @@ public class TeamsBot : TeamsActivityHandler
         var conversationId = turnContext.Activity.Conversation?.Id;
         var activityId = turnContext.Activity.Id;
 
-        // When an Adaptive Card button (Action.Submit with msteams.type=messageBack) is clicked,
-        // Teams sends BOTH Activity.Text (= button title, e.g. "view order 129998")
-        // AND Activity.Value (= the data payload, e.g. { action: "view_details" }).
-        // We MUST check Value first so the structured command wins over the display title.
+        // Prioritize Activity.Value payload over Activity.Text for Adaptive Card submissions.
         if (turnContext.Activity.Value != null)
         {
             try
             {
                 var valueObj = Newtonsoft.Json.Linq.JObject.FromObject(turnContext.Activity.Value);
 
-                // For messageBack cards, Teams might not reliably populate Activity.Text. 
-                // We extract msteams.text directly from Value if present.
+                // Extract msteams.text to handle messageBack payloads reliably.
                 if (valueObj.TryGetValue("msteams", StringComparison.OrdinalIgnoreCase, out var msTeamsToken) && msTeamsToken is Newtonsoft.Json.Linq.JObject msTeamsObj)
                 {
                     if (msTeamsObj.TryGetValue("text", StringComparison.OrdinalIgnoreCase, out var textToken))
