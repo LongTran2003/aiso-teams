@@ -9,4 +9,5 @@ public record DelegateApprovalDto(
     DateTimeOffset ValidFrom,
     DateTimeOffset ValidTo,
     string? Reason,
-    decimal? MaxAmount = null);
+    decimal? MaxAmount = null,
+    string? Currency = "VND");
