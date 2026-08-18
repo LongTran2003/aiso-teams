@@ -1528,7 +1528,8 @@ public class SapClient : ISapClient
             SALES_ORG = dto.SalesOrg ?? string.Empty,
             VALID_FROM = dto.ValidFrom.ToString("yyyy-MM-dd"),
             VALID_TO = dto.ValidTo.ToString("yyyy-MM-dd"),
-            REASON = dto.Reason ?? string.Empty
+            REASON = dto.Reason ?? string.Empty,
+            MAX_AMOUNT = dto.MaxAmount ?? 0m
         };
 
         using var response = await SendPostRequestRawAsync(url, payload, ct);

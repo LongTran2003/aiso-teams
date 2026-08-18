@@ -48,7 +48,7 @@ public class RevokeDelegationFunction : IFunction
         var delegateUser = parameters.TryGetProperty("delegateUser", out var uProp) ? uProp.GetString() : null;
 
         if (string.IsNullOrWhiteSpace(delegationId) && string.IsNullOrWhiteSpace(delegateUser))
-            return FunctionResult.Fail("Vui lòng cung cấp mã ID ủy quyền hoặc tên người được ủy quyền để thu hồi.");
+            return FunctionResult.Fail("Please provide the delegation ID or delegate user name to revoke.");
 
         var dto = new RevokeDelegationDto(
             RequestingTeamsUser: requestingSapUser,
@@ -67,16 +67,16 @@ public class RevokeDelegationFunction : IFunction
             return FunctionResult.Ok(new
             {
                 action = "Revoked",
-                message = "Đã thu hồi quyền thành công."
+                message = "Successfully revoked delegation."
             });
         }
         catch (SapODataException ex)
         {
-            return FunctionResult.Fail($"SAP từ chối thu hồi quyền: {ex.Message}", "VALIDATION");
+            return FunctionResult.Fail($"SAP rejected revocation: {ex.Message}", "VALIDATION");
         }
         catch (Exception ex)
         {
-            return FunctionResult.Fail($"Lỗi khi thu hồi quyền: {ex.Message}");
+            return FunctionResult.Fail($"Error revoking delegation: {ex.Message}");
         }
     }
 }
