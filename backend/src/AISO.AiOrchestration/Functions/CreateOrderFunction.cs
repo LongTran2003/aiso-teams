@@ -57,8 +57,7 @@ public sealed class CreateOrderFunction : IFunction
                 "required": ["material", "qty"]
               }
             }
-          },
-          "required": ["customer", "items"]
+          }
         }
         """;
 
@@ -107,9 +106,6 @@ public sealed class CreateOrderFunction : IFunction
                     qty));
             }
         }
-
-        if (lines.Count == 0)
-            return FunctionResult.Fail("At least one material with a valid quantity is required.", "VALIDATION");
 
         var areas = await _sap.GetSalesAreasAsync(ct);
         var customers = await _sap.GetValidCustomersAsync(
