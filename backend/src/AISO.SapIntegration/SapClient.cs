@@ -311,7 +311,11 @@ public class SapClient : ISapClient
         try
         {
             var result = await SendPostRequestAsync<SapSalesOrderDto, object>(url, payload, ct);
-            return result == null ? throw new InvalidOperationException("Failed to deserialize updated order.") : MapToDomain(result);
+            if (result == null)
+                throw new InvalidOperationException("Failed to deserialize updated order.");
+
+            var refreshed = await GetSalesOrderByIdAsync(formattedSo, ct);
+            return refreshed ?? MapToDomain(result);
         }
         catch (Exception ex)
         {
