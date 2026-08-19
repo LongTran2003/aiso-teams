@@ -378,6 +378,7 @@ public class TeamsBot : TeamsActivityHandler
                                         "SAP_SYNC",
                                         sapSyncWarning)),
                                     cancellationToken);
+                                return;
                             }
 
                             await turnContext.SendActivityAsync(
