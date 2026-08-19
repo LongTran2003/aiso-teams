@@ -15,7 +15,7 @@ authorization master ( global )
       ValidTo   = valid_to;
     }
 
-  static action syncUserRole parameter ZI_AISO_SYNC_ROLE_PARAMS;
+  static action syncUserRole parameter zaiso_a_sync_role;
   static action delegateApproval parameter zaiso_a_delegate;
   static action revokeDelegation parameter zaiso_a_revoke_delegation;
 }
