@@ -119,11 +119,11 @@ public sealed class EditOrderFunction : IFunction
 
             var itemNo = ReadString(parameters, "item_no");
             var targetItem = existing.Items?.FirstOrDefault(); // Default
-            
+
             if (!string.IsNullOrWhiteSpace(itemNo))
             {
-                targetItem = existing.Items?.FirstOrDefault(i => 
-                    string.Equals(i.ItemNumber?.TrimStart('0'), itemNo.TrimStart('0'), StringComparison.OrdinalIgnoreCase)) 
+                targetItem = existing.Items?.FirstOrDefault(i =>
+                    string.Equals(i.ItemNumber?.TrimStart('0'), itemNo.TrimStart('0'), StringComparison.OrdinalIgnoreCase))
                     ?? targetItem;
             }
             else
