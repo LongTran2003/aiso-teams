@@ -218,7 +218,8 @@ public class SapClient : ISapClient
                 MATERIAL = i.Material,
                 PLANT = i.Plant,
                 ORDER_QTY = i.OrderQty.ToString("F3", System.Globalization.CultureInfo.InvariantCulture),
-                UNIT = i.Unit
+                UNIT = i.Unit,
+                NET_VALUE = "0.00"
             }).ToList()
         };
 
