@@ -50,33 +50,41 @@ public class RevokeDelegationFunction : IFunction
         if (string.IsNullOrWhiteSpace(delegationId) && string.IsNullOrWhiteSpace(delegateUser))
             return FunctionResult.Fail("Please provide the delegation ID or delegate user name to revoke.");
 
-        var dto = new RevokeDelegationDto(
-            RequestingTeamsUser: requestingSapUser,
-            DelegationId: delegationId ?? delegateUser!); // fallback if ID is missing
+        var targetUser = delegateUser ?? delegationId!;
 
         try
         {
-            await _sapClient.RevokeDelegationAsync(dto, ct);
-
-            // Cập nhật local DB
-            if (!string.IsNullOrWhiteSpace(delegateUser))
+            // Validate if the targetUser is actually delegated
+            var delegateeInfo = await _scope.GetDelegationInfoAsync(targetUser, ct);
+            if (string.IsNullOrWhiteSpace(delegateeInfo.DelegatorSapUser))
             {
-                await _scope.SetDelegatedBySapUserAsync(delegateUser, null, null, null, ct);
+                return FunctionResult.Fail($"User {targetUser} does not currently have any active delegation.");
             }
 
-            return FunctionResult.Ok(new
+            // Validate permissions: Only the original delegator or Admin can revoke.
+            var requestingRole = await _scope.GetRoleBySapUserAsync(requestingSapUser, ct);
+            if (requestingRole < UserRole.Admin && !string.Equals(delegateeInfo.DelegatorSapUser, requestingSapUser, StringComparison.OrdinalIgnoreCase))
             {
-                action = "Revoked",
-                message = "Successfully revoked delegation."
-            });
-        }
-        catch (SapODataException ex)
-        {
-            return FunctionResult.Fail($"SAP rejected revocation: {ex.Message}", "VALIDATION");
+                return FunctionResult.Fail($"You cannot revoke this delegation. Only the original delegator ({delegateeInfo.DelegatorSapUser}) or an Admin can revoke it.", "UNAUTHORIZED");
+            }
+
+            return FunctionResult.Ok(new ConfirmRevokeDelegationResponse(
+                targetUser,
+                delegationId,
+                delegateeInfo.DelegatorSapUser
+            ));
         }
         catch (Exception ex)
         {
-            return FunctionResult.Fail($"Error revoking delegation: {ex.Message}");
+            return FunctionResult.Fail($"Error verifying delegation: {ex.Message}");
         }
     }
 }
+
+/// <summary>
+/// Payload telling the bot to show <c>confirm-revoke-delegation</c>.
+/// </summary>
+public sealed record ConfirmRevokeDelegationResponse(
+    string DelegateUser,
+    string? DelegationId,
+    string? DelegatorUser);

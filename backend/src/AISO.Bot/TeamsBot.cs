@@ -35,6 +35,8 @@ public class TeamsBot : TeamsActivityHandler
     private readonly UserMappingService _userMappingService;
     private readonly IBotUserAdminService _botUserAdmin;
     private readonly Microsoft.Extensions.Configuration.IConfiguration _config;
+    private readonly IUserScopeLookup _scopeLookup;
+    private readonly AISO.Domain.Notifications.IEmailService _emailService;
 
     public TeamsBot(
         IFunctionDispatcher dispatcher,
@@ -47,7 +49,9 @@ public class TeamsBot : TeamsActivityHandler
         SsoDialog dialog,
         UserMappingService userMappingService,
         IBotUserAdminService botUserAdmin,
-        Microsoft.Extensions.Configuration.IConfiguration config)
+        Microsoft.Extensions.Configuration.IConfiguration config,
+        IUserScopeLookup scopeLookup,
+        AISO.Domain.Notifications.IEmailService emailService)
     {
         _dispatcher = dispatcher;
         _sap = sap;
@@ -60,6 +64,8 @@ public class TeamsBot : TeamsActivityHandler
         _userMappingService = userMappingService;
         _botUserAdmin = botUserAdmin;
         _config = config;
+        _scopeLookup = scopeLookup;
+        _emailService = emailService;
     }
 
     public override async Task OnTurnAsync(ITurnContext turnContext, CancellationToken cancellationToken = default)
@@ -759,6 +765,71 @@ public class TeamsBot : TeamsActivityHandler
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
                                 cancellationToken: cancellationToken);
+                        }
+                        return;
+                    }
+
+                    if (string.Equals(action, "revoke_delegation_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var delegateUser = valueObj.TryGetValue("delegateUser", StringComparison.OrdinalIgnoreCase, out var uToken) ? uToken.ToString() : null;
+                        var delegationId = valueObj.TryGetValue("delegationId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : null;
+
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("NOT_LINKED", "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(delegateUser))
+                        {
+                            await turnContext.SendActivityAsync(MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Delegate user is missing.")), cancellationToken);
+                            return;
+                        }
+
+                        var dto = new RevokeDelegationDto(
+                            RequestingTeamsUser: linkedSapUsername,
+                            DelegationId: string.IsNullOrWhiteSpace(delegationId) ? delegateUser : delegationId);
+
+                        try
+                        {
+                            await _sap.RevokeDelegationAsync(dto, cancellationToken);
+
+                            // Update local DB
+                            await _scopeLookup.SetDelegatedBySapUserAsync(delegateUser, null, null, null, cancellationToken);
+
+                            // Send email notification
+                            var delegateEmail = await _scopeLookup.GetEmailBySapUserAsync(delegateUser, cancellationToken);
+                            if (!string.IsNullOrEmpty(delegateEmail))
+                            {
+                                string subject = $"Delegation Revoked by {linkedSapUsername}";
+                                string html = $@"
+                                    <h2>Delegation Revoked</h2>
+                                    <p>Your approval delegation from <b>{linkedSapUsername}</b> has been revoked early.</p>
+                                    <p>You can no longer approve SAP orders on their behalf.</p>
+                                ";
+                                await _emailService.SendEmailAsync(delegateEmail, subject, html, cancellationToken);
+                            }
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard("Delegation", "Revoked", delegateUser)),
+                                cancellationToken);
+                        }
+                        catch (SapODataException sapEx)
+                        {
+                            _logger.LogError(sapEx, "SAP error revoking delegation for {DelegateUser}", delegateUser);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Unexpected error revoking delegation for {DelegateUser}", delegateUser);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken);
                         }
                         return;
                     }
@@ -2663,6 +2734,22 @@ public class TeamsBot : TeamsActivityHandler
 
                 _logger.LogInformation(
                     "Bot replied with overdue orders card ({Count})", overdueResponse.Orders.Count);
+                return;
+            }
+
+            if (result.Payload is AISO.AiOrchestration.Functions.ConfirmRevokeDelegationResponse confirmRevoke)
+            {
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildConfirmRevokeDelegationCard(
+                        confirmRevoke.DelegateUser,
+                        confirmRevoke.DelegationId),
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with confirm-revoke-delegation card for user {DelegateUser}",
+                    confirmRevoke.DelegateUser);
                 return;
             }
 
