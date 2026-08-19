@@ -1,0 +1,64 @@
+﻿{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Attention",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Revoke Delegation",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Attention",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "User ${delegateUser}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Are you sure you want to revoke the delegation for **${delegateUser}**? This will immediately remove their ability to approve sales orders on your behalf.",
+      "wrap": true,
+      "spacing": "Medium"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Revoke Delegation",
+      "style": "destructive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Revoke delegation for ${delegateUser}",
+          "text": "revoke delegation ${delegateUser}"
+        },
+        "action": "revoke_delegation_confirm",
+        "delegateUser": "${delegateUser}",
+        "delegationId": "${delegationId}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}
