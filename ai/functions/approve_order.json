@@ -1,6 +1,6 @@
 {
   "name": "ApproveOrder",
-  "description": "Approve a pending release request and release the sales order in SAP. Manager or Admin only. Use when a manager says approve order, approve release, or confirm release request.",
+  "description": "Approve a pending release request and release the sales order in SAP. Use when a manager says approve order, approve release, or confirm release request.",
   "parameters": {
     "type": "object",
     "properties": {
