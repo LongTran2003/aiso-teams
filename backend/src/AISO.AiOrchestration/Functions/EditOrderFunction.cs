@@ -105,24 +105,41 @@ public sealed class EditOrderFunction : IFunction
                 draftDate = existing.RequestedDeliveryDate?.ToString("yyyy-MM-dd") ?? string.Empty;
             }
 
-            var lineOp = (ReadString(parameters, "line_op") ?? "none").Trim().ToUpperInvariant();
+            var explicitQty = parameters.TryGetProperty("qty", out var qtyEl) && qtyEl.ValueKind == JsonValueKind.Number;
+            var explicitMaterial = ReadString(parameters, "material") != null;
+
+            var lineOp = (ReadString(parameters, "line_op") ?? string.Empty).Trim().ToUpperInvariant();
             if (lineOp is not ("U" or "I" or "D" or "NONE"))
-                lineOp = "NONE";
+            {
+                lineOp = explicitQty || explicitMaterial ? "U" : "NONE";
+            }
+
             if (lineOp == "NONE")
                 lineOp = "none";
 
-            var itemNo = ReadString(parameters, "item_no")
-                ?? first?.ItemNumber?.TrimStart('0')
-                ?? "10";
+            var itemNo = ReadString(parameters, "item_no");
+            var targetItem = existing.Items?.FirstOrDefault(); // Default
+
+            if (!string.IsNullOrWhiteSpace(itemNo))
+            {
+                targetItem = existing.Items?.FirstOrDefault(i =>
+                    string.Equals(i.ItemNumber?.TrimStart('0'), itemNo.TrimStart('0'), StringComparison.OrdinalIgnoreCase))
+                    ?? targetItem;
+            }
+            else
+            {
+                itemNo = targetItem?.ItemNumber?.TrimStart('0') ?? "10";
+            }
+
             if (string.IsNullOrWhiteSpace(itemNo))
                 itemNo = "10";
 
-            var material = ReadString(parameters, "material") ?? first?.Material ?? string.Empty;
+            var material = explicitMaterial ? ReadString(parameters, "material") : (targetItem?.Material ?? string.Empty);
             var plant = ReadString(parameters, "plant") ?? "1010";
-            var unit = ReadString(parameters, "unit") ?? first?.Unit ?? "PC";
+            var unit = ReadString(parameters, "unit") ?? targetItem?.Unit ?? "PC";
 
-            decimal qty = first?.Quantity ?? 1m;
-            if (parameters.TryGetProperty("qty", out var qtyEl) && qtyEl.ValueKind == JsonValueKind.Number)
+            decimal qty = targetItem?.Quantity ?? 1m;
+            if (explicitQty)
                 qty = qtyEl.GetDecimal();
 
             if (lineOp is "I" or "U" && qty <= 0)
