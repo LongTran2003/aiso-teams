@@ -1,6 +1,6 @@
 {
   "name": "ReleaseOrder",
-  "description": "Directly release a sales order in SAP. Manager or Admin only. Do NOT use for phrases like 'request release', 'submit for approval', or 'yêu cầu duyệt' — those must call RequestRelease. Prefer ApproveOrder when a pending release request exists.",
+  "description": "Directly release a sales order in SAP. Do NOT use for phrases like 'request release', 'submit for approval', or 'yêu cầu duyệt' — those must call RequestRelease. Prefer ApproveOrder when a pending release request exists.",
   "parameters": {
     "type": "object",
     "properties": {
