@@ -172,11 +172,11 @@ public sealed class EditOrderFunction : IFunction
                 existing.RequestedDeliveryDate?.ToString("yyyy-MM-dd") ?? string.Empty,
                 draftDate.Trim(),
                 lineOp,
-                itemNo.Trim(),
-                material.Trim().ToUpperInvariant(),
+                itemNo?.Trim() ?? string.Empty,
+                material?.Trim().ToUpperInvariant() ?? string.Empty,
                 qty,
-                plant.Trim(),
-                unit.Trim().ToUpperInvariant(),
+                plant?.Trim() ?? string.Empty,
+                unit?.Trim().ToUpperInvariant() ?? string.Empty,
                 linesSummary));
         }
         catch (Exception ex)
@@ -197,6 +197,7 @@ public sealed class EditOrderFunction : IFunction
 
         if (role >= UserRole.Manager)
         {
+            var delegationInfo = await _scope.GetDelegationInfoAsync(requestingSapUser, ct);
             var effectiveUserForOrg = !string.IsNullOrWhiteSpace(delegationInfo.DelegatorSapUser)
                 ? delegationInfo.DelegatorSapUser
                 : requestingSapUser;
