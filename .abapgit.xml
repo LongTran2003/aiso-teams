@@ -5,6 +5,10 @@
    <MASTER_LANGUAGE>E</MASTER_LANGUAGE>
    <STARTING_FOLDER>/sap/src/</STARTING_FOLDER>
    <FOLDER_LOGIC>PREFIX</FOLDER_LOGIC>
+   <IGNORE>
+    <item>/sap/src/ddic/zaiso_s_so_edit_item.tabl.xml</item>
+    <item>/sap/src/ddic/zaiso_tt_so_edit_item.ttyp.xml</item>
+   </IGNORE>
   </DATA>
  </asx:values>
 </asx:abap>
