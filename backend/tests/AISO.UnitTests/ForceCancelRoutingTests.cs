@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using AISO.AiOrchestration;
 using AISO.AiOrchestration.Functions;
 using AISO.AiOrchestration.Stub;
