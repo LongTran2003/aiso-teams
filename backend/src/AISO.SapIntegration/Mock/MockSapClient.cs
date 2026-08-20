@@ -583,8 +583,8 @@ public sealed class MockSapClient : ISapClient
     public Task RevokeDelegationAsync(RevokeDelegationDto dto, CancellationToken ct = default)
     {
         _logger?.LogInformation(
-            "MockSapClient: RevokeDelegationAsync called by {RequestingUser} to revoke {DelegationId}",
-            dto.RequestingTeamsUser, dto.DelegationId);
+            "MockSapClient: RevokeDelegationAsync called by {RequestingUser} to revoke {DelegateUser}",
+            dto.RequestingTeamsUser, dto.DelegateUser);
         return Task.CompletedTask;
     }
 }

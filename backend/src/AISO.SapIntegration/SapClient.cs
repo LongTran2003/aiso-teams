@@ -1547,7 +1547,7 @@ public class SapClient : ISapClient
         var payload = new
         {
             REQUESTING_TEAMS_USER = dto.RequestingTeamsUser,
-            DELEGATION_ID = dto.DelegationId
+            DELEGATE_USER = dto.DelegateUser
         };
 
         using var response = await SendPostRequestRawAsync(url, payload, ct);

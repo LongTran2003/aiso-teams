@@ -881,7 +881,7 @@ public class TeamsBot : TeamsActivityHandler
 
                         var dto = new RevokeDelegationDto(
                             RequestingTeamsUser: linkedSapUsername,
-                            DelegationId: string.IsNullOrWhiteSpace(delegationId) ? delegateUser : delegationId);
+                            DelegateUser: delegateUser);
 
                         try
                         {
