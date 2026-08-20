@@ -1,61 +1,9 @@
 {
   "name": "CreateOrder",
-  "description": "Create a new sales order in the SAP ERP system. Trigger this function when the user explicitly asks to create, place, or add a new sales order. Requires at minimum a customer ID and at least one line item with a material code and quantity.",
+  "description": "Opens the Create Sales Order UI form. ALWAYS call this function IMMEDIATELY when the user asks to create an order. DO NOT ask the user for any parameters (customer, material, etc.), just call this function with an empty object and the UI will handle it.",
   "parameters": {
     "type": "object",
-    "properties": {
-      "customer": {
-        "type": "string",
-        "description": "The SAP customer ID or account number (e.g. '10100001'). Required."
-      },
-      "doc_type": {
-        "type": ["string", "null"],
-        "description": "SAP document type code. Defaults to 'TA' (standard order) if not specified. Use null or omit if not mentioned."
-      },
-      "sales_org": {
-        "type": ["string", "null"],
-        "description": "Sales organization code (e.g. '1010'). Use null or omit if not specified by the user."
-      },
-      "dist_channel": {
-        "type": ["string", "null"],
-        "description": "Distribution channel code (e.g. '10'). Use null or omit if not specified."
-      },
-      "division": {
-        "type": ["string", "null"],
-        "description": "Division code (e.g. '00'). Use null or omit if not specified."
-      },
-      "currency": {
-        "type": ["string", "null"],
-        "description": "Currency code (e.g. 'USD', 'VND', 'EUR'). Use null or omit if not specified."
-      },
-      "items": {
-        "type": "array",
-        "description": "List of line items in the sales order. At least one item is required.",
-        "items": {
-          "type": "object",
-          "properties": {
-            "material": {
-              "type": "string",
-              "description": "Material code or product ID (e.g. 'TG11', 'MAT-2001')."
-            },
-            "qty": {
-              "type": "number",
-              "description": "Order quantity."
-            },
-            "plant": {
-              "type": ["string", "null"],
-              "description": "Plant code (e.g. '1010'). Use null or omit if not specified."
-            },
-            "unit": {
-              "type": ["string", "null"],
-              "description": "Unit of measure (e.g. 'PC', 'KG'). Use null or omit if not specified."
-            }
-          },
-          "required": ["material", "qty"]
-        }
-      }
-    },
-    "required": ["customer", "items"],
+    "properties": {},
     "additionalProperties": false
   }
 }
