@@ -102,7 +102,7 @@ public class ForceCancelRoutingTests
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("force release 13122"));
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("reject approval 9"));
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("cancel order 13122"));
-        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("hủy đơn 13122"));
+        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("há»§y Ä‘Æ¡n 13122"));
     }
 
     [Fact]
@@ -184,6 +184,8 @@ public class ForceCancelRoutingTests
         private readonly SalesOrderStatus _status;
 
         public StatusFixedSapClient(SalesOrderStatus status) => _status = status;
+
+        public Task<IReadOnlyList<SapValidMaterialPlant>> GetValidMaterialPlantsAsync(CancellationToken ct = default) { return Task.FromResult<IReadOnlyList<SapValidMaterialPlant>>([]); }
 
         public Task<SalesOrder?> GetSalesOrderByIdAsync(string soNumber, CancellationToken ct = default) =>
             Task.FromResult<SalesOrder?>(new SalesOrder
