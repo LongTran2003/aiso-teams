@@ -31,8 +31,7 @@ public sealed class CreateOrderFunction : IFunction
     public string Name => "CreateOrder";
 
     public string Description =>
-        "DO NOT ASK THE USER FOR MISSING DETAILS. ALWAYS call this function IMMEDIATELY with empty parameters when the user asks to create an order. " +
-        "It returns an interactive form for the user to fill out the missing details.";
+        "DO NOT ASK THE USER FOR MISSING DETAILS. IF any parameter is missing, just omit it and call this function IMMEDIATELY with an empty JSON object. The UI form will prompt the user for everything.";
 
     public string ParametersJsonSchema => """
         {
