@@ -25,5 +25,6 @@ define root view entity ZC_AISO_SO_WITH_ITEMS
       HasInvalidMaterial,
       OwnerSapUser,
       
-      _Items
+      _Items : redirected to composition child ZC_AISO_SO_ITEM
+      
 }

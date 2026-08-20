@@ -2,14 +2,18 @@ unmanaged implementation in class zbp_i_aiso_so_header unique;
 strict ( 1 );
 
 define behavior for ZI_AISO_SO_HEADER alias SalesOrder
+late numbering
 authorization master ( instance )
 lock master
 {
+  create;
+
+  association _Items { create; }
+
   action cancelOrder parameter zaiso_a_cancel_so result [1] $self;
   action updateReference parameter zaiso_a_update_ref result [1] $self;
   action updateSalesOrder parameter zaiso_a_update_so result [1] $self;
-  static action createSalesOrder parameter zaiso_a_create_so result [1] $self;
-  action releaseOrder parameter zaiso_s_release_params  result [1] $self;
+  action releaseOrder parameter zaiso_s_release_params result [1] $self;
   action forwardOrder parameter zaiso_s_forward_params result [1] $self;
   action rejectOrder parameter zaiso_a_reject_so result [1] $self;
   action approveOrder parameter zaiso_a_approve result [1] $self;
@@ -17,7 +21,26 @@ lock master
   action reassignOwner parameter zaiso_a_reassign result [1] $self;
   action forceCancel parameter zaiso_a_override result [1] $self;
   action forceRelease parameter zaiso_a_override result [1] $self;
-  field ( readonly ) SoNumber, OverallStatus, Customer,CustomerName, CustomerReference, RequestedDeliveryDate, SalesOrg, DistChannel,
-                      Division, Currency, NetValue, DocDate, CreatedBy, CreatedDate,
-                      CreditStatus, DeliveryBlock, BillingStatus, IsCancelled;
+
+  field ( readonly ) SoNumber, OverallStatus, CustomerName, RequestedDeliveryDate,
+                     NetValue, DocDate, CreatedBy, CreatedDate,
+                     CreditStatus, DeliveryBlock, BillingStatus, IsCancelled,
+                     HasInvalidMaterial;
+
+  field ( mandatory : create ) Customer, SalesOrg, DistChannel, Division, Currency, DocType, OwnerSapUser;
+}
+
+// ═══════════════════════════════════════════════
+// ↓↓↓ THÊM BLOCK NÀY ĐỂ FIX LỖI ↓↓↓
+// ═══════════════════════════════════════════════
+define behavior for ZI_AISO_SO_ITEM alias SalesOrderItem
+late numbering
+lock dependent by _Header
+authorization dependent by _Header
+{
+  create;
+  field ( readonly ) SoNumber, ItemNo;
+  field ( mandatory ) Material, Plant, OrderQty, Unit;
+
+  association _Header;
 }
