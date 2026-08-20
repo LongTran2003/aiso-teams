@@ -142,7 +142,7 @@ public sealed class CreateOrderFunction : IFunction
                     ?? customerChoices.FirstOrDefault(c =>
                         SapValidCustomer.TryParseKey(c.Value, out var id, out _, out _, out _)
                         && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase));
-                
+
                 if (selected == null)
                 {
                     // Customer requested was not found in the valid customers list from SAP
