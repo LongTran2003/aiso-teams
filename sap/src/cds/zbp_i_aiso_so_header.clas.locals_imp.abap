@@ -534,8 +534,9 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
           AND spart = @ls_key-%param-division.
 
       IF sy-subrc <> 0.
+        " --- FIX: đổi cause-not_found -> cause-unspecific để giữ được message chi tiết ---
         APPEND VALUE #( %cid        = ls_key-%cid
-                         %fail-cause = if_abap_behv=>cause-not_found )
+                         %fail-cause = if_abap_behv=>cause-unspecific )
                TO failed-salesorder.
         APPEND VALUE #( %cid = ls_key-%cid
                          %msg = new_message(
@@ -547,7 +548,6 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
         CONTINUE.
       ENDIF.
 
-      " --- FIX: ALPHA convert material trước khi check, đồng bộ với customer ---
       DATA(lv_has_invalid_item) = abap_false.
       DATA(lv_invalid_detail)   = ''.
       LOOP AT ls_key-%param-items INTO DATA(ls_check_item).
@@ -572,7 +572,6 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
           EXIT.
         ENDIF.
 
-        " --- FIX: validate qty > 0 để tránh BAPI trả lỗi generic khi qty = 0 hoặc âm ---
         IF ls_check_item-order_qty <= 0.
           lv_has_invalid_item = abap_true.
           lv_invalid_detail = |Order quantity for material { lv_material } must be greater than 0|.
@@ -581,8 +580,9 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
       ENDLOOP.
 
       IF lv_has_invalid_item = abap_true.
+        " --- FIX: đổi cause-not_found -> cause-unspecific ---
         APPEND VALUE #( %cid        = ls_key-%cid
-                         %fail-cause = if_abap_behv=>cause-not_found )
+                         %fail-cause = if_abap_behv=>cause-unspecific )
                TO failed-salesorder.
         APPEND VALUE #( %cid = ls_key-%cid
                          %msg = new_message(
@@ -613,7 +613,6 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
       LOOP AT ls_key-%param-items INTO DATA(ls_item).
         lv_item_no = lv_item_no + 10.
 
-        " --- FIX: dùng ALPHA convert material khi build BAPI item table ---
         DATA(lv_item_material) = |{ ls_item-material ALPHA = IN }|.
 
         APPEND VALUE #( itm_number = lv_item_no
