@@ -758,7 +758,7 @@ def run_evaluation(
         client = OpenAI(api_key=GROQ_API_KEY, base_url="https://api.groq.com/openai/v1")
         system_prompt = _load_system_prompt()
         tools = load_tools()
-        model_name = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+        model_name = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
         print(f"Running evaluation using model: {model_name}\n")
     except (OSError, ValueError, openai.OpenAIError) as e:
         print(f"Failed to initialize API client: {e}", file=sys.stderr)

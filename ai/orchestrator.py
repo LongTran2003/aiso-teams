@@ -38,7 +38,7 @@ _FUNCTIONS_DIR = _BASE_DIR / "functions"
 
 # Groq credentials (from .env)
 _GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
-_GROQ_MODEL: str = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+_GROQ_MODEL: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
 
 # ---------------------------------------------------------------------------
