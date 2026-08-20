@@ -57,7 +57,7 @@ public static class SalesOrderWorkflow
     public static bool IsCurrentOwner(string? ownerSapUser, string? currentSapUser)
     {
         if (string.IsNullOrWhiteSpace(ownerSapUser))
-            return true;
+            return false;
 
         if (string.IsNullOrWhiteSpace(currentSapUser))
             return false;

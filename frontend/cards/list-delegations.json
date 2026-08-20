@@ -1,0 +1,75 @@
+﻿{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "size": "Large",
+      "weight": "Bolder",
+      "text": "Active Delegations",
+      "wrap": true
+    },
+    {
+      "type": "Container",
+      "$data": "${delegations}",
+      "style": "emphasis",
+      "spacing": "Medium",
+      "items": [
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "**${delegateName}** (${delegateUser})",
+                  "wrap": true,
+                  "size": "Medium"
+                },
+                {
+                  "type": "TextBlock",
+                  "spacing": "None",
+                  "text": "Delegated by: ${delegatorUser}",
+                  "isSubtle": true,
+                  "wrap": true,
+                  "size": "Small"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "auto",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "${timeRemaining}",
+                  "color": "Warning",
+                  "weight": "Bolder",
+                  "horizontalAlignment": "Right"
+                },
+                {
+                  "type": "TextBlock",
+                  "spacing": "None",
+                  "text": "Max: ${maxAmount}",
+                  "isSubtle": true,
+                  "size": "Small",
+                  "horizontalAlignment": "Right"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "$data": "${if(count(delegations) == 0, [1], [])}",
+      "text": "No active delegations found.",
+      "isSubtle": true,
+      "horizontalAlignment": "Center"
+    }
+  ]
+}

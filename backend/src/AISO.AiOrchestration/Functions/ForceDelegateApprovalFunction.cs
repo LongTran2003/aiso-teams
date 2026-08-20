@@ -98,7 +98,7 @@ public class ForceDelegateApprovalFunction : IFunction
         {
             return FunctionResult.Fail("Delegation end date (ValidTo) cannot be before start date.", "VALIDATION");
         }
-        
+
         var salesOrg = await _scope.GetSalesOrgBySapUserAsync(delegatorUser, ct);
 
         var dto = new DelegateApprovalDto(

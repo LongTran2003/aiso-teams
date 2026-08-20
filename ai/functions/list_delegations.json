@@ -1,0 +1,9 @@
+﻿{
+  "name": "ListDelegations",
+  "description": "List all currently active delegations. Use this when the user asks to see who is delegated, who they delegated to, or who has approval rights.",
+  "parameters": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  }
+}

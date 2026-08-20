@@ -86,8 +86,8 @@ public class SalesOrderWorkflowTests
     }
 
     [Theory]
-    [InlineData(null, "DEV-100", true)]
-    [InlineData("", "DEV-100", true)]
+    [InlineData(null, "DEV-100", false)]
+    [InlineData("", "DEV-100", false)]
     [InlineData("DEV-100", "DEV-100", true)]
     [InlineData("DEV-200", "DEV-100", false)]
     [InlineData("DEV-200", null, false)]

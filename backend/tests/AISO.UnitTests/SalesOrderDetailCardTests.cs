@@ -11,7 +11,7 @@ public class SalesOrderDetailCardTests
     [Fact]
     public void BuildSalesOrderDetailCard_Employee_ShowsRequestReleaseNotApprove()
     {
-        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(SampleOrder(), UserRole.Employee);
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(SampleOrder(), UserRole.Employee, currentSapUser: "DEV-100");
         var json = JsonConvert.SerializeObject(attachment.Content);
 
         Assert.Contains("Request release", json);
@@ -27,7 +27,7 @@ public class SalesOrderDetailCardTests
     public void BuildSalesOrderDetailCard_Manager_WithoutPending_ShowsItemsNotApprove()
     {
         var order = SampleOrder(withItems: true);
-        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(order, UserRole.Manager);
+        var attachment = TeamsCardBuilder.BuildSalesOrderDetailCard(order, UserRole.Manager, currentSapUser: "DEV-100");
         var json = JsonConvert.SerializeObject(attachment.Content);
 
         Assert.DoesNotContain("\"action\":\"approve_so\"", json);
@@ -49,7 +49,7 @@ public class SalesOrderDetailCardTests
             UserRole.Manager,
             hasPendingApproval: true,
             pendingRequestedBySapUser: "DEV-100",
-            pendingComment: "Please rush");
+            pendingComment: "Please rush", currentSapUser: "DEV-100");
         var json = JsonConvert.SerializeObject(attachment.Content);
 
         Assert.Contains("Release request pending", json);
@@ -84,7 +84,7 @@ public class SalesOrderDetailCardTests
             SampleOrder(),
             UserRole.Employee,
             hasPendingApproval: true,
-            pendingRequestedBySapUser: "DEV-100");
+            pendingRequestedBySapUser: "DEV-100", currentSapUser: "DEV-100");
         var json = JsonConvert.SerializeObject(attachment.Content);
 
         Assert.Contains("Waiting for manager approval", json);
@@ -397,6 +397,7 @@ public class SalesOrderDetailCardTests
             NetValue = 1200m,
             Currency = "USD",
             SalesOrg = "TV01",
+            OwnerSapUser = "DEV-100",
             Status = status,
             Items = withItems
                 ? new[]

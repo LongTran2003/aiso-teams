@@ -138,4 +138,29 @@ public sealed class UserScopeLookup : IUserScopeLookup
             await db.SaveChangesAsync(ct);
         }
     }
+
+    public async Task<IReadOnlyList<ActiveDelegation>> GetActiveDelegationsAsync(string? filterDelegatorUser = null, CancellationToken ct = default)
+    {
+        await using var db = await _dbFactory.CreateDbContextAsync(ct);
+
+        var query = db.UserMappings
+            .AsNoTracking()
+            .Where(u => u.DelegatedBySapUser != null && u.SapUserId != null);
+
+        if (!string.IsNullOrWhiteSpace(filterDelegatorUser))
+        {
+            query = query.Where(u => u.DelegatedBySapUser == filterDelegatorUser);
+        }
+
+        var results = await query
+            .Select(u => new ActiveDelegation(
+                u.SapUserId!,
+                u.DisplayName,
+                u.DelegatedBySapUser!,
+                u.DelegatedValidTo,
+                u.DelegationMaxAmount))
+            .ToListAsync(ct);
+
+        return results;
+    }
 }
