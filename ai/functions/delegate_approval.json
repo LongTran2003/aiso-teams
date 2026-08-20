@@ -24,7 +24,7 @@
       },
       "maxAmount": {
         "type": "number",
-        "description": "Optional maximum order amount limit (e.g. 500000). If the user specifies a limit like 'dưới 50 triệu' or 'hạn mức 500000', extract it here as a number."
+        "description": "Optional maximum order amount limit (e.g. 500000). If the user specifies a limit like 'dÆ°á»›i 50 triá»‡u' or 'háº¡n má»©c 500000', extract it here as a number."
       }
     },
     "required": [
