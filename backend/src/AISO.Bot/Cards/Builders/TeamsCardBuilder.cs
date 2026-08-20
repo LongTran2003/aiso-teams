@@ -333,6 +333,9 @@ internal static class TeamsCardBuilder
     public static Attachment BuildConfirmRejectApprovalCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-reject-approval.json", new { salesOrderNumber });
 
+    public static Attachment BuildListDelegationsCard(IReadOnlyList<DelegationItem> delegations) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("list-delegations.json", new { delegations });
+
     public static Attachment BuildConfirmRevokeDelegationCard(string delegateUser, string? delegationId) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "confirm-revoke-delegation.json",

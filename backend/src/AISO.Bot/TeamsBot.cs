@@ -2768,6 +2768,26 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
+            if (result.Payload is AISO.AiOrchestration.Functions.ListDelegationsResponse listDelegationsResponse)
+            {
+                if (listDelegationsResponse.Delegations.Count == 0)
+                {
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        TeamsCardBuilder.BuildEmptyCard(),
+                        cancellationToken);
+                    return;
+                }
+
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildListDelegationsCard(listDelegationsResponse.Delegations),
+                    cancellationToken);
+                return;
+            }
+
             if (result.Payload is AISO.AiOrchestration.Functions.ListBotUsersResponse listUsersResponse)
             {
                 if (listUsersResponse.Users.Count == 0)
