@@ -176,7 +176,9 @@ def _mock_response(user_message: str) -> ChatResponse:
         if any(kw in lower for kw in ("khÃ¡ch hÃ ng", "customer", "client")):
             intent = "get_kpi_by_customer"
             fn_name = "GetKpiByCustomer"
-        elif any(kw in lower for kw in ("sáº£n pháº©m", "product", "material", "hÃ ng")):
+        elif any(
+            kw in lower for kw in ("sáº£n pháº©m", "product", "material", "hÃ ng")
+        ):
             intent = "get_kpi_by_product"
             fn_name = "GetKpiByProduct"
         else:
@@ -243,13 +245,13 @@ def _mock_response(user_message: str) -> ChatResponse:
                 )
             )
             card_type = _get_adaptive_card_type("UpdateOrderReference")
-            reply = (
-                f"[MOCK] Vui lÃ²ng cung cáº¥p sá»‘ PO reference má»›i cho Ä‘Æ¡n hÃ ng {order_id}."
-            )
+            reply = f"[MOCK] Vui lÃ²ng cung cáº¥p sá»‘ PO reference má»›i cho Ä‘Æ¡n hÃ ng {order_id}."
         else:
             reply = "[MOCK] Vui lÃ²ng cung cáº¥p mÃ£ Ä‘Æ¡n hÃ ng cá»¥ thá»ƒ Ä‘á»ƒ tÃ´i thá»±c hiá»‡n."
 
-    elif any(kw in lower for kw in ("chi tiáº¿t", "detail", "line item", "máº·t hÃ ng")):
+    elif any(
+        kw in lower for kw in ("chi tiáº¿t", "detail", "line item", "máº·t hÃ ng")
+    ):
         match = re.search(r"(ord-\w+)", lower)
         order_id = match.group(1).upper() if match else ""
         if order_id:
@@ -267,7 +269,8 @@ def _mock_response(user_message: str) -> ChatResponse:
             reply = "[MOCK] Vui lÃ²ng cung cáº¥p mÃ£ Ä‘Æ¡n hÃ ng cá»¥ thá»ƒ Ä‘á»ƒ tÃ´i thá»±c hiá»‡n."
 
     elif any(
-        kw in lower for kw in ("Ä‘Æ¡n hÃ ng", "order", "ord-", "tráº¡ng thÃ¡i", "status")
+        kw in lower
+        for kw in ("Ä‘Æ¡n hÃ ng", "order", "ord-", "tráº¡ng thÃ¡i", "status")
     ):
         match = re.search(r"(ord-\w+)", lower)
         order_id = match.group(1).upper() if match else ""
