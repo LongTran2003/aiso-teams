@@ -58,3 +58,4 @@ dotnet test --configuration Release --no-build
 - [Architecture](../docs/foundation/architecture.md)
 - [Git workflow](../docs/foundation/git-workflow.md)
 - [Sprint plan](../docs/planning/sprint-plan.md)
+ 
