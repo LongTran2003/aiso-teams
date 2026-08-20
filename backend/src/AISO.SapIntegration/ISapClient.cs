@@ -151,6 +151,9 @@ public interface ISapClient
     /// <summary>Valid sales areas from <c>SalesArea</c> (TVTA).</summary>
     Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default);
 
+    /// <summary>Materials from <c>Material</c> (MARA/MAKT).</summary>
+    Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default);
+
     /// <summary>Customers valid per sales area from <c>ValidCustomer</c> (KNVV).</summary>
     Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
         string? salesOrg = null,
@@ -239,6 +242,15 @@ public sealed record SapValidCustomer(
         division = parts[3].ToUpperInvariant();
         return !string.IsNullOrWhiteSpace(customer);
     }
+}
+
+/// <summary>OData <c>Material</c> row.</summary>
+public sealed record SapMaterial(
+    string Material,
+    string MaterialName,
+    DateTimeOffset? CreatedOn)
+{
+    public string Label => $"{Material} - {MaterialName}";
 }
 
 public sealed record CreateSalesOrderDto

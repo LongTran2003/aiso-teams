@@ -25,6 +25,13 @@ internal class SapValidCustomerDto
     public string? Country { get; set; }
 }
 
+internal class SapMaterialDto
+{
+    public string? Material { get; set; }
+    public string? MaterialName { get; set; }
+    public string? CreatedOn { get; set; }
+}
+
 internal class SapSalesOrderDto
 {
     public string? SoNumber { get; set; }

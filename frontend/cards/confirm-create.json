@@ -81,13 +81,7 @@
           "width": "stretch",
           "items": [
             {
-              "type": "Input.Text",
-              "id": "material1",
-              "label": "Material 1",
-              "isRequired": true,
-              "errorMessage": "At least one material is required",
-              "placeholder": "e.g. TG11",
-              "value": "${material1}"
+              "type": "Input.ChoiceSet", "id": "material1", "label": "Material 1", "isRequired": true, "errorMessage": "At least one material is required", "value": "${material1}", "choices": [ { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" } ]
             }
           ]
         },
@@ -363,3 +357,4 @@
     }
   ]
 }
+

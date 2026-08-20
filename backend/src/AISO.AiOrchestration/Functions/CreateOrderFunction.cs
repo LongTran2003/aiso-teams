@@ -112,6 +112,11 @@ public sealed class CreateOrderFunction : IFunction
             .Select(g => g.First())
             .ToList();
 
+        var materials = await _sap.GetMaterialsAsync(ct);
+        var materialChoices = materials
+            .Select(m => new ConfirmCreateChoice(m.Label, m.Material))
+            .ToList();
+
         // Prefer a ValidCustomer row matching draft customer (+ user org when possible).
         ConfirmCreateChoice? selected = null;
         if (customerChoices.Count > 0)
@@ -169,7 +174,8 @@ public sealed class CreateOrderFunction : IFunction
             DistChannel: distChannel.Trim().ToUpperInvariant(),
             Division: division.Trim().ToUpperInvariant(),
             SalesAreaChoices: salesAreaChoices,
-            CustomerChoices: customerChoices));
+            CustomerChoices: customerChoices,
+            MaterialChoices: materialChoices));
     }
 
     private static string? ReadString(JsonElement element, string name) =>
@@ -193,7 +199,8 @@ public sealed record ConfirmCreateOrderResponse(
     string DistChannel = "10",
     string Division = "00",
     IReadOnlyList<ConfirmCreateChoice>? SalesAreaChoices = null,
-    IReadOnlyList<ConfirmCreateChoice>? CustomerChoices = null)
+    IReadOnlyList<ConfirmCreateChoice>? CustomerChoices = null,
+    IReadOnlyList<ConfirmCreateChoice>? MaterialChoices = null)
 {
     /// <summary>First line material (tests / legacy callers).</summary>
     public string Material => Lines.Count > 0 ? Lines[0].Material : string.Empty;
@@ -205,4 +212,5 @@ public sealed record ConfirmCreateOrderResponse(
 
     public bool UseSalesAreaChoices => SalesAreaChoices is { Count: > 0 };
     public bool UseCustomerChoices => CustomerChoices is { Count: > 0 };
+    public bool UseMaterialChoices => MaterialChoices is { Count: > 0 };
 }

@@ -524,6 +524,19 @@ public sealed class MockSapClient : ISapClient
         return Task.FromResult(areas);
     }
 
+    public Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default)
+    {
+        IReadOnlyList<SapMaterial> materials =
+        [
+            new("TG11", "Trading Goods 11", DateTimeOffset.UtcNow),
+            new("TG12", "Trading Goods 12", DateTimeOffset.UtcNow),
+            new("TG13", "Trading Goods 13", DateTimeOffset.UtcNow),
+            new("DXTR1000", "Deluxe Touring Bike (Black)", DateTimeOffset.UtcNow),
+            new("WDFR1000", "Water Bottle (Front)", DateTimeOffset.UtcNow)
+        ];
+        return Task.FromResult(materials);
+    }
+
     public Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
         string? salesOrg = null,
         string? distChannel = null,

@@ -1231,6 +1231,61 @@ public class SapClient : ISapClient
         }
     }
 
+    public async Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default)
+    {
+        var url = new ODataQueryBuilder("Material")
+            .AddCustomParam("sap-client", "324")
+            .Top(100)
+            .Build();
+
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (response.StatusCode is System.Net.HttpStatusCode.NotFound
+                or System.Net.HttpStatusCode.BadRequest)
+            {
+                _logger.LogWarning("Material entity unavailable: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapMaterial>();
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Material GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapMaterial>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapMaterialDto>>(rawJson, JsonOptions);
+            if (result?.Value is null || result.Value.Count == 0)
+                return Array.Empty<SapMaterial>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.Material))
+                .Select(r =>
+                {
+                    DateTimeOffset? created = null;
+                    if (DateTimeOffset.TryParse(r.CreatedOn, out var dt))
+                        created = dt;
+
+                    return new SapMaterial(
+                        r.Material!.Trim().ToUpperInvariant(),
+                        (r.MaterialName ?? string.Empty).Trim(),
+                        created);
+                })
+                .GroupBy(a => a.Material, StringComparer.OrdinalIgnoreCase)
+                .Select(g => g.First())
+                .OrderBy(a => a.Material, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not SapODataException)
+        {
+            _logger.LogWarning(ex, "Material lookup failed");
+            return Array.Empty<SapMaterial>();
+        }
+    }
+
     public async Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
         string? salesOrg = null,
         string? distChannel = null,

@@ -242,6 +242,8 @@ public class ForceCancelRoutingTests
             => throw new NotImplementedException();
         public Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default)
             => throw new NotImplementedException();
+        public Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<SapMaterial>>(Array.Empty<SapMaterial>());
+
         public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default)
             => throw new NotImplementedException();
         public Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
@@ -303,6 +305,6 @@ public class ForceCancelRoutingTests
             Task.FromResult(new AISO.Domain.Users.DelegationInfo(null, null));
 
         public Task SetDelegatedBySapUserAsync(string delegateUser, string? delegatorUser, DateTimeOffset? validTo = null, decimal? maxAmount = null, CancellationToken ct = default)
-            => Task.CompletedTask; public Task<IReadOnlyList<AISO.Domain.Users.ActiveDelegation>> GetActiveDelegationsAsync(string filterDelegatorUser = null, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<AISO.Domain.Users.ActiveDelegation>>(Array.Empty<AISO.Domain.Users.ActiveDelegation>());
+            => Task.CompletedTask; public Task<IReadOnlyList<AISO.Domain.Users.ActiveDelegation>> GetActiveDelegationsAsync(string? filterDelegatorUser = null, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<AISO.Domain.Users.ActiveDelegation>>(Array.Empty<AISO.Domain.Users.ActiveDelegation>());
     }
 }
