@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using AISO.AiOrchestration;
 using AISO.AiOrchestration.Functions;
 using AISO.AiOrchestration.Stub;
@@ -102,7 +102,7 @@ public class ForceCancelRoutingTests
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("force release 13122"));
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("reject approval 9"));
         Assert.True(AiServiceDispatcher.IsDeterministicShortcut("cancel order 13122"));
-        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("há»§y Ä‘Æ¡n 13122"));
+        Assert.True(AiServiceDispatcher.IsDeterministicShortcut("hủy đơn 13122"));
     }
 
     [Fact]
