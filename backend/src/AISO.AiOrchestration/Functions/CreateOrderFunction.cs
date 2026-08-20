@@ -52,7 +52,7 @@ public sealed class CreateOrderFunction : IFunction
         var userOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
         if (string.IsNullOrWhiteSpace(salesOrg))
             salesOrg = string.IsNullOrWhiteSpace(userOrg) ? "TV01" : userOrg;
-            
+
         var plant = salesOrg;
 
         var lines = new List<ConfirmCreateOrderLine>();
