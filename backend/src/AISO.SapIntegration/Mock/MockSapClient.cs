@@ -552,7 +552,7 @@ public sealed class MockSapClient : ISapClient
         string? salesOrg = null,
         string? distChannel = null,
         string? division = null,
-        int top = 100,
+        int top = 30,
         CancellationToken ct = default)
     {
         IEnumerable<SapValidCustomer> rows =

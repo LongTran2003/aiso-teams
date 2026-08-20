@@ -1339,6 +1339,7 @@ public class SapClient : ISapClient
         string? salesOrg = null,
         string? distChannel = null,
         string? division = null,
+        int top = 30,
         CancellationToken ct = default)
     {
         return await GetValidCustomersAsync(
@@ -1346,7 +1347,7 @@ public class SapClient : ISapClient
             salesOrg,
             distChannel,
             division,
-            30,
+            top,
             ct);
     }
 

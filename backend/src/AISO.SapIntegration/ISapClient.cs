@@ -162,7 +162,7 @@ public interface ISapClient
         string? salesOrg = null,
         string? distChannel = null,
         string? division = null,
-        int top = 100,
+        int top = 30,
         CancellationToken ct = default);
 
     /// <summary>
