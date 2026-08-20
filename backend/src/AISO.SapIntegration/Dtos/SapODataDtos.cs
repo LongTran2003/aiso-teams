@@ -8,6 +8,14 @@ internal class ODataResponse<T>
     public List<T>? Value { get; set; }
 }
 
+internal class SapValidMaterialPlantDto
+{
+    public string Material { get; set; } = string.Empty;
+    public string Plant { get; set; } = string.Empty;
+    public string MaterialType { get; set; } = string.Empty;
+    public string BaseUnit { get; set; } = string.Empty;
+}
+
 internal class SapSalesAreaDto
 {
     public string? SalesOrg { get; set; }

@@ -78,7 +78,7 @@ public sealed class CreateOrderFunction : IFunction
                         "VALIDATION");
                 }
 
-                plant = ReadString(item, "plant") ?? plant;
+                plant = ReadString(item, "plant"); // We no longer fallback to `plant` because there is no default plant
                 unit = ReadString(item, "unit") ?? unit;
 
                 lines.Add(new ConfirmCreateOrderLine(
@@ -113,8 +113,19 @@ public sealed class CreateOrderFunction : IFunction
             .ToList();
 
         var materials = await _sap.GetMaterialsAsync(ct);
-        var materialChoices = materials
-            .Select(m => new ConfirmCreateChoice(m.Label, m.Material))
+        var materialPlants = await _sap.GetValidMaterialPlantsAsync(ct);
+
+        // Fetch material names to enrich the label
+        var matDict = materials.ToDictionary(m => m.Material, m => m.MaterialName);
+
+        var materialChoices = materialPlants
+            .Select(mp => 
+            {
+                var name = matDict.TryGetValue(mp.Material, out var n) ? n : mp.MaterialType;
+                return new ConfirmCreateChoice(
+                    $"{mp.Material.TrimStart('0')} - {name} (Kho {mp.Plant})", 
+                    $"{mp.Material}|{mp.Plant}|{mp.BaseUnit}");
+            })
             .ToList();
 
         // Prefer a ValidCustomer row matching draft customer (+ user org when possible).
@@ -128,8 +139,15 @@ public sealed class CreateOrderFunction : IFunction
                         || string.Equals(org, salesOrg, StringComparison.OrdinalIgnoreCase)))
                 ?? customerChoices.FirstOrDefault(c =>
                     SapValidCustomer.TryParseKey(c.Value, out var id, out _, out _, out _)
-                    && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase))
-                ?? customerChoices[0];
+                    && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase));
+            
+            if (selected == null)
+            {
+                // Customer requested was not found in the valid customers list from SAP
+                return FunctionResult.Fail(
+                    $"Khách hàng {customer} không tồn tại hoặc không hợp lệ. Vui lòng kiểm tra lại mã khách hàng.",
+                    "VALIDATION");
+            }
 
             if (SapValidCustomer.TryParseKey(selected.Value, out var sId, out var sOrg, out var sChan, out var sDiv))
             {
@@ -168,7 +186,7 @@ public sealed class CreateOrderFunction : IFunction
             Customer: customerFormValue,
             SalesOrg: salesOrg.Trim().ToUpperInvariant(),
             Currency: currency.Trim().ToUpperInvariant(),
-            Plant: plant.Trim(),
+            Plant: "", // Plant will be read from Material
             Unit: unit.Trim().ToUpperInvariant(),
             Lines: lines,
             DistChannel: distChannel.Trim().ToUpperInvariant(),

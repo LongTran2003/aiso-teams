@@ -1295,6 +1295,46 @@ public class SapClient : ISapClient
         }
     }
 
+    public async Task<IReadOnlyList<SapValidMaterialPlant>> GetValidMaterialPlantsAsync(CancellationToken ct = default)
+    {
+        var builder = new ODataQueryBuilder("ValidMaterialPlant")
+            .AddCustomParam("$select", "Material,Plant,MaterialType,BaseUnit")
+            .Top(500);
+
+        var url = builder.Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("ValidMaterialPlant GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapValidMaterialPlant>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapValidMaterialPlantDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapValidMaterialPlant>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.Material) && !string.IsNullOrWhiteSpace(r.Plant))
+                .Select(r => new SapValidMaterialPlant(
+                    Material: FormatMaterialNumber(r.Material),
+                    Plant: r.Plant,
+                    MaterialType: r.MaterialType,
+                    BaseUnit: r.BaseUnit))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "ValidMaterialPlant lookup failed");
+            return Array.Empty<SapValidMaterialPlant>();
+        }
+    }
+
     public async Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
         string? salesOrg = null,
         string? distChannel = null,

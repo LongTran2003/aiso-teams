@@ -151,8 +151,11 @@ public interface ISapClient
     /// <summary>Valid sales areas from <c>SalesArea</c> (TVTA).</summary>
     Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default);
 
-    /// <summary>Materials from <c>Material</c> (MARA/MAKT).</summary>
+    /// <summary>Material master from <c>Material</c>.</summary>
     Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default);
+
+    /// <summary>Valid Material per Plant from <c>ValidMaterialPlant</c>.</summary>
+    Task<IReadOnlyList<SapValidMaterialPlant>> GetValidMaterialPlantsAsync(CancellationToken ct = default);
 
     /// <summary>Customers valid per sales area from <c>ValidCustomer</c> (KNVV).</summary>
     Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
@@ -252,6 +255,13 @@ public sealed record SapMaterial(
 {
     public string Label => $"{Material} - {MaterialName}";
 }
+
+/// <summary>OData <c>ValidMaterialPlant</c> row.</summary>
+public sealed record SapValidMaterialPlant(
+    string Material,
+    string Plant,
+    string MaterialType,
+    string BaseUnit);
 
 public sealed record CreateSalesOrderDto
 {

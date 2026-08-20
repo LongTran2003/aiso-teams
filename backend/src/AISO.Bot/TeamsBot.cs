@@ -1587,10 +1587,10 @@ public class TeamsBot : TeamsActivityHandler
                                 qtyKey = "qty";
                             }
 
-                            var material = valueObj.TryGetValue(matKey, StringComparison.OrdinalIgnoreCase, out var matToken)
+                            var materialValue = valueObj.TryGetValue(matKey, StringComparison.OrdinalIgnoreCase, out var matToken)
                                 ? matToken.ToString()?.Trim()
                                 : null;
-                            if (string.IsNullOrWhiteSpace(material))
+                            if (string.IsNullOrWhiteSpace(materialValue))
                                 continue;
 
                             decimal qty = 1m;
@@ -1605,17 +1605,33 @@ public class TeamsBot : TeamsActivityHandler
                                 await turnContext.SendActivityAsync(
                                     MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
                                         "VALIDATION",
-                                        $"Material {material} has invalid quantity. Quantity must be greater than 0.")),
+                                        $"Material {materialValue} has invalid quantity. Quantity must be greater than 0.")),
                                     cancellationToken);
                                 return;
                             }
 
+                            var itemMaterial = materialValue;
+                            var itemPlant = string.IsNullOrWhiteSpace(plant) ? (string.IsNullOrWhiteSpace(salesOrg) ? "1010" : salesOrg) : plant;
+                            var itemUnit = string.IsNullOrWhiteSpace(unit) ? "EA" : unit.ToUpperInvariant();
+
+                            // The new Adaptive Card sends material choices in the format "Material|Plant|BaseUnit"
+                            var parts = materialValue.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                            if (parts.Length >= 2)
+                            {
+                                itemMaterial = parts[0];
+                                itemPlant = parts[1];
+                                if (parts.Length >= 3)
+                                {
+                                    itemUnit = parts[2];
+                                }
+                            }
+
                             lineItems.Add(new CreateSalesOrderItemDto
                             {
-                                Material = material.ToUpperInvariant(),
+                                Material = itemMaterial.ToUpperInvariant(),
                                 OrderQty = qty,
-                                Plant = string.IsNullOrWhiteSpace(plant) ? (string.IsNullOrWhiteSpace(salesOrg) ? "1010" : salesOrg) : plant,
-                                Unit = string.IsNullOrWhiteSpace(unit) ? "EA" : unit.ToUpperInvariant()
+                                Plant = itemPlant,
+                                Unit = itemUnit.ToUpperInvariant()
                             });
                         }
 
