@@ -87,6 +87,18 @@ public class ForceDelegateApprovalFunction : IFunction
 
         var fromDate = DateTimeOffset.Parse(validFrom);
         var toDate = DateTimeOffset.Parse(validTo);
+        var today = DateTimeOffset.UtcNow.Date;
+
+        if (fromDate.Date < today)
+        {
+            return FunctionResult.Fail("Delegation start date (ValidFrom) cannot be in the past.", "VALIDATION");
+        }
+
+        if (toDate < fromDate)
+        {
+            return FunctionResult.Fail("Delegation end date (ValidTo) cannot be before start date.", "VALIDATION");
+        }
+        
         var salesOrg = await _scope.GetSalesOrgBySapUserAsync(delegatorUser, ct);
 
         var dto = new DelegateApprovalDto(

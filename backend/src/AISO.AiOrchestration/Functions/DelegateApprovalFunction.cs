@@ -86,6 +86,17 @@ public class DelegateApprovalFunction : IFunction
 
         var fromDate = DateTimeOffset.Parse(validFrom);
         var toDate = DateTimeOffset.Parse(validTo);
+        var today = DateTimeOffset.UtcNow.Date;
+
+        if (fromDate.Date < today)
+        {
+            return FunctionResult.Fail("Delegation start date (ValidFrom) cannot be in the past.", "VALIDATION");
+        }
+
+        if (toDate < fromDate)
+        {
+            return FunctionResult.Fail("Delegation end date (ValidTo) cannot be before start date.", "VALIDATION");
+        }
 
         // Prevent chain delegation
         var delegatorInfo = await _scope.GetDelegationInfoAsync(requestingSapUser, ct);
