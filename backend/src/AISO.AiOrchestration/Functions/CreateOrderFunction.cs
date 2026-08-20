@@ -42,7 +42,7 @@ public sealed class CreateOrderFunction : IFunction
 
     public async Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
     {
-        var customer = ReadString(parameters, "customer") ?? "10100001";
+        var customer = ReadString(parameters, "customer");
         var salesOrg = ReadString(parameters, "sales_org");
         var distChannel = ReadString(parameters, "dist_channel") ?? "10";
         var division = ReadString(parameters, "division") ?? "00";
@@ -132,21 +132,29 @@ public sealed class CreateOrderFunction : IFunction
         ConfirmCreateChoice? selected = null;
         if (customerChoices.Count > 0)
         {
-            selected = customerChoices.FirstOrDefault(c =>
-                    SapValidCustomer.TryParseKey(c.Value, out var id, out var org, out _, out _)
-                    && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase)
-                    && (string.IsNullOrWhiteSpace(salesOrg)
-                        || string.Equals(org, salesOrg, StringComparison.OrdinalIgnoreCase)))
-                ?? customerChoices.FirstOrDefault(c =>
-                    SapValidCustomer.TryParseKey(c.Value, out var id, out _, out _, out _)
-                    && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase));
-
-            if (selected == null)
+            if (!string.IsNullOrWhiteSpace(customer))
             {
-                // Customer requested was not found in the valid customers list from SAP
-                return FunctionResult.Fail(
-                    $"Khách hàng {customer} không tồn tại hoặc không hợp lệ. Vui lòng kiểm tra lại mã khách hàng.",
-                    "VALIDATION");
+                selected = customerChoices.FirstOrDefault(c =>
+                        SapValidCustomer.TryParseKey(c.Value, out var id, out var org, out _, out _)
+                        && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase)
+                        && (string.IsNullOrWhiteSpace(salesOrg)
+                            || string.Equals(org, salesOrg, StringComparison.OrdinalIgnoreCase)))
+                    ?? customerChoices.FirstOrDefault(c =>
+                        SapValidCustomer.TryParseKey(c.Value, out var id, out _, out _, out _)
+                        && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase));
+                
+                if (selected == null)
+                {
+                    // Customer requested was not found in the valid customers list from SAP
+                    return FunctionResult.Fail(
+                        $"Customer {customer} does not exist or is not valid for your sales area. Please check the customer ID.",
+                        "VALIDATION");
+                }
+            }
+            else
+            {
+                // No customer requested, just pick the first available one to pre-fill the form
+                selected = customerChoices[0];
             }
 
             if (SapValidCustomer.TryParseKey(selected.Value, out var sId, out var sOrg, out var sChan, out var sDiv))
@@ -176,7 +184,7 @@ public sealed class CreateOrderFunction : IFunction
         }
 
         var customerFormValue = selected?.Value
-            ?? $"{customer.Trim()}|{salesOrg}|{distChannel}|{division}";
+            ?? $"{(customer ?? "").Trim()}|{salesOrg}|{distChannel}|{division}";
 
         _logger.LogInformation(
             "CreateOrder confirm step: customer={Customer} area={Org}/{Chan}/{Div} lines={LineCount} areas={AreaCount} customers={CustomerCount} by={User}",
