@@ -2775,7 +2775,7 @@ public class TeamsBot : TeamsActivityHandler
                     await ReplaceLoadingActivityAsync(
                         turnContext,
                         loadingActivityId,
-                        TeamsCardBuilder.BuildEmptyCard(),
+                        "Hiện tại không có dữ liệu uỷ quyền nào đang hoạt động.",
                         cancellationToken);
                     return;
                 }
