@@ -1192,7 +1192,7 @@ public class SapClient : ISapClient
     {
         var url = new ODataQueryBuilder("SalesArea")
             .AddCustomParam("sap-client", "324")
-            .Top(200)
+            .Top(30)
             .Build();
 
         _logger.LogInformation("Calling SAP OData: {Url}", url);
@@ -1244,7 +1244,7 @@ public class SapClient : ISapClient
     {
         var url = new ODataQueryBuilder("Material")
             .AddCustomParam("sap-client", "324")
-            .Top(100)
+            .Top(30)
             .Build();
 
         _logger.LogInformation("Calling SAP OData: {Url}", url);
@@ -1299,7 +1299,7 @@ public class SapClient : ISapClient
     {
         var builder = new ODataQueryBuilder("ValidMaterialPlant")
             .AddCustomParam("$select", "Material,Plant,MaterialType,BaseUnit")
-            .Top(100);
+            .Top(30);
 
         var url = builder.Build();
         _logger.LogInformation("Calling SAP OData: {Url}", url);
@@ -1339,7 +1339,6 @@ public class SapClient : ISapClient
         string? salesOrg = null,
         string? distChannel = null,
         string? division = null,
-        int top = 100,
         CancellationToken ct = default)
     {
         return await GetValidCustomersAsync(
@@ -1347,7 +1346,7 @@ public class SapClient : ISapClient
             salesOrg,
             distChannel,
             division,
-            top,
+            30,
             ct);
     }
 
