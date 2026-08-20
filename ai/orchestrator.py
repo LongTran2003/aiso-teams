@@ -611,6 +611,18 @@ class AIOrchestrator:
             # Force specific tool for delegation intents
             forced_tool = self._detect_forced_tool(user_message)
             if forced_tool:
+                # Ensure the forced tool is in the subset
+                forced_in_subset = any(
+                    t.get("function", {}).get("name") == forced_tool
+                    for t in subset_tools
+                )
+                if not forced_in_subset:
+                    # Add it from full tools list
+                    for t in self._tools or []:
+                        if t.get("function", {}).get("name") == forced_tool:
+                            subset_tools.append(t)
+                            kwargs["tools"] = subset_tools
+                            break
                 kwargs["tool_choice"] = {
                     "type": "function",
                     "function": {"name": forced_tool},
