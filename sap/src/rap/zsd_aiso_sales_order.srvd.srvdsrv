@@ -13,4 +13,5 @@ define service ZSD_AISO_SALES_ORDER {
   expose ZI_AISO_SALES_AREA as SalesArea;
   expose ZI_AISO_VALID_MATERIAL as ValidMaterial;
   expose ZI_AISO_VALID_MATERIAL_PLANT as ValidMaterialPlant;
+  expose ZC_AISO_MATERIAL as Material;
 }
