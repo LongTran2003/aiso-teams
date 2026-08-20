@@ -109,6 +109,7 @@ _FUNCTION_CARD_TYPE: dict[str, str] = {
     "ViewAuditLog": "audit_log",
     "ListBotUsers": "bot_users",
     "ManageBotUser": "manage_bot_user",
+    "ListDelegations": "list_delegations",
     "GetOverdueOrders": "overdue_orders",
     "RequestRelease": "order_detail",
     "ApproveOrder": "order_detail",
