@@ -46,6 +46,18 @@ public class SapClient : ISapClient
         return raw.ToUpperInvariant();
     }
 
+    internal static string FormatMaterialNumber(string? material)
+    {
+        if (string.IsNullOrWhiteSpace(material))
+            return string.Empty;
+
+        var raw = material.Trim();
+        if (raw.All(char.IsDigit))
+            return raw.PadLeft(18, '0');
+
+        return raw.ToUpperInvariant();
+    }
+
     public async Task<IReadOnlyList<SalesOrder>> GetSalesOrdersAsync(SalesOrdersQuery query, CancellationToken ct = default)
     {
         var builder = new ODataQueryBuilder("SalesOrder")
@@ -215,7 +227,7 @@ public class SapClient : ISapClient
             {
                 SO_NUMBER = "0000000000",
                 ITEM_NO = ((index + 1) * 10).ToString().PadLeft(6, '0'),
-                MATERIAL = i.Material,
+                MATERIAL = FormatMaterialNumber(i.Material),
                 PLANT = i.Plant,
                 ORDER_QTY = Math.Round(i.OrderQty, 3),
                 UNIT = i.Unit,
@@ -342,7 +354,7 @@ public class SapClient : ISapClient
             ["ITEMS"] = (dto.Items ?? Array.Empty<UpdateSalesOrderItemDto>()).Select(i => new
             {
                 ITEM_NO = PadItemNumber(i.ItemNumber),
-                MATERIAL = i.Material ?? string.Empty,
+                MATERIAL = FormatMaterialNumber(i.Material),
                 ORDER_QTY = Math.Round(i.OrderQty ?? 0m, 3),
                 UNIT = i.Unit ?? string.Empty,
                 CHANGE_FLAG = (i.Operation ?? string.Empty).Trim().ToUpperInvariant()
