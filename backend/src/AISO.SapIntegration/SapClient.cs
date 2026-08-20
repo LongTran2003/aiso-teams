@@ -1299,7 +1299,7 @@ public class SapClient : ISapClient
     {
         var builder = new ODataQueryBuilder("ValidMaterialPlant")
             .AddCustomParam("$select", "Material,Plant,MaterialType,BaseUnit")
-            .Top(500);
+            .Top(100);
 
         var url = builder.Build();
         _logger.LogInformation("Calling SAP OData: {Url}", url);
