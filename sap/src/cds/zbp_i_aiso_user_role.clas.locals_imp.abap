@@ -177,23 +177,31 @@ CLASS lhc_UserRole IMPLEMENTATION.
   ENDLOOP.
 ENDMETHOD.
 
-  METHOD revokedelegation.
+    METHOD revokedelegation.
     LOOP AT keys INTO DATA(ls_key).
       DATA(lv_requesting) = ls_key-%param-requesting_teams_user.
       DATA(lv_role)       = get_user_role( iv_sap_user = lv_requesting ).
 
-      SELECT SINGLE delegator_user FROM zaiso_delegation
-        INTO @DATA(lv_delegator)
-        WHERE delegation_id = @ls_key-%param-delegation_id.
+      SELECT SINGLE delegation_id, delegator_user
+        FROM zaiso_delegation
+        INTO @DATA(ls_delegation)
+        WHERE delegate_user = @ls_key-%param-delegate_user
+          AND status        = 'A'.
 
       IF sy-subrc <> 0.
         APPEND VALUE #( %cid        = ls_key-%cid
                          %fail-cause = if_abap_behv=>cause-not_found )
                TO failed-userrole.
+        APPEND VALUE #( %cid = ls_key-%cid
+                         %msg = new_message( id       = '00'
+                                              number   = '001'
+                                              severity = if_abap_behv_message=>severity-error
+                                              v1       = |No active delegation found for { ls_key-%param-delegate_user }| ) )
+               TO reported-userrole.
         CONTINUE.
       ENDIF.
 
-      IF lv_delegator <> lv_requesting AND lv_role <> 'ADMIN'.
+      IF ls_delegation-delegator_user <> lv_requesting AND lv_role <> 'ADMIN'.
         APPEND VALUE #( %cid        = ls_key-%cid
                          %fail-cause = if_abap_behv=>cause-unauthorized )
                TO failed-userrole.
@@ -207,8 +215,7 @@ ENDMETHOD.
       ENDIF.
 
       UPDATE zaiso_delegation SET status = 'R'
-        WHERE delegation_id = @ls_key-%param-delegation_id.
+        WHERE delegation_id = @ls_delegation-delegation_id.
     ENDLOOP.
   ENDMETHOD.
-
 ENDCLASS.
