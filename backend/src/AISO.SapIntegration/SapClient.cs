@@ -211,27 +211,24 @@ public class SapClient : ISapClient
         if (string.IsNullOrWhiteSpace(dto.RequestingSapUser))
             throw new ArgumentException("RequestingSapUser is required for createSalesOrder.", nameof(dto));
 
-        var url = "SalesOrder/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.createSalesOrder?sap-client=324&$format=json";
+        var url = "SalesOrder?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
         var payload = new
         {
-            DOC_TYPE = dto.DocType,
-            SALES_ORG = dto.SalesOrg,
-            DIST_CHANNEL = dto.DistChannel,
-            DIVISION = dto.Division,
-            CUSTOMER = FormatCustomerNumber(dto.Customer),
-            CURRENCY = dto.Currency,
-            REQUESTING_TEAMS_USER = dto.RequestingSapUser.Trim(),
-            ITEMS = dto.Items.Select((i, index) => new
+            DocType = dto.DocType,
+            SalesOrg = dto.SalesOrg,
+            DistChannel = dto.DistChannel,
+            Division = dto.Division,
+            Customer = FormatCustomerNumber(dto.Customer),
+            Currency = dto.Currency,
+            OwnerSapUser = dto.RequestingSapUser.Trim(),
+            _Items = dto.Items.Select(i => new
             {
-                SO_NUMBER = "0000000000",
-                ITEM_NO = ((index + 1) * 10).ToString().PadLeft(6, '0'),
-                MATERIAL = FormatMaterialNumber(i.Material),
-                PLANT = i.Plant,
-                ORDER_QTY = Math.Round(i.OrderQty, 3),
-                UNIT = i.Unit,
-                NET_VALUE = 0m
+                Material = FormatMaterialNumber(i.Material),
+                Plant = i.Plant,
+                OrderQty = Math.Round(i.OrderQty, 3),
+                Unit = i.Unit
             }).ToList()
         };
 
