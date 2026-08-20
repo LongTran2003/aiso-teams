@@ -119,11 +119,11 @@ public sealed class CreateOrderFunction : IFunction
         var matDict = materials.ToDictionary(m => m.Material, m => m.MaterialName);
 
         var materialChoices = materialPlants
-            .Select(mp => 
+            .Select(mp =>
             {
                 var name = matDict.TryGetValue(mp.Material, out var n) ? n : mp.MaterialType;
                 return new ConfirmCreateChoice(
-                    $"{mp.Material.TrimStart('0')} - {name} (Kho {mp.Plant})", 
+                    $"{mp.Material.TrimStart('0')} - {name} (Kho {mp.Plant})",
                     $"{mp.Material}|{mp.Plant}|{mp.BaseUnit}");
             })
             .ToList();
@@ -140,7 +140,7 @@ public sealed class CreateOrderFunction : IFunction
                 ?? customerChoices.FirstOrDefault(c =>
                     SapValidCustomer.TryParseKey(c.Value, out var id, out _, out _, out _)
                     && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase));
-            
+
             if (selected == null)
             {
                 // Customer requested was not found in the valid customers list from SAP
