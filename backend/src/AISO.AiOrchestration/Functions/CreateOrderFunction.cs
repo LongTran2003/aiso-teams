@@ -47,12 +47,13 @@ public sealed class CreateOrderFunction : IFunction
         var distChannel = ReadString(parameters, "dist_channel") ?? "10";
         var division = ReadString(parameters, "division") ?? "00";
         var currency = ReadString(parameters, "currency") ?? "USD";
-        var plant = "1010";
-        var unit = "PC";
+        var unit = "EA";
 
         var userOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
         if (string.IsNullOrWhiteSpace(salesOrg))
             salesOrg = string.IsNullOrWhiteSpace(userOrg) ? "TV01" : userOrg;
+            
+        var plant = salesOrg;
 
         var lines = new List<ConfirmCreateOrderLine>();
         if (parameters.TryGetProperty("items", out var itemsElement) && itemsElement.ValueKind == JsonValueKind.Array)

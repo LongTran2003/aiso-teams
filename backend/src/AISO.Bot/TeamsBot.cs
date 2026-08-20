@@ -1614,8 +1614,8 @@ public class TeamsBot : TeamsActivityHandler
                             {
                                 Material = material.ToUpperInvariant(),
                                 OrderQty = qty,
-                                Plant = string.IsNullOrWhiteSpace(plant) ? "1010" : plant,
-                                Unit = string.IsNullOrWhiteSpace(unit) ? "PC" : unit.ToUpperInvariant()
+                                Plant = string.IsNullOrWhiteSpace(plant) ? (string.IsNullOrWhiteSpace(salesOrg) ? "1010" : salesOrg) : plant,
+                                Unit = string.IsNullOrWhiteSpace(unit) ? "EA" : unit.ToUpperInvariant()
                             });
                         }
 
