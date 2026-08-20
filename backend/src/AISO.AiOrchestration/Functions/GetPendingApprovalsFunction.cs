@@ -47,9 +47,13 @@ public sealed class GetPendingApprovalsFunction : IFunction
             return FunctionResult.Fail("Only Manager or Admin can view pending approvals (or a delegated user).", "UNAUTHORIZED");
         }
 
-        var salesOrg = role == UserRole.Admin
+        var effectiveUserForOrg = !string.IsNullOrWhiteSpace(delegationInfo.DelegatorSapUser)
+            ? delegationInfo.DelegatorSapUser
+            : requestingSapUser;
+
+        var salesOrg = role == UserRole.Admin && string.IsNullOrWhiteSpace(delegationInfo.DelegatorSapUser)
             ? null
-            : await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
+            : await _scope.GetSalesOrgBySapUserAsync(effectiveUserForOrg, ct);
 
         var pending = await _approvals.GetPendingAsync(salesOrg, ct);
 

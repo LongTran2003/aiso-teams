@@ -115,7 +115,10 @@ public sealed class CancelOrderFunction : IFunction
 
         if (role >= UserRole.Manager)
         {
-            var managerOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
+            var effectiveUserForOrg = !string.IsNullOrWhiteSpace(delegationInfo.DelegatorSapUser)
+                ? delegationInfo.DelegatorSapUser
+                : requestingSapUser;
+            var managerOrg = await _scope.GetSalesOrgBySapUserAsync(effectiveUserForOrg, ct);
             if (!string.IsNullOrWhiteSpace(managerOrg)
                 && !string.IsNullOrWhiteSpace(order.SalesOrg)
                 && !string.Equals(managerOrg, order.SalesOrg, StringComparison.OrdinalIgnoreCase))

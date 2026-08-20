@@ -71,8 +71,11 @@ public sealed class RejectApprovalFunction : IFunction
         try
         {
             var role = await _scope.GetRoleBySapUserAsync(requestingSapUser, ct);
-            var salesOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
             var delegationInfo = await _scope.GetDelegationInfoAsync(requestingSapUser, ct);
+            var effectiveUserForOrg = !string.IsNullOrWhiteSpace(delegationInfo.DelegatorSapUser)
+                ? delegationInfo.DelegatorSapUser
+                : requestingSapUser;
+            var salesOrg = await _scope.GetSalesOrgBySapUserAsync(effectiveUserForOrg, ct);
             var isAdmin = role == UserRole.Admin;
 
             if (role < UserRole.Manager && string.IsNullOrWhiteSpace(delegationInfo.DelegatorSapUser))
