@@ -845,6 +845,21 @@ public class TeamsBot : TeamsActivityHandler
                         catch (SapODataException sapEx)
                         {
                             _logger.LogError(sapEx, "SAP error delegating approval for {DelegateUser}", delegateUser);
+
+                            // If SAP says delegation already exists, sync local DB
+                            if (sapEx.Message.Contains("already has active delegation", StringComparison.OrdinalIgnoreCase))
+                            {
+                                try
+                                {
+                                    await _scopeLookup.SetDelegatedBySapUserAsync(delegateUser, linkedSapUsername, toDate, maxAmount, cancellationToken);
+                                    _logger.LogInformation("Synced existing SAP delegation for {DelegateUser} to local DB", delegateUser);
+                                }
+                                catch (Exception syncEx)
+                                {
+                                    _logger.LogWarning(syncEx, "Failed to sync SAP delegation for {DelegateUser}", delegateUser);
+                                }
+                            }
+
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
                                 cancellationToken);
