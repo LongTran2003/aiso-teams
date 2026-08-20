@@ -499,6 +499,7 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
           lv_audit_id        TYPE sysuuid_c32,
           lv_requesting_user TYPE char100,
           lv_customer        TYPE kunnr,
+          lv_material        TYPE matnr,
           lv_item_no         TYPE posnr_va.
 
     LOOP AT keys INTO DATA(ls_key).
@@ -546,25 +547,35 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
         CONTINUE.
       ENDIF.
 
+      " --- FIX: ALPHA convert material trước khi check, đồng bộ với customer ---
       DATA(lv_has_invalid_item) = abap_false.
       DATA(lv_invalid_detail)   = ''.
       LOOP AT ls_key-%param-items INTO DATA(ls_check_item).
+        lv_material = |{ ls_check_item-material ALPHA = IN }|.
+
         SELECT SINGLE matnr FROM mara
           INTO @DATA(lv_matnr_exists)
-          WHERE matnr = @ls_check_item-material.
+          WHERE matnr = @lv_material.
         IF sy-subrc <> 0.
           lv_has_invalid_item = abap_true.
-          lv_invalid_detail = |Material { ls_check_item-material } does not exist|.
+          lv_invalid_detail = |Material { lv_material } does not exist|.
           EXIT.
         ENDIF.
 
         SELECT SINGLE werks FROM marc
           INTO @DATA(lv_plant_exists)
-          WHERE matnr = @ls_check_item-material
+          WHERE matnr = @lv_material
             AND werks = @ls_check_item-plant.
         IF sy-subrc <> 0.
           lv_has_invalid_item = abap_true.
-          lv_invalid_detail = |Material { ls_check_item-material } not extended to plant { ls_check_item-plant }|.
+          lv_invalid_detail = |Material { lv_material } not extended to plant { ls_check_item-plant }|.
+          EXIT.
+        ENDIF.
+
+        " --- FIX: validate qty > 0 để tránh BAPI trả lỗi generic khi qty = 0 hoặc âm ---
+        IF ls_check_item-order_qty <= 0.
+          lv_has_invalid_item = abap_true.
+          lv_invalid_detail = |Order quantity for material { lv_material } must be greater than 0|.
           EXIT.
         ENDIF.
       ENDLOOP.
@@ -602,8 +613,11 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
       LOOP AT ls_key-%param-items INTO DATA(ls_item).
         lv_item_no = lv_item_no + 10.
 
+        " --- FIX: dùng ALPHA convert material khi build BAPI item table ---
+        DATA(lv_item_material) = |{ ls_item-material ALPHA = IN }|.
+
         APPEND VALUE #( itm_number = lv_item_no
-                         material   = ls_item-material
+                         material   = lv_item_material
                          plant      = ls_item-plant
                          target_qty = ls_item-order_qty
                          target_qu  = ls_item-unit ) TO lt_items_in.
