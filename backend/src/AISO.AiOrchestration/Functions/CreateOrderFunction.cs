@@ -31,27 +31,28 @@ public sealed class CreateOrderFunction : IFunction
     public string Name => "CreateOrder";
 
     public string Description =>
-        "DO NOT ASK THE USER FOR MISSING DETAILS. IF any parameter is missing, just omit it and call this function IMMEDIATELY with an empty JSON object. The UI form will prompt the user for everything.";
+        "Opens the Create Sales Order UI form. ALWAYS call this function IMMEDIATELY when the user asks to create an order. DO NOT ask the user for any parameters (customer, material, etc.), just call this function with an empty object and the UI will handle it.";
 
     public string ParametersJsonSchema => """
         {
           "type": "object",
           "properties": {
-            "customer": { "type": "string", "description": "The customer ID (e.g. '10100001')." },
-            "doc_type": { "type": "string", "description": "The document type (default 'TA')." },
-            "sales_org": { "type": "string", "description": "Sales Organization (e.g. 'TV01')." },
-            "dist_channel": { "type": "string", "description": "Distribution Channel (e.g. '10')." },
-            "division": { "type": "string", "description": "Division (e.g. '00')." },
-            "currency": { "type": "string", "description": "Currency (default 'USD')." },
+            "customer": { "type": "string", "description": "(Optional) The customer ID." },
+            "doc_type": { "type": "string", "description": "(Optional) The document type." },
+            "sales_org": { "type": "string", "description": "(Optional) Sales Organization." },
+            "dist_channel": { "type": "string", "description": "(Optional) Distribution Channel." },
+            "division": { "type": "string", "description": "(Optional) Division." },
+            "currency": { "type": "string", "description": "(Optional) Currency." },
             "items": {
               "type": "array",
+              "description": "(Optional) Line items.",
               "items": {
                 "type": "object",
                 "properties": {
-                  "material": { "type": "string", "description": "Material code (e.g. 'TG11')." },
-                  "qty": { "type": "number", "description": "Order quantity." },
-                  "plant": { "type": "string", "description": "Plant (e.g. '1010')." },
-                  "unit": { "type": "string", "description": "Unit of measure (e.g. 'PC')." }
+                  "material": { "type": "string", "description": "(Optional) Material code." },
+                  "qty": { "type": "number", "description": "(Optional) Order quantity." },
+                  "plant": { "type": "string", "description": "(Optional) Plant." },
+                  "unit": { "type": "string", "description": "(Optional) Unit of measure." }
                 }
               }
             }
