@@ -216,6 +216,10 @@ internal static class TeamsCardBuilder
             customer = fallbackKey;
         }
 
+        var materialChoices = (draft.MaterialChoices ?? Array.Empty<ConfirmCreateChoice>())
+            .Select(c => new { title = c.Title, value = c.Value })
+            .ToList();
+
         return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "confirm-create.json",
             new
@@ -227,6 +231,7 @@ internal static class TeamsCardBuilder
                 salesArea = salesAreaKey,
                 salesAreaChoices,
                 customerChoices,
+                materialChoices,
                 currency = string.IsNullOrWhiteSpace(draft.Currency) ? "USD" : draft.Currency,
                 plant = string.IsNullOrWhiteSpace(draft.Plant) ? "1010" : draft.Plant,
                 unit = string.IsNullOrWhiteSpace(draft.Unit) ? "PC" : draft.Unit,
