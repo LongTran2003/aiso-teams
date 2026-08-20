@@ -554,6 +554,27 @@ class AIOrchestrator:
         ]
         return subset if subset else None
 
+    def _detect_forced_tool(self, user_message: str) -> str | None:
+        """Detect delegation/revoke intent and return forced tool name."""
+        msg = user_message.lower()
+        # Revoke keywords first (more specific)
+        revoke_kws = ["revoke", "thu hồi", "thu hoi", "huỷ uỷ quyền", "huy uy quyen"]
+        if any(kw in msg for kw in revoke_kws):
+            return "RevokeDelegation"
+        # Force delegate
+        force_kws = ["force delegate", "cưỡng chế"]
+        if any(kw in msg for kw in force_kws):
+            return "ForceDelegateApproval"
+        # List delegations
+        list_kws = ["list delegation", "danh sách uỷ quyền", "danh sach uy quyen"]
+        if any(kw in msg for kw in list_kws):
+            return "ListDelegations"
+        # Normal delegate
+        delegate_kws = ["delegate", "uỷ quyền", "ủy quyền", "uy quyen"]
+        if any(kw in msg for kw in delegate_kws):
+            return "DelegateApproval"
+        return None
+
     def process(
         self, user_message: str, chat_history: list[Any] | None = None
     ) -> ChatResponse:
@@ -586,6 +607,14 @@ class AIOrchestrator:
         if subset_tools:
             kwargs["tools"] = subset_tools
             kwargs["tool_choice"] = "auto"
+
+            # Force specific tool for delegation intents
+            forced_tool = self._detect_forced_tool(user_message)
+            if forced_tool:
+                kwargs["tool_choice"] = {
+                    "type": "function",
+                    "function": {"name": forced_tool},
+                }
 
         max_retries = 6
         initial_backoff = 3
