@@ -458,6 +458,8 @@ class AIOrchestrator:
         ]
         admin_keywords = [
             "delegate",
+            "delegation",
+            "delegations",
             "revoke",
             "uá»· quyá»n",
             "á»§y quyá»n",
@@ -997,3 +999,4 @@ def process_user_message(request: ChatRequest) -> ChatResponse:
             raise
     else:
         return _mock_response(request.user_message)
+
