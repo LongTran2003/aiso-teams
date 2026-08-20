@@ -36,27 +36,7 @@ public sealed class CreateOrderFunction : IFunction
     public string ParametersJsonSchema => """
         {
           "type": "object",
-          "properties": {
-            "customer": { "type": "string", "description": "(Optional) The customer ID." },
-            "doc_type": { "type": "string", "description": "(Optional) The document type." },
-            "sales_org": { "type": "string", "description": "(Optional) Sales Organization." },
-            "dist_channel": { "type": "string", "description": "(Optional) Distribution Channel." },
-            "division": { "type": "string", "description": "(Optional) Division." },
-            "currency": { "type": "string", "description": "(Optional) Currency." },
-            "items": {
-              "type": "array",
-              "description": "(Optional) Line items.",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "material": { "type": "string", "description": "(Optional) Material code." },
-                  "qty": { "type": "number", "description": "(Optional) Order quantity." },
-                  "plant": { "type": "string", "description": "(Optional) Plant." },
-                  "unit": { "type": "string", "description": "(Optional) Unit of measure." }
-                }
-              }
-            }
-          }
+          "properties": {}
         }
         """;
 
