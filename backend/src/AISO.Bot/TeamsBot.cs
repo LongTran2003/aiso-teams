@@ -769,6 +769,96 @@ public class TeamsBot : TeamsActivityHandler
                         return;
                     }
 
+                    if (string.Equals(action, "delegate_confirm", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var delegateUser = valueObj.TryGetValue("delegateUser", StringComparison.OrdinalIgnoreCase, out var uToken) ? uToken.ToString() : null;
+                        var validFromStr = valueObj.TryGetValue("validFromRaw", StringComparison.OrdinalIgnoreCase, out var vfToken) ? vfToken.ToString() : null;
+                        var validToStr = valueObj.TryGetValue("validToRaw", StringComparison.OrdinalIgnoreCase, out var vtToken) ? vtToken.ToString() : null;
+                        var maxAmountStr = valueObj.TryGetValue("maxAmountRaw", StringComparison.OrdinalIgnoreCase, out var maToken) ? maToken.ToString() : null;
+                        var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var currToken) ? currToken.ToString() : "VND";
+                        var reason = valueObj.TryGetValue("reason", StringComparison.OrdinalIgnoreCase, out var rToken) ? rToken.ToString() : null;
+
+                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("NOT_LINKED", "No SAP account is linked to your Teams identity yet.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(delegateUser) || string.IsNullOrWhiteSpace(validFromStr) || string.IsNullOrWhiteSpace(validToStr))
+                        {
+                            await turnContext.SendActivityAsync(MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Delegate user or dates are missing.")), cancellationToken);
+                            return;
+                        }
+
+                        var fromDate = DateTimeOffset.Parse(validFromStr);
+                        var toDate = DateTimeOffset.Parse(validToStr);
+                        decimal? maxAmount = null;
+                        if (!string.IsNullOrWhiteSpace(maxAmountStr) && decimal.TryParse(maxAmountStr, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out var m))
+                        {
+                            maxAmount = m;
+                        }
+
+                        var salesOrg = await _scopeLookup.GetSalesOrgBySapUserAsync(linkedSapUsername, cancellationToken);
+
+                        var dto = new DelegateApprovalDto(
+                            RequestingTeamsUser: linkedSapUsername,
+                            DelegateUser: delegateUser,
+                            SalesOrg: salesOrg,
+                            ValidFrom: fromDate,
+                            ValidTo: toDate,
+                            Reason: reason,
+                            MaxAmount: maxAmount,
+                            Currency: currency);
+
+                        try
+                        {
+                            await _sap.DelegateApprovalAsync(dto, cancellationToken);
+
+                            // Update local DB
+                            await _scopeLookup.SetDelegatedBySapUserAsync(delegateUser, linkedSapUsername, toDate, maxAmount, cancellationToken);
+
+                            // Send email notification
+                            var delegateEmail = await _scopeLookup.GetEmailBySapUserAsync(delegateUser, cancellationToken);
+                            if (!string.IsNullOrEmpty(delegateEmail))
+                            {
+                                string subject = $"Delegation Notice from {linkedSapUsername}";
+                                string html = $@"
+                                    <h2>Delegation Notice</h2>
+                                    <p>You have been delegated by <b>{linkedSapUsername}</b> to approve SAP orders (Sales Org: {salesOrg ?? "All"}).</p>
+                                    <ul>
+                                        <li><b>Start Date:</b> {fromDate:dd/MM/yyyy}</li>
+                                        <li><b>End Date:</b> {toDate:dd/MM/yyyy}</li>
+                                        <li><b>Max Amount:</b> {(maxAmount.HasValue ? $"{maxAmount.Value:N0} {currency}" : "Unlimited")}</li>
+                                        <li><b>Reason:</b> {reason ?? "None"}</li>
+                                    </ul>
+                                    <p>Please log in to the AISO Teams Bot to process approval requests during this period.</p>
+                                ";
+                                await _emailService.SendEmailAsync(delegateEmail, subject, html, cancellationToken);
+                            }
+
+                            string successMsg = $"Successfully delegated to {delegateUser} from {fromDate:dd/MM/yyyy} to {toDate:dd/MM/yyyy}." + (maxAmount.HasValue ? $" Max Amount: {maxAmount.Value:N0} {currency}" : "");
+                            await turnContext.SendActivityAsync(MessageFactory.Text(successMsg), cancellationToken);
+                        }
+                        catch (SapODataException sapEx)
+                        {
+                            _logger.LogError(sapEx, "SAP error delegating approval for {DelegateUser}", delegateUser);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
+                                cancellationToken);
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Unexpected error delegating approval for {DelegateUser}", delegateUser);
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
+                                cancellationToken);
+                        }
+                        return;
+                    }
+
                     if (string.Equals(action, "revoke_delegation_confirm", StringComparison.OrdinalIgnoreCase))
                     {
                         var delegateUser = valueObj.TryGetValue("delegateUser", StringComparison.OrdinalIgnoreCase, out var uToken) ? uToken.ToString() : null;
@@ -2750,6 +2840,29 @@ public class TeamsBot : TeamsActivityHandler
                 _logger.LogInformation(
                     "Bot replied with confirm-revoke-delegation card for user {DelegateUser}",
                     confirmRevoke.DelegateUser);
+                return;
+            }
+
+            if (result.Payload is AISO.AiOrchestration.Functions.ConfirmDelegateApprovalResponse confirmDelegate)
+            {
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildConfirmDelegateApprovalCard(
+                        confirmDelegate.DelegateUser,
+                        confirmDelegate.ValidFromRaw,
+                        confirmDelegate.ValidToRaw,
+                        confirmDelegate.ValidFrom,
+                        confirmDelegate.ValidTo,
+                        confirmDelegate.Reason,
+                        confirmDelegate.MaxAmountRaw,
+                        confirmDelegate.MaxAmount,
+                        confirmDelegate.Currency),
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with confirm-delegate card for user {DelegateUser}",
+                    confirmDelegate.DelegateUser);
                 return;
             }
 

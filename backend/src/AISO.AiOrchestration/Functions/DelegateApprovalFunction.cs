@@ -100,60 +100,30 @@ public class DelegateApprovalFunction : IFunction
             return FunctionResult.Fail($"Cannot delegate to {delegateUser} because they are currently acting as a delegate for someone else.", "VALIDATION");
         }
 
-        var salesOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
-
-        var dto = new DelegateApprovalDto(
-            RequestingTeamsUser: requestingSapUser,
-            DelegateUser: delegateUser,
-            SalesOrg: salesOrg,
-            ValidFrom: fromDate,
-            ValidTo: toDate,
-            Reason: reason,
-            MaxAmount: maxAmount,
-            Currency: currency);
-
-        try
-        {
-            await _sapClient.DelegateApprovalAsync(dto, ct);
-
-            // Cập nhật local DB
-            // Update local DB
-            await _scope.SetDelegatedBySapUserAsync(delegateUser, requestingSapUser, toDate, maxAmount, ct);
-
-            // Send Email Notification
-            var delegateEmail = await _scope.GetEmailBySapUserAsync(delegateUser, ct);
-            if (!string.IsNullOrEmpty(delegateEmail))
-            {
-                string subject = $"Delegation Notice from {requestingSapUser}";
-                string html = $@"
-                    <h2>Delegation Notice</h2>
-                    <p>You have been delegated by <b>{requestingSapUser}</b> to approve SAP orders (Sales Org: {salesOrg ?? "All"}).</p>
-                    <ul>
-                        <li><b>Start Date:</b> {fromDate:dd/MM/yyyy}</li>
-                        <li><b>End Date:</b> {toDate:dd/MM/yyyy}</li>
-                        <li><b>Max Amount:</b> {(maxAmount.HasValue ? $"{maxAmount.Value:N0} {dto.Currency}" : "Unlimited")}</li>
-                        <li><b>Reason:</b> {reason ?? "None"}</li>
-                    </ul>
-                    <p>Please log in to the AISO Teams Bot to process approval requests during this period.</p>
-                ";
-                await _emailService.SendEmailAsync(delegateEmail, subject, html, ct);
-            }
-
-            return FunctionResult.Ok(new
-            {
-                action = "Delegated",
-                delegateUser,
-                maxAmount,
-                message = $"Successfully delegated to {delegateUser} from {fromDate:dd/MM/yyyy} to {toDate:dd/MM/yyyy}." + (maxAmount.HasValue ? $" Max Amount: {maxAmount.Value:N0} {dto.Currency}" : "")
-            });
-        }
-        catch (SapODataException ex)
-        {
-            return FunctionResult.Fail($"SAP rejected delegation: {ex.Message}", "VALIDATION");
-        }
-        catch (Exception ex)
-        {
-            return FunctionResult.Fail($"Error delegating: {ex.Message}");
-        }
+        return FunctionResult.Ok(new ConfirmDelegateApprovalResponse(
+            delegateUser,
+            validFrom,
+            validTo,
+            fromDate.ToString("dd/MM/yyyy"),
+            toDate.ToString("dd/MM/yyyy"),
+            reason ?? "None",
+            maxAmount?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "",
+            maxAmount.HasValue ? maxAmount.Value.ToString("N0") : "Unlimited",
+            currency
+        ));
     }
 }
+
+/// <summary>
+/// Payload telling the bot to show <c>confirm-delegate</c> card.
+/// </summary>
+public sealed record ConfirmDelegateApprovalResponse(
+    string DelegateUser,
+    string ValidFromRaw,
+    string ValidToRaw,
+    string ValidFrom,
+    string ValidTo,
+    string Reason,
+    string MaxAmountRaw,
+    string MaxAmount,
+    string Currency);

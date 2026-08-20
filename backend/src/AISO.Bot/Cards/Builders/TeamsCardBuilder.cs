@@ -336,6 +336,31 @@ internal static class TeamsCardBuilder
                 delegateUser,
                 delegationId = delegationId ?? string.Empty
             });
+
+    public static Attachment BuildConfirmDelegateApprovalCard(
+        string delegateUser,
+        string validFromRaw,
+        string validToRaw,
+        string validFrom,
+        string validTo,
+        string reason,
+        string maxAmountRaw,
+        string maxAmount,
+        string currency) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "confirm-delegate.json",
+            new
+            {
+                delegateUser,
+                validFromRaw,
+                validToRaw,
+                validFrom,
+                validTo,
+                reason,
+                maxAmountRaw,
+                maxAmount,
+                currency
+            });
     public static Attachment BuildConfirmForceCancelCard(
         string salesOrderNumber,
         string? reason = null) =>

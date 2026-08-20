@@ -1,0 +1,104 @@
+﻿{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "default",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Delegate Approval",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "User ${delegateUser}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "You are about to delegate your approval authority. Please review the details below:",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        {
+          "title": "Delegate To:",
+          "value": "${delegateUser}"
+        },
+        {
+          "title": "Valid From:",
+          "value": "${validFrom}"
+        },
+        {
+          "title": "Valid To:",
+          "value": "${validTo}"
+        },
+        {
+          "title": "Max Amount:",
+          "value": "${maxAmount}"
+        },
+        {
+          "title": "Currency:",
+          "value": "${currency}"
+        },
+        {
+          "title": "Reason:",
+          "value": "${reason}"
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "During this period, the delegated user will be able to approve sales orders on your behalf.",
+      "wrap": true,
+      "size": "Small",
+      "isSubtle": true
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Confirm Delegation",
+      "style": "positive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Confirm delegation for ${delegateUser}",
+          "text": "delegate confirm ${delegateUser}"
+        },
+        "action": "delegate_confirm",
+        "delegateUser": "${delegateUser}",
+        "validFromRaw": "${validFromRaw}",
+        "validToRaw": "${validToRaw}",
+        "maxAmountRaw": "${maxAmountRaw}",
+        "currency": "${currency}",
+        "reason": "${reason}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}
