@@ -23,10 +23,7 @@
         "description": "Optional reason for delegation."
       },
       "maxAmount": {
-        "type": [
-          "number",
-          "null"
-        ],
+        "type": "number",
         "description": "Optional maximum order amount limit (e.g. 500000). If the user specifies a limit like 'dưới 50 triệu' or 'hạn mức 500000', extract it here as a number."
       }
     },
