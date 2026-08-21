@@ -6,7 +6,7 @@ define view entity ZI_AISO_VALID_CUSTOMER
 {
   key kunnr as Customer,
   key vkorg as SalesOrg,
-  key vtweg as DistrChannel,
+  key vtweg as DistChannel,
   key spart as Division,
 
       _Customer.name1  as CustomerName,

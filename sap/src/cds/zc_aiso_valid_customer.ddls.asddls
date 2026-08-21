@@ -5,7 +5,7 @@ define view entity ZC_AISO_VALID_CUSTOMER
 {
   key Customer,
   key SalesOrg,
-  key DistrChannel,
+  key DistChannel,
   key Division,
       CustomerName,
       Country
