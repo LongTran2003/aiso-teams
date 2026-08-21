@@ -1645,7 +1645,6 @@ public class TeamsBot : TeamsActivityHandler
                                 }
                             }
 
-                            var defaultPlant = "1010";
                             var materials = await SafeMaterialsAsync("materials-by-area", org, chan);
                             if (materials.Count == 0)
                                 materials = await SafeMaterialsAsync("materials-any");
@@ -1654,19 +1653,13 @@ public class TeamsBot : TeamsActivityHandler
                             var matDict = materialInfos.ToDictionary(m => m.Material, m => m.MaterialName);
 
                             var materialPlantsByMat = await SafeMaterialPlantsByMaterialAsync("material-plants");
-                            var plantLookup = new HashSet<string>(
-                                materialPlantsByMat
-                                    .Where(kv => string.Equals(kv.Value.Plant, defaultPlant, StringComparison.OrdinalIgnoreCase))
-                                    .Select(kv => kv.Key),
-                                StringComparer.OrdinalIgnoreCase);
-
-                            var filteredMaterials = plantLookup.Count > 0
-                                ? materials.Where(m => plantLookup.Contains(m.Material)).ToList()
+                            var filteredMaterials = materialPlantsByMat.Count > 0
+                                ? materials.Where(m => materialPlantsByMat.ContainsKey(m.Material)).ToList()
                                 : materials;
 
-                            if (plantLookup.Count > 0 && filteredMaterials.Count == 0)
+                            if (materialPlantsByMat.Count > 0 && filteredMaterials.Count == 0)
                             {
-                                step3Errors.Add($"No materials extended to plant {defaultPlant}");
+                                step3Errors.Add("No materials with plant extension found in current sales area");
                             }
 
                             var materialChoices = filteredMaterials
@@ -1675,7 +1668,7 @@ public class TeamsBot : TeamsActivityHandler
                                     var name = matDict.TryGetValue(m.Material, out var n) ? n : "Unknown";
                                     var actualPlant = materialPlantsByMat.TryGetValue(m.Material, out var mp) && !string.IsNullOrWhiteSpace(mp.Plant)
                                         ? mp.Plant
-                                        : defaultPlant;
+                                        : "1010";
                                     return new AISO.AiOrchestration.Functions.ConfirmCreateChoice(
                                         $"{m.Material.TrimStart('0')} - {name}",
                                         $"{m.Material}|{actualPlant}|EA");
