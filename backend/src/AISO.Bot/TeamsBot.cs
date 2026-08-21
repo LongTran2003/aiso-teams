@@ -1584,11 +1584,55 @@ public class TeamsBot : TeamsActivityHandler
                             return;
                         }
 
-                        var materials = await _sap.GetValidMaterialSalesAsync(salesOrg: org, distChannel: chan, top: 100, ct: cancellationToken);
-                        if (materials.Count == 0)
-                            materials = await _sap.GetValidMaterialSalesAsync(top: 100, ct: cancellationToken);
+                        var step3Errors = new List<string>();
 
-                        var materialInfos = await _sap.GetMaterialsAsync(cancellationToken);
+                        async Task<IReadOnlyList<AISO.SapIntegration.SapValidMaterialSales>> SafeMaterialsAsync(string label, string? orgArg = null, string? chanArg = null)
+                        {
+                            try
+                            {
+                                return await _sap.GetValidMaterialSalesAsync(salesOrg: orgArg, distChannel: chanArg, top: 100, ct: cancellationToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                step3Errors.Add($"{label}: {ex.Message}");
+                                _logger.LogError(ex, "SAP call failed: {Label}", label);
+                                return Array.Empty<AISO.SapIntegration.SapValidMaterialSales>();
+                            }
+                        }
+
+                        async Task<IReadOnlyList<AISO.SapIntegration.SapMaterial>> SafeMaterialsInfoAsync(string label)
+                        {
+                            try
+                            {
+                                return await _sap.GetMaterialsAsync(cancellationToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                step3Errors.Add($"{label}: {ex.Message}");
+                                _logger.LogError(ex, "SAP call failed: {Label}", label);
+                                return Array.Empty<AISO.SapIntegration.SapMaterial>();
+                            }
+                        }
+
+                        async Task<IReadOnlyList<AISO.SapIntegration.SapValidCustomer>> SafeCustomersAsync(string label, string? orgArg)
+                        {
+                            try
+                            {
+                                return await _sap.GetValidCustomersAsync(salesOrg: orgArg, ct: cancellationToken);
+                            }
+                            catch (Exception ex)
+                            {
+                                step3Errors.Add($"{label}: {ex.Message}");
+                                _logger.LogError(ex, "SAP call failed: {Label}", label);
+                                return Array.Empty<AISO.SapIntegration.SapValidCustomer>();
+                            }
+                        }
+
+                        var materials = await SafeMaterialsAsync("materials-by-area", org, chan);
+                        if (materials.Count == 0)
+                            materials = await SafeMaterialsAsync("materials-any");
+
+                        var materialInfos = await SafeMaterialsInfoAsync("materials-info");
                         var matDict = materialInfos.ToDictionary(m => m.Material, m => m.MaterialName);
 
                         var materialChoices = materials
@@ -1597,16 +1641,21 @@ public class TeamsBot : TeamsActivityHandler
                                 var name = matDict.TryGetValue(m.Material, out var n) ? n : "Unknown";
                                 return new AISO.AiOrchestration.Functions.ConfirmCreateChoice(
                                     $"{m.Material.TrimStart('0')} - {name}",
-                                    $"{m.Material}|{m.SalesOrg}|EA"); // Plant is mostly mapped implicitly in backend, we fallback Unit=EA
+                                    $"{m.Material}|{m.SalesOrg}|EA");
                             })
                             .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
                             .Select(g => g.First())
                             .ToList();
 
                         var customerLabel = $"{custId.TrimStart('0')}";
-                        var customerObj = await _sap.GetValidCustomersAsync(salesOrg: org, ct: cancellationToken);
+                        var customerObj = await SafeCustomersAsync("customers-by-area", org);
                         var foundCust = customerObj.FirstOrDefault(c => string.Equals(c.Customer.TrimStart('0'), custId.TrimStart('0'), StringComparison.OrdinalIgnoreCase));
                         if (foundCust != null) customerLabel = foundCust.Label;
+
+                        if (step3Errors.Count > 0)
+                        {
+                            _logger.LogWarning("Step 3 loaded with errors: {Errors}", string.Join(" | ", step3Errors));
+                        }
 
                         await turnContext.SendActivityAsync(
                             MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep3Card(
