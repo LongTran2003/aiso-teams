@@ -12,7 +12,7 @@ namespace AISO.AiOrchestration.Functions;
 /// </summary>
 public sealed class CreateOrderFunction : IFunction
 {
-    public const int MaxLineSlots = 8;
+    public const int MaxLineSlots = 20;
 
     private readonly ISapClient _sap;
     private readonly IUserScopeLookup _scope;
