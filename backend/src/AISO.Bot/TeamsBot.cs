@@ -1566,7 +1566,10 @@ public class TeamsBot : TeamsActivityHandler
 
                     if (string.Equals(action, "create_so_step2_submit", StringComparison.OrdinalIgnoreCase))
                     {
-                        var salesAreaKey = valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken) ? areaToken.ToString()?.Trim() : null;
+                        string? salesAreaKey = null;
+                        try
+                        {
+                        salesAreaKey = valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken) ? areaToken.ToString()?.Trim() : null;
                         var customerKey = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken) ? custToken.ToString()?.Trim() : null;
 
                         if (string.IsNullOrWhiteSpace(salesAreaKey) || !SapSalesArea.TryParseKey(salesAreaKey, out var org, out var chan, out var div))
@@ -1613,6 +1616,17 @@ public class TeamsBot : TeamsActivityHandler
                                 materialChoices)),
                             cancellationToken);
                         return;
+                        }
+                        catch (Exception ex) when (ex is not OperationCanceledException)
+                        {
+                            _logger.LogError(ex, "Failed to load Step 3 data for sales order (action=create_so_step2_submit)");
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "STEP2_LOAD_FAILED",
+                                    $"Could not load materials for SalesArea {salesAreaKey}. {ex.Message}")),
+                                cancellationToken);
+                            return;
+                        }
                     }
 
                     if (string.Equals(action, "create_so_confirm", StringComparison.OrdinalIgnoreCase))
