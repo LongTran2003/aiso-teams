@@ -148,8 +148,8 @@ public interface ISapClient
     /// </summary>
     Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default);
 
-    /// <summary>Valid sales areas from <c>SalesArea</c> (TVTA).</summary>
-    Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default);
+    /// <summary>Valid sales areas from <c>SalesArea</c> (TVTA). Optionally filter by SalesOrg.</summary>
+    Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(string? salesOrg = null, CancellationToken ct = default);
 
     /// <summary>Material master from <c>Material</c>.</summary>
     Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default);

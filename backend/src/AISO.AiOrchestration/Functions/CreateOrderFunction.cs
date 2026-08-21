@@ -92,7 +92,7 @@ public sealed class CreateOrderFunction : IFunction
             lines.Add(new ConfirmCreateOrderLine("TG11", 1m));
         }
 
-        var areas = await _sap.GetSalesAreasAsync(ct);
+        var areas = await _sap.GetSalesAreasAsync(userOrg, ct);
         var customers = await _sap.GetValidCustomersAsync(
             salesOrg: string.IsNullOrWhiteSpace(userOrg) ? null : userOrg,
             top: 100,

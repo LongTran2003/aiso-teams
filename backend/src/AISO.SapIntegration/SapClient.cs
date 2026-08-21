@@ -1189,14 +1189,14 @@ public class SapClient : ISapClient
         }
     }
 
-    public async Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(string? salesOrg = null, CancellationToken ct = default)
     {
         var url = new ODataQueryBuilder("SalesArea")
             .AddCustomParam("sap-client", "324")
             .Top(30)
             .Build();
 
-        _logger.LogInformation("Calling SAP OData: {Url}", url);
+        _logger.LogInformation("Calling SAP OData: {Url} (filter: SalesOrg={SalesOrg})", url, salesOrg ?? "<all>");
 
         try
         {
@@ -1219,10 +1219,17 @@ public class SapClient : ISapClient
             if (result?.Value is null || result.Value.Count == 0)
                 return Array.Empty<SapSalesArea>();
 
-            return result.Value
+            var query = result.Value
                 .Where(r => !string.IsNullOrWhiteSpace(r.SalesOrg)
                             && !string.IsNullOrWhiteSpace(r.DistrChannel)
-                            && !string.IsNullOrWhiteSpace(r.Division))
+                            && !string.IsNullOrWhiteSpace(r.Division));
+
+            if (!string.IsNullOrWhiteSpace(salesOrg))
+            {
+                query = query.Where(r => string.Equals(r.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return query
                 .Select(r => new SapSalesArea(
                     r.SalesOrg!.Trim().ToUpperInvariant(),
                     r.DistrChannel!.Trim().ToUpperInvariant(),

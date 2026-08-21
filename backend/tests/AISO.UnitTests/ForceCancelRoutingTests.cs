@@ -254,7 +254,7 @@ public class ForceCancelRoutingTests
             => throw new NotImplementedException();
         public Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<SapMaterial>>(Array.Empty<SapMaterial>());
 
-        public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default)
+        public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(string? salesOrg = null, CancellationToken ct = default)
             => throw new NotImplementedException();
         public Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
             string? salesOrg = null, string? distChannel = null, string? division = null, int top = 100, CancellationToken ct = default)

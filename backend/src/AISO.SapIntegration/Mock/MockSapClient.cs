@@ -536,9 +536,9 @@ public sealed class MockSapClient : ISapClient
         return Task.FromResult<bool?>(known);
     }
 
-    public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default)
+    public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(string? salesOrg = null, CancellationToken ct = default)
     {
-        IReadOnlyList<SapSalesArea> areas =
+        IReadOnlyList<SapSalesArea> allAreas =
         [
             new("TV01", "10", "00"),
             new("FU24", "10", "00"),
@@ -547,7 +547,12 @@ public sealed class MockSapClient : ISapClient
             new("DN00", "10", "00"),
             new("DS00", "10", "00")
         ];
-        return Task.FromResult(areas);
+
+        if (string.IsNullOrWhiteSpace(salesOrg))
+            return Task.FromResult(allAreas);
+
+        var filtered = allAreas.Where(a => string.Equals(a.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase)).ToList();
+        return Task.FromResult<IReadOnlyList<SapSalesArea>>(filtered);
     }
 
     public Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default)
