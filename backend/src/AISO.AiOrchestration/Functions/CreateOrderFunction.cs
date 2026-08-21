@@ -92,11 +92,17 @@ public sealed class CreateOrderFunction : IFunction
             lines.Add(new ConfirmCreateOrderLine("TG11", 1m));
         }
 
-        var areas = await _sap.GetSalesAreasAsync(userOrg, ct);
+        var areas = await _sap.GetSalesAreasAsync(
+            string.IsNullOrWhiteSpace(userOrg) ? null : userOrg,
+            ct);
         var customers = await _sap.GetValidCustomersAsync(
             salesOrg: string.IsNullOrWhiteSpace(userOrg) ? null : userOrg,
             top: 100,
             ct: ct);
+
+        // If scoped list empty, fall back to unfiltered sample for the dropdown.
+        if (areas.Count == 0)
+            areas = await _sap.GetSalesAreasAsync(null, ct);
 
         // If scoped list empty, fall back to unfiltered sample for the dropdown.
         if (customers.Count == 0)
