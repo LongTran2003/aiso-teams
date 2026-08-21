@@ -3,12 +3,14 @@
 {
 "FROM":
 [
-"KNVV",
-"TVKOT"
+"MAKT",
+"MARA",
+"MVKE"
 ],
 "ASSOCIATED":
 [
-"TVKOT"
+"MAKT",
+"MARA"
 ],
 "BASE":
 [],

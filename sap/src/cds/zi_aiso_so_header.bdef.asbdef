@@ -27,7 +27,7 @@ lock master
                      CreditStatus, DeliveryBlock, BillingStatus, IsCancelled,
                      HasInvalidMaterial;
 
-  field ( mandatory : create ) Customer, SalesOrg, DistChannel, Division, Currency, DocType, OwnerSapUser;
+  field ( mandatory : create ) Customer, SalesOrg, DistChannel, Division, Currency, DocType, RequestingTeamsUser;
 }
 
 // ═══════════════════════════════════════════════

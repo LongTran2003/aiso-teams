@@ -3,13 +3,10 @@
 {
 "FROM":
 [
-"KNVV",
-"TVKOT"
+"ZI_AISO_SALES_AREA"
 ],
 "ASSOCIATED":
-[
-"TVKOT"
-],
+[],
 "BASE":
 [],
 "ANNO_REF":
