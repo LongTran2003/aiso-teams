@@ -1662,6 +1662,23 @@ public class TeamsBot : TeamsActivityHandler
                         distChannel = string.IsNullOrWhiteSpace(distChannel) ? "10" : distChannel;
                         division = string.IsNullOrWhiteSpace(division) ? "00" : division;
 
+                        // Pre-check customer is valid for the sales area before calling createSalesOrder.
+                        var customerValid = await _sap.IsCustomerValidForSalesAreaAsync(
+                            customer ?? string.Empty,
+                            salesOrg,
+                            distChannel,
+                            division,
+                            cancellationToken);
+                        if (customerValid == false)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "CUSTOMER_NOT_VALID",
+                                    $"Customer {customer} is not active for SalesArea {salesOrg}/{distChannel}/{division}. Please go back and pick a different customer.")),
+                                cancellationToken);
+                            return;
+                        }
+
                         var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var curToken)
                             ? curToken.ToString()?.Trim()
                             : "USD";
