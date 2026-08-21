@@ -541,7 +541,24 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
 
     " ══ Validate customer + sales area ══
     DATA(lv_customer) = |{ ls_entity-Customer ALPHA = IN }|.
+    DATA: lv_debug_timestamp TYPE c LENGTH 14.
+CONCATENATE sy-datum sy-uzeit INTO lv_debug_timestamp.
 
+TRY.
+    DATA(lv_debug_id) = cl_system_uuid=>create_uuid_c32_static( ).
+  CATCH cx_uuid_error.
+    CLEAR lv_debug_id.
+ENDTRY.
+INSERT zaiso_audit FROM @( VALUE #(
+  mandt       = sy-mandt
+  audit_id    = lv_debug_id
+  sap_user    = sy-uname
+  action_type = 'DEBUG_CREATE'
+  so_number   = ''
+  status      = 'DEBUG'
+  remarks     = |CUST=[{ lv_customer }] SO=[{ ls_entity-SalesOrg }] DC=[{ ls_entity-DistChannel }] DV=[{ ls_entity-Division }]|
+  created_at  = lv_debug_timestamp
+) ).
     SELECT SINGLE kunnr FROM knvv
       INTO @DATA(lv_cust_valid)
       WHERE kunnr = @lv_customer
