@@ -147,6 +147,59 @@ internal static class TeamsCardBuilder
                 reason = reason ?? string.Empty
             });
 
+    public static Attachment BuildCreateOrderStep1Card(
+        IReadOnlyList<ConfirmCreateChoice> salesAreaChoices,
+        string? selectedSalesArea = null) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "create-so-step1.json",
+            new
+            {
+                salesAreaChoices,
+                salesArea = selectedSalesArea ?? string.Empty
+            });
+
+    public static Attachment BuildCreateOrderStep2Card(
+        string salesAreaLabel,
+        string salesAreaKey,
+        IReadOnlyList<ConfirmCreateChoice> customerChoices,
+        string? selectedCustomer = null) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "create-so-step2.json",
+            new
+            {
+                salesAreaLabel,
+                salesAreaKey,
+                customerChoices,
+                customer = selectedCustomer ?? string.Empty
+            });
+
+    public static Attachment BuildCreateOrderStep3Card(
+        string customerLabel,
+        string customerKey,
+        string salesAreaKey,
+        IReadOnlyList<ConfirmCreateChoice> materialChoices,
+        string currency = "USD",
+        string plant = "1010",
+        string unit = "PC") =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "create-so-step3.json",
+            new
+            {
+                customerLabel,
+                customerKey,
+                salesAreaKey,
+                materialChoices,
+                currency,
+                plant,
+                unit,
+                material1 = string.Empty,
+                qty1 = 1m,
+                material2 = string.Empty,
+                qty2 = string.Empty,
+                material3 = string.Empty,
+                qty3 = string.Empty
+            });
+
     public static Attachment BuildConfirmCreateOrderCard(
         string customer,
         string salesOrg,

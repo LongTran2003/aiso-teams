@@ -1531,6 +1531,90 @@ public class TeamsBot : TeamsActivityHandler
                         return;
                     }
 
+                    if (string.Equals(action, "create_so_step1_submit", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesAreaKey = valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken)
+                            ? areaToken.ToString()?.Trim()
+                            : null;
+
+                        if (string.IsNullOrWhiteSpace(salesAreaKey) || !SapSalesArea.TryParseKey(salesAreaKey, out var org, out var chan, out var div))
+                        {
+                            await turnContext.SendActivityAsync(MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Please select a valid Sales Area.")), cancellationToken);
+                            return;
+                        }
+
+                        var customers = await _sap.GetValidCustomersAsync(salesOrg: org, distChannel: chan, division: div, top: 100, ct: cancellationToken);
+                        if (customers.Count == 0)
+                            customers = await _sap.GetValidCustomersAsync(top: 100, ct: cancellationToken);
+
+                        var customerChoices = customers
+                            .Select(c => new AISO.AiOrchestration.Functions.ConfirmCreateChoice(c.Label, c.Key))
+                            .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
+                            .Select(g => g.First())
+                            .ToList();
+
+                        var salesAreaLabel = $"{org} / {chan} / {div}";
+
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep2Card(
+                                salesAreaLabel,
+                                salesAreaKey,
+                                customerChoices)),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "create_so_step2_submit", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesAreaKey = valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken) ? areaToken.ToString()?.Trim() : null;
+                        var customerKey = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken) ? custToken.ToString()?.Trim() : null;
+
+                        if (string.IsNullOrWhiteSpace(salesAreaKey) || !SapSalesArea.TryParseKey(salesAreaKey, out var org, out var chan, out var div))
+                        {
+                            await turnContext.SendActivityAsync(MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Missing Sales Area context.")), cancellationToken);
+                            return;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(customerKey) || !SapValidCustomer.TryParseKey(customerKey, out var custId, out _, out _, out _))
+                        {
+                            await turnContext.SendActivityAsync(MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Please select a valid Customer.")), cancellationToken);
+                            return;
+                        }
+
+                        var materials = await _sap.GetValidMaterialSalesAsync(salesOrg: org, distChannel: chan, top: 100, ct: cancellationToken);
+                        if (materials.Count == 0)
+                            materials = await _sap.GetValidMaterialSalesAsync(top: 100, ct: cancellationToken);
+
+                        var materialInfos = await _sap.GetMaterialsAsync(cancellationToken);
+                        var matDict = materialInfos.ToDictionary(m => m.Material, m => m.MaterialName);
+
+                        var materialChoices = materials
+                            .Select(m =>
+                            {
+                                var name = matDict.TryGetValue(m.Material, out var n) ? n : "Unknown";
+                                return new AISO.AiOrchestration.Functions.ConfirmCreateChoice(
+                                    $"{m.Material.TrimStart('0')} - {name}",
+                                    $"{m.Material}|{m.SalesOrg}|EA"); // Plant is mostly mapped implicitly in backend, we fallback Unit=EA
+                            })
+                            .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
+                            .Select(g => g.First())
+                            .ToList();
+
+                        var customerLabel = $"{custId.TrimStart('0')}";
+                        var customerObj = await _sap.GetValidCustomersAsync(salesOrg: org, ct: cancellationToken);
+                        var foundCust = customerObj.FirstOrDefault(c => string.Equals(c.Customer.TrimStart('0'), custId.TrimStart('0'), StringComparison.OrdinalIgnoreCase));
+                        if (foundCust != null) customerLabel = foundCust.Label;
+
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep3Card(
+                                customerLabel,
+                                customerKey,
+                                salesAreaKey,
+                                materialChoices)),
+                            cancellationToken);
+                        return;
+                    }
+
                     if (string.Equals(action, "create_so_confirm", StringComparison.OrdinalIgnoreCase))
                     {
                         var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
@@ -2970,7 +3054,9 @@ public class TeamsBot : TeamsActivityHandler
                 await ReplaceLoadingActivityAsync(
                     turnContext,
                     loadingActivityId,
-                    TeamsCardBuilder.BuildConfirmCreateOrderCard(confirmCreate),
+                    TeamsCardBuilder.BuildCreateOrderStep1Card(
+                        confirmCreate.SalesAreaChoices ?? (IReadOnlyList<AISO.AiOrchestration.Functions.ConfirmCreateChoice>)Array.Empty<AISO.AiOrchestration.Functions.ConfirmCreateChoice>(),
+                        confirmCreate.SalesAreaKey),
                     cancellationToken);
 
                 _logger.LogInformation(

@@ -1330,8 +1330,56 @@ public class SapClient : ISapClient
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "ValidMaterialPlant lookup failed");
+            _logger.LogError(ex, "Error fetching ValidMaterialPlant");
             return Array.Empty<SapValidMaterialPlant>();
+        }
+    }
+
+    public async Task<IReadOnlyList<SapValidMaterialSales>> GetValidMaterialSalesAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        int top = 30,
+        CancellationToken ct = default)
+    {
+        var builder = new ODataQueryBuilder("ValidMaterialSales")
+            .AddCustomParam("$select", "Material,SalesOrg,DistrChannel")
+            .Top(Math.Clamp(top, 1, 200));
+
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            builder.Filter("SalesOrg", "eq", salesOrg.Trim().ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(distChannel))
+            builder.Filter("DistrChannel", "eq", distChannel.Trim().ToUpperInvariant());
+
+        var url = builder.Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("ValidMaterialSales GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapValidMaterialSales>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapValidMaterialSalesDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapValidMaterialSales>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.Material))
+                .Select(r => new SapValidMaterialSales(
+                    Material: FormatMaterialNumber(r.Material),
+                    SalesOrg: r.SalesOrg ?? string.Empty,
+                    DistrChannel: r.DistrChannel ?? string.Empty))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching ValidMaterialSales");
+            return Array.Empty<SapValidMaterialSales>();
         }
     }
 

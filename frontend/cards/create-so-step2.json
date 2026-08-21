@@ -1,0 +1,73 @@
+﻿{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Create sales order (Step 2 of 3)",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Selected Sales Area: ${salesAreaLabel}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "customer",
+      "label": "Select Customer",
+      "style": "compact",
+      "isRequired": true,
+      "errorMessage": "Customer is required",
+      "value": "${customer}",
+      "choices": [
+        {
+          "$data": "${customerChoices}",
+          "title": "${title}",
+          "value": "${value}"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Next",
+      "style": "positive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Next step",
+          "text": "Next"
+        },
+        "action": "create_so_step2_submit",
+        "salesArea": "${salesAreaKey}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}

@@ -157,6 +157,13 @@ public interface ISapClient
     /// <summary>Valid Material per Plant from <c>ValidMaterialPlant</c>.</summary>
     Task<IReadOnlyList<SapValidMaterialPlant>> GetValidMaterialPlantsAsync(CancellationToken ct = default);
 
+    /// <summary>Valid Materials for a specific Sales Org and Dist Channel.</summary>
+    Task<IReadOnlyList<SapValidMaterialSales>> GetValidMaterialSalesAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        int top = 30,
+        CancellationToken ct = default);
+
     /// <summary>Customers valid per sales area from <c>ValidCustomer</c> (KNVV).</summary>
     Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
         string? salesOrg = null,
@@ -262,6 +269,12 @@ public sealed record SapValidMaterialPlant(
     string Plant,
     string MaterialType,
     string BaseUnit);
+
+/// <summary>OData <c>ValidMaterialSales</c> row.</summary>
+public sealed record SapValidMaterialSales(
+    string Material,
+    string SalesOrg,
+    string DistrChannel);
 
 public sealed record CreateSalesOrderDto
 {

@@ -222,6 +222,21 @@ public sealed class MockSapClient : ISapClient
         return Task.FromResult(list);
     }
 
+    public Task<IReadOnlyList<SapValidMaterialSales>> GetValidMaterialSalesAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        int top = 30,
+        CancellationToken ct = default)
+    {
+        IReadOnlyList<SapValidMaterialSales> list = new List<SapValidMaterialSales>
+        {
+            new("000000000000000110", salesOrg ?? "TV01", distChannel ?? "10"),
+            new("000000000000000111", salesOrg ?? "TV01", distChannel ?? "10"),
+            new("000000000000000113", salesOrg ?? "TV01", distChannel ?? "10")
+        };
+        return Task.FromResult(list);
+    }
+
     public Task<SalesOrder?> GetSalesOrderByIdAsync(string soNumber, CancellationToken ct = default)
     {
         _logger?.LogDebug("MockSapClient.GetSalesOrderByIdAsync: {SoNumber}", soNumber);
