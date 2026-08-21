@@ -1225,7 +1225,10 @@ public class SapClient : ISapClient
                 .Select(r => new SapSalesArea(
                     r.SalesOrg!.Trim().ToUpperInvariant(),
                     r.DistrChannel!.Trim().ToUpperInvariant(),
-                    r.Division!.Trim().ToUpperInvariant()))
+                    r.Division!.Trim().ToUpperInvariant(),
+                    r.SalesOrgName?.Trim(),
+                    r.DistChannelName?.Trim(),
+                    r.DivisionName?.Trim()))
                 .GroupBy(a => a.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.First())
                 .OrderBy(a => a.SalesOrg, StringComparer.OrdinalIgnoreCase)

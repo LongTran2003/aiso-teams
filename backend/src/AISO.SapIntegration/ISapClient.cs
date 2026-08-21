@@ -185,10 +185,26 @@ public interface ISapClient
 }
 
 /// <summary>OData <c>SalesArea</c> row (VKORG / VTWEG / SPART).</summary>
-public sealed record SapSalesArea(string SalesOrg, string DistChannel, string Division)
+public sealed record SapSalesArea(
+    string SalesOrg,
+    string DistChannel,
+    string Division,
+    string? SalesOrgName = null,
+    string? DistChannelName = null,
+    string? DivisionName = null)
 {
     public string Key => $"{SalesOrg}|{DistChannel}|{Division}";
-    public string Label => $"{SalesOrg} / {DistChannel} / {Division}";
+
+    public string Label
+    {
+        get
+        {
+            var org = string.IsNullOrWhiteSpace(SalesOrgName) ? SalesOrg : $"{SalesOrg} ({SalesOrgName})";
+            var dist = string.IsNullOrWhiteSpace(DistChannelName) ? DistChannel : $"{DistChannel} ({DistChannelName})";
+            var div = string.IsNullOrWhiteSpace(DivisionName) ? Division : $"{Division} ({DivisionName})";
+            return $"{org} / {dist} / {div}";
+        }
+    }
 
     public static bool TryParseKey(string? key, out string salesOrg, out string distChannel, out string division)
     {

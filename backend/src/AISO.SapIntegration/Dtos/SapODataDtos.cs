@@ -28,6 +28,9 @@ internal class SapSalesAreaDto
     public string? SalesOrg { get; set; }
     public string? DistrChannel { get; set; }
     public string? Division { get; set; }
+    public string? SalesOrgName { get; set; }
+    public string? DistChannelName { get; set; }
+    public string? DivisionName { get; set; }
 }
 
 internal class SapValidCustomerDto

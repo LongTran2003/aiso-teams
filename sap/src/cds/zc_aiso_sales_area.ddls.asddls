@@ -6,5 +6,7 @@ define view entity ZC_AISO_SALES_AREA
   key SalesOrg,
   key DistrChannel,
   key Division,
-      SalesOrgName
+      SalesOrgName,
+      DistChannelName,
+      DivisionName
 }
