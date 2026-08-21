@@ -1628,6 +1628,24 @@ public class TeamsBot : TeamsActivityHandler
                                 }
                             }
 
+                            async Task<IReadOnlyDictionary<string, AISO.SapIntegration.SapValidMaterialPlant>> SafeMaterialPlantsByMaterialAsync(string label)
+                            {
+                                try
+                                {
+                                    var rows = await _sap.GetValidMaterialPlantsAsync(cancellationToken);
+                                    return rows
+                                        .GroupBy(r => r.Material, StringComparer.OrdinalIgnoreCase)
+                                        .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
+                                }
+                                catch (Exception ex)
+                                {
+                                    step3Errors.Add($"{label}: {ex.Message}");
+                                    _logger.LogError(ex, "SAP call failed: {Label}", label);
+                                    return new Dictionary<string, AISO.SapIntegration.SapValidMaterialPlant>(StringComparer.OrdinalIgnoreCase);
+                                }
+                            }
+
+                            var defaultPlant = "1010";
                             var materials = await SafeMaterialsAsync("materials-by-area", org, chan);
                             if (materials.Count == 0)
                                 materials = await SafeMaterialsAsync("materials-any");
@@ -1635,13 +1653,32 @@ public class TeamsBot : TeamsActivityHandler
                             var materialInfos = await SafeMaterialsInfoAsync("materials-info");
                             var matDict = materialInfos.ToDictionary(m => m.Material, m => m.MaterialName);
 
-                            var materialChoices = materials
+                            var materialPlantsByMat = await SafeMaterialPlantsByMaterialAsync("material-plants");
+                            var plantLookup = new HashSet<string>(
+                                materialPlantsByMat
+                                    .Where(kv => string.Equals(kv.Value.Plant, defaultPlant, StringComparison.OrdinalIgnoreCase))
+                                    .Select(kv => kv.Key),
+                                StringComparer.OrdinalIgnoreCase);
+
+                            var filteredMaterials = plantLookup.Count > 0
+                                ? materials.Where(m => plantLookup.Contains(m.Material)).ToList()
+                                : materials;
+
+                            if (plantLookup.Count > 0 && filteredMaterials.Count == 0)
+                            {
+                                step3Errors.Add($"No materials extended to plant {defaultPlant}");
+                            }
+
+                            var materialChoices = filteredMaterials
                                 .Select(m =>
                                 {
                                     var name = matDict.TryGetValue(m.Material, out var n) ? n : "Unknown";
+                                    var actualPlant = materialPlantsByMat.TryGetValue(m.Material, out var mp) && !string.IsNullOrWhiteSpace(mp.Plant)
+                                        ? mp.Plant
+                                        : defaultPlant;
                                     return new AISO.AiOrchestration.Functions.ConfirmCreateChoice(
                                         $"{m.Material.TrimStart('0')} - {name}",
-                                        $"{m.Material}|1010|EA");
+                                        $"{m.Material}|{actualPlant}|EA");
                                 })
                                 .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
                                 .Select(g => g.First())
