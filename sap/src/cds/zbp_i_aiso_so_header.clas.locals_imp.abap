@@ -1213,43 +1213,47 @@ CLASS lsc_zbp_i_aiso_so_header IMPLEMENTATION.
           ls_header_inx-purch_no_c = 'X'.
 
         WHEN 'UPDATE_SO'.
-          IF ls_rr-new_reference IS NOT INITIAL.
-            ls_header_in-purch_no_c  = ls_rr-new_reference.
-            ls_header_inx-purch_no_c = 'X'.
-          ENDIF.
-          IF ls_rr-req_date IS NOT INITIAL.
-            ls_header_in-req_date_h  = ls_rr-req_date.
-            ls_header_inx-req_date_h = 'X'.
-          ENDIF.
+  IF ls_rr-new_reference IS NOT INITIAL.
+    ls_header_in-purch_no_c  = ls_rr-new_reference.
+    ls_header_inx-purch_no_c = 'X'.
+  ENDIF.
+  IF ls_rr-req_date IS NOT INITIAL.
+    ls_header_in-req_date_h  = ls_rr-req_date.
+    ls_header_inx-req_date_h = 'X'.
+  ENDIF.
 
-          LOOP AT ls_rr-items INTO DATA(ls_line).
-            CASE ls_line-change_flag.
-              WHEN 'I'.
-                APPEND VALUE #( itm_number = ls_line-item_no
-                                 material   = ls_line-material
-                                 target_qty = ls_line-order_qty
-                                 target_qu  = ls_line-unit )   TO lt_items_in.
-                APPEND VALUE #( itm_number = ls_line-item_no
-                                 updateflag = 'I'
-                                 material   = 'X'
-                                 target_qty = 'X'
-                                 target_qu  = 'X' )            TO lt_items_inx.
-              WHEN 'U'.
-                APPEND VALUE #( itm_number = ls_line-item_no
-                                 material   = ls_line-material
-                                 target_qty = ls_line-order_qty
-                                 target_qu  = ls_line-unit )   TO lt_items_in.
-                APPEND VALUE #( itm_number = ls_line-item_no
-                                 updateflag = 'U'
-                                 material   = 'X'
-                                 target_qty = 'X'
-                                 target_qu  = 'X' )            TO lt_items_inx.
-              WHEN 'D'.
-                APPEND VALUE #( itm_number = ls_line-item_no ) TO lt_items_in.
-                APPEND VALUE #( itm_number = ls_line-item_no
-                                 updateflag = 'D' )            TO lt_items_inx.
-            ENDCASE.
-          ENDLOOP.
+  LOOP AT ls_rr-items INTO DATA(ls_line).
+    CASE ls_line-change_flag.
+      WHEN 'I'.
+        APPEND VALUE #( itm_number = ls_line-item_no
+                         material   = ls_line-material
+                         plant      = ls_line-plant
+                         target_qty = ls_line-order_qty
+                         target_qu  = ls_line-unit )   TO lt_items_in.
+        APPEND VALUE #( itm_number = ls_line-item_no
+                         updateflag = 'I'
+                         material   = 'X'
+                         plant      = 'X'
+                         target_qty = 'X'
+                         target_qu  = 'X' )            TO lt_items_inx.
+      WHEN 'U'.
+        APPEND VALUE #( itm_number = ls_line-item_no
+                         material   = ls_line-material
+                         plant      = ls_line-plant
+                         target_qty = ls_line-order_qty
+                         target_qu  = ls_line-unit )   TO lt_items_in.
+        APPEND VALUE #( itm_number = ls_line-item_no
+                         updateflag = 'U'
+                         material   = 'X'
+                         plant      = COND #( WHEN ls_line-plant IS NOT INITIAL THEN 'X' ELSE '' )
+                         target_qty = 'X'
+                         target_qu  = 'X' )            TO lt_items_inx.
+      WHEN 'D'.
+        APPEND VALUE #( itm_number = ls_line-item_no ) TO lt_items_in.
+        APPEND VALUE #( itm_number = ls_line-item_no
+                         updateflag = 'D' )            TO lt_items_inx.
+    ENDCASE.
+  ENDLOOP.
 
       ENDCASE.
 
