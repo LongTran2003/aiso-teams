@@ -1641,7 +1641,7 @@ public class TeamsBot : TeamsActivityHandler
                                     var name = matDict.TryGetValue(m.Material, out var n) ? n : "Unknown";
                                     return new AISO.AiOrchestration.Functions.ConfirmCreateChoice(
                                         $"{m.Material.TrimStart('0')} - {name}",
-                                        $"{m.Material}|{m.SalesOrg}|EA");
+                                        $"{m.Material}|1010|EA");
                                 })
                                 .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
                                 .Select(g => g.First())
@@ -1808,14 +1808,7 @@ public class TeamsBot : TeamsActivityHandler
                             }
 
                             if (qty <= 0)
-                            {
-                                await turnContext.SendActivityAsync(
-                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
-                                        "VALIDATION",
-                                        $"Material {materialValue} has invalid quantity. Quantity must be greater than 0.")),
-                                    cancellationToken);
-                                return;
-                            }
+                                continue;
 
                             var itemMaterial = materialValue;
                             var itemPlant = string.IsNullOrWhiteSpace(plant) ? (string.IsNullOrWhiteSpace(salesOrg) ? "1010" : salesOrg) : plant;
