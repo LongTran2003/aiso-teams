@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using AISO.AiOrchestration;
 using AISO.AiOrchestration.Functions;
 using AISO.AiOrchestration.Stub;
@@ -185,7 +185,15 @@ public class ForceCancelRoutingTests
 
         public StatusFixedSapClient(SalesOrderStatus status) => _status = status;
 
-        public Task<IReadOnlyList<SapValidMaterialPlant>> GetValidMaterialPlantsAsync(CancellationToken ct = default) { return Task.FromResult<IReadOnlyList<SapValidMaterialPlant>>([]); } public Task<IReadOnlyList<SapValidMaterialSales>> GetValidMaterialSalesAsync(string? salesOrg = null, string? distChannel = null, int top = 30, CancellationToken ct = default) { return Task.FromResult<IReadOnlyList<SapValidMaterialSales>>([]); }
+        public Task<IReadOnlyList<SapValidMaterialPlant>> GetValidMaterialPlantsAsync(CancellationToken ct = default)
+        {
+            return Task.FromResult<IReadOnlyList<SapValidMaterialPlant>>([]);
+        }
+
+        public Task<IReadOnlyList<SapValidMaterialSales>> GetValidMaterialSalesAsync(string? salesOrg = null, string? distChannel = null, int top = 30, CancellationToken ct = default)
+        {
+            return Task.FromResult<IReadOnlyList<SapValidMaterialSales>>([]);
+        }
 
         public Task<SalesOrder?> GetSalesOrderByIdAsync(string soNumber, CancellationToken ct = default) =>
             Task.FromResult<SalesOrder?>(new SalesOrder
@@ -310,3 +318,4 @@ public class ForceCancelRoutingTests
             => Task.CompletedTask; public Task<IReadOnlyList<AISO.Domain.Users.ActiveDelegation>> GetActiveDelegationsAsync(string? filterDelegatorUser = null, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<AISO.Domain.Users.ActiveDelegation>>(Array.Empty<AISO.Domain.Users.ActiveDelegation>());
     }
 }
+
