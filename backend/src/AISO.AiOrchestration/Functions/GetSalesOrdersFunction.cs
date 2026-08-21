@@ -157,7 +157,7 @@ public sealed class GetSalesOrdersFunction : IFunction
 
             return FunctionResult.Ok(response);
         }
-        catch (SapODataException ex) when (ex.StatusCode == 400)
+        catch (SapODataException ex) when (ex.HttpStatusCode == 400)
         {
             _logger.LogWarning(ex,
                 "SAP OData 400 error for GetSalesOrders. CustomerIdOrName={Customer}",

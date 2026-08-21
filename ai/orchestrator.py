@@ -177,9 +177,7 @@ def _mock_response(user_message: str) -> ChatResponse:
         if any(kw in lower for kw in ("khách hàng", "customer", "client")):
             intent = "get_kpi_by_customer"
             fn_name = "GetKpiByCustomer"
-        elif any(
-            kw in lower for kw in ("sản phẩm", "product", "material", "hàng")
-        ):
+        elif any(kw in lower for kw in ("sản phẩm", "product", "material", "hàng")):
             intent = "get_kpi_by_product"
             fn_name = "GetKpiByProduct"
         else:
@@ -246,13 +244,13 @@ def _mock_response(user_message: str) -> ChatResponse:
                 )
             )
             card_type = _get_adaptive_card_type("UpdateOrderReference")
-            reply = f"[MOCK] Vui lòng cung cấp số PO reference mới cho đơn hàng {order_id}."
+            reply = (
+                f"[MOCK] Vui lòng cung cấp số PO reference mới cho đơn hàng {order_id}."
+            )
         else:
             reply = "[MOCK] Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện."
 
-    elif any(
-        kw in lower for kw in ("chi tiết", "detail", "line item", "mặt hàng")
-    ):
+    elif any(kw in lower for kw in ("chi tiết", "detail", "line item", "mặt hàng")):
         match = re.search(r"(ord-\w+)", lower)
         order_id = match.group(1).upper() if match else ""
         if order_id:
