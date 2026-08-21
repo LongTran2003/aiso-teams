@@ -1360,14 +1360,12 @@ ENDMETHOD.
         lv_timestamp       TYPE c LENGTH 14,
         lv_audit_id        TYPE sysuuid_c32.
 
-  " ═══ Loop qua từng header trong create buffer ═══
   LOOP AT lcl_buffer=>gt_create_header INTO DATA(ls_hdr).
 
     CLEAR: ls_header_in, ls_header_inx, lt_partners,
            lt_items_in, lt_items_inx, lt_schedules_in, lt_schedules_inx,
            lt_return, lv_so_number.
 
-    " ── Build BAPI header ──
     ls_header_in-doc_type   = ls_hdr-doc_type.
     ls_header_in-sales_org  = ls_hdr-sales_org.
     ls_header_in-distr_chan = ls_hdr-dist_channel.
@@ -1381,18 +1379,19 @@ ENDMETHOD.
     ls_header_inx-currency   = 'X'.
     ls_header_inx-updateflag = 'I'.
 
+    " FIX: ALPHA conversion cho customer
     APPEND VALUE #( partn_role = 'AG'
-                     partn_numb = ls_hdr-customer ) TO lt_partners.
+                     partn_numb = |{ ls_hdr-customer ALPHA = IN }| ) TO lt_partners.
 
-    " ── Build BAPI items (lọc theo cid_ref = header's cid) ──
     lv_item_no = 0.
     LOOP AT lcl_buffer=>gt_create_items INTO DATA(ls_itm)
          WHERE cid_ref = ls_hdr-cid.
 
       lv_item_no = lv_item_no + 10.
 
+      " FIX: ALPHA conversion cho material
       APPEND VALUE #( itm_number = lv_item_no
-                       material   = ls_itm-material
+                       material   = |{ ls_itm-material ALPHA = IN }|
                        plant      = ls_itm-plant
                        target_qty = ls_itm-order_qty
                        target_qu  = ls_itm-unit ) TO lt_items_in.
@@ -1410,7 +1409,6 @@ ENDMETHOD.
                        req_qty    = 'X' ) TO lt_schedules_inx.
     ENDLOOP.
 
-    " ── Call BAPI ──
     CALL FUNCTION 'BAPI_SALESORDER_CREATEFROMDAT2'
       EXPORTING
         order_header_in    = ls_header_in
@@ -1425,7 +1423,6 @@ ENDMETHOD.
         order_schedules_in  = lt_schedules_in
         order_schedules_inx = lt_schedules_inx.
 
-    " ── Check errors ──
     READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
     IF sy-subrc = 0.
       APPEND VALUE #( %pid        = ls_hdr-cid
@@ -1444,14 +1441,10 @@ ENDMETHOD.
       CONTINUE.
     ENDIF.
 
-    " ════════════════════════════════════════════
-    " LATE NUMBERING: Map %cid → SO number thật
-    " ════════════════════════════════════════════
     APPEND VALUE #( %pid           = ls_hdr-cid
                      %key-SoNumber = lv_so_number )
            TO mapped-salesorder.
 
-    " Map items: %pid → (SoNumber + ItemNo)
     lv_item_no = 0.
     LOOP AT lcl_buffer=>gt_create_items INTO DATA(ls_itm_map)
          WHERE cid_ref = ls_hdr-cid.
@@ -1462,7 +1455,6 @@ ENDMETHOD.
              TO mapped-salesorderitem.
     ENDLOOP.
 
-    " ── Buffer audit + so_map (persist trong save) ──
     APPEND VALUE #(
       mandt     = sy-mandt
       so_number = lv_so_number
