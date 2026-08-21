@@ -274,7 +274,7 @@ public class SapClientTests
 
         Assert.Equal("0000001888", result.SoNumber);
         Assert.Contains(handler.RequestUris, u => u.Contains("SalesOrder?sap-client=324", StringComparison.Ordinal));
-        Assert.Contains("OwnerSapUser", handler.RequestBodies[0] ?? "");
+        Assert.Contains("RequestingTeamsUser", handler.RequestBodies[0] ?? "");
         Assert.Contains("DEV-024", handler.RequestBodies[0] ?? "");
         Assert.Contains("\"Customer\":\"0000001000\"", handler.RequestBodies[0] ?? "");
         Assert.Contains(handler.RequestUris, u => u.Contains("SalesOrder('0000001888')", StringComparison.Ordinal));
