@@ -228,12 +228,20 @@ public sealed class MockSapClient : ISapClient
         int top = 30,
         CancellationToken ct = default)
     {
-        IReadOnlyList<SapValidMaterialSales> list = new List<SapValidMaterialSales>
+        var allMaterials = new List<SapValidMaterialSales>
         {
-            new("000000000000000110", salesOrg ?? "TV01", distChannel ?? "10"),
-            new("000000000000000111", salesOrg ?? "TV01", distChannel ?? "10"),
-            new("000000000000000113", salesOrg ?? "TV01", distChannel ?? "10")
+            new("000000000000000110", "1000", "10"),
+            new("000000000000000111", "1000", "10"),
+            new("000000000000000113", "1000", "10")
         };
+
+        IEnumerable<SapValidMaterialSales> filtered = allMaterials;
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            filtered = filtered.Where(m => string.Equals(m.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(distChannel))
+            filtered = filtered.Where(m => string.Equals(m.DistrChannel, distChannel, StringComparison.OrdinalIgnoreCase));
+
+        IReadOnlyList<SapValidMaterialSales> list = filtered.ToList();
         return Task.FromResult(list);
     }
 
