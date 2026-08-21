@@ -30,14 +30,14 @@
       "type": "Input.Text",
       "id": "currency",
       "label": "Currency",
-      "placeholder": "e.g. USD",
       "value": "${currency}"
     },
     {
       "type": "TextBlock",
-      "text": "Line items (1 required, up to 20 supported)",
+      "text": "Up to 3 line items per order",
       "spacing": "Medium",
-      "size": "Small"
+      "size": "Small",
+      "isSubtle": true
     },
     {
       "type": "ColumnSet",
@@ -48,7 +48,13 @@
           "width": "stretch",
           "items": [
             {
-              "type": "Input.ChoiceSet", "id": "material1", "label": "Material 1", "isRequired": true, "errorMessage": "At least one material is required", "value": "${material1}", "choices": [ { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" } ]
+              "type": "Input.ChoiceSet",
+              "id": "material1",
+              "label": "Material 1",
+              "isRequired": true,
+              "errorMessage": "At least one material is required",
+              "value": "${material1}",
+              "choices": [ { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" } ]
             }
           ]
         },
@@ -63,7 +69,7 @@
               "isRequired": true,
               "errorMessage": "Qty required",
               "min": 1,
-              "value": "${qty1}"
+              "value": 1
             }
           ]
         }
@@ -78,18 +84,14 @@
           "width": "stretch",
           "items": [
             {
-                "type": "Input.ChoiceSet",
-                "id": "material2",
-                "label": "Material 2",
-                "value": "${material2}",
-                "choices": [
-                  {
-                    "$data": "${materialChoices}",
-                    "title": "${title}",
-                    "value": "${value}"
-                  }
-                ]
-              }
+              "type": "Input.ChoiceSet",
+              "id": "material2",
+              "label": "Material 2 (optional)",
+              "value": "${material2}",
+              "choices": [
+                { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" }
+              ]
+            }
           ]
         },
         {
@@ -101,7 +103,7 @@
               "id": "qty2",
               "label": "Qty",
               "min": 0,
-              "value": "${qty2}"
+              "value": 0
             }
           ]
         }
@@ -116,18 +118,14 @@
           "width": "stretch",
           "items": [
             {
-                "type": "Input.ChoiceSet",
-                "id": "material3",
-                "label": "Material 3",
-                "value": "${material3}",
-                "choices": [
-                  {
-                    "$data": "${materialChoices}",
-                    "title": "${title}",
-                    "value": "${value}"
-                  }
-                ]
-              }
+              "type": "Input.ChoiceSet",
+              "id": "material3",
+              "label": "Material 3 (optional)",
+              "value": "${material3}",
+              "choices": [
+                { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" }
+              ]
+            }
           ]
         },
         {
@@ -139,7 +137,7 @@
               "id": "qty3",
               "label": "Qty",
               "min": 0,
-              "value": "${qty3}"
+              "value": 0
             }
           ]
         }
@@ -147,93 +145,6 @@
     }
   ],
   "actions": [
-    {
-      "type": "Action.ShowCard",
-      "title": "+ Add items 4-10",
-      "card": {
-        "type": "AdaptiveCard",
-        "version": "1.5",
-        "body": [
-          {
-            "type": "TextBlock",
-            "text": "Additional line items (4-10)",
-            "weight": "Bolder",
-            "size": "Small",
-            "spacing": "Medium"
-          },
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material4", "label": "Material 4", "value": "${material4}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty4", "label": "Qty", "min": 0, "value": "${qty4}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material5", "label": "Material 5", "value": "${material5}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty5", "label": "Qty", "min": 0, "value": "${qty5}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material6", "label": "Material 6", "value": "${material6}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty6", "label": "Qty", "min": 0, "value": "${qty6}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material7", "label": "Material 7", "value": "${material7}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty7", "label": "Qty", "min": 0, "value": "${qty7}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material8", "label": "Material 8", "value": "${material8}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty8", "label": "Qty", "min": 0, "value": "${qty8}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material9", "label": "Material 9", "value": "${material9}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty9", "label": "Qty", "min": 0, "value": "${qty9}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material10", "label": "Material 10", "value": "${material10}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty10", "label": "Qty", "min": 0, "value": "${qty10}"}]}]}
-        ],
-        "actions": [
-          {
-            "type": "Action.Submit",
-            "title": "Done",
-            "data": {
-              "msteams": {
-                "type": "messageBack",
-                "displayText": "Confirm create order",
-                "text": "create order"
-              },
-              "action": "create_so_confirm",
-              "salesArea": "${salesAreaKey}",
-              "customer": "${customerKey}",
-              "plant": "${plant}",
-              "unit": "${unit}"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "type": "Action.ShowCard",
-      "title": "+ Add items 11-20",
-      "card": {
-        "type": "AdaptiveCard",
-        "version": "1.5",
-        "body": [
-          {
-            "type": "TextBlock",
-            "text": "Additional line items (11-20)",
-            "weight": "Bolder",
-            "size": "Small",
-            "spacing": "Medium"
-          },
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material11", "label": "Material 11", "value": "${material11}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty11", "label": "Qty", "min": 0, "value": "${qty11}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material12", "label": "Material 12", "value": "${material12}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty12", "label": "Qty", "min": 0, "value": "${qty12}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material13", "label": "Material 13", "value": "${material13}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty13", "label": "Qty", "min": 0, "value": "${qty13}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material14", "label": "Material 14", "value": "${material14}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty14", "label": "Qty", "min": 0, "value": "${qty14}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material15", "label": "Material 15", "value": "${material15}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty15", "label": "Qty", "min": 0, "value": "${qty15}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material16", "label": "Material 16", "value": "${material16}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty16", "label": "Qty", "min": 0, "value": "${qty16}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material17", "label": "Material 17", "value": "${material17}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty17", "label": "Qty", "min": 0, "value": "${qty17}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material18", "label": "Material 18", "value": "${material18}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty18", "label": "Qty", "min": 0, "value": "${qty18}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material19", "label": "Material 19", "value": "${material19}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty19", "label": "Qty", "min": 0, "value": "${qty19}"}]}]},
-          {"type": "ColumnSet", "spacing": "Small", "columns": [{"type": "Column", "width": "stretch", "items": [{"type": "Input.ChoiceSet", "id": "material20", "label": "Material 20", "value": "${material20}", "choices": [{"$data": "${materialChoices}", "title": "${title}", "value": "${value}"}]}]}, {"type": "Column", "width": "80px", "items": [{"type": "Input.Number", "id": "qty20", "label": "Qty", "min": 0, "value": "${qty20}"}]}]}
-        ],
-        "actions": [
-          {
-            "type": "Action.Submit",
-            "title": "Done",
-            "data": {
-              "msteams": {
-                "type": "messageBack",
-                "displayText": "Confirm create order",
-                "text": "create order"
-              },
-              "action": "create_so_confirm",
-              "salesArea": "${salesAreaKey}",
-              "customer": "${customerKey}",
-              "plant": "${plant}",
-              "unit": "${unit}"
-            }
-          }
-        ]
-      }
-    },
     {
       "type": "Action.Submit",
       "title": "Create order",
