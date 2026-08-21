@@ -526,7 +526,7 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
   LOOP AT entities INTO DATA(ls_entity).
 
     " ══ Validate requesting user ══
-    IF ls_entity-OwnerSapUser IS INITIAL.
+    IF ls_entity-RequestingTeamsUser IS INITIAL.
       APPEND VALUE #( %cid        = ls_entity-%cid
                        %fail-cause = if_abap_behv=>cause-unauthorized )
              TO failed-salesorder.
@@ -565,7 +565,7 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
     " ══ Buffer header (BAPI sẽ gọi trong adjust_numbers) ══
     APPEND VALUE #(
       cid             = ls_entity-%cid
-      requesting_user = ls_entity-OwnerSapUser
+      requesting_user = ls_entity-RequestingTeamsUser
       customer        = lv_customer
       doc_type        = ls_entity-DocType
       sales_org       = ls_entity-SalesOrg

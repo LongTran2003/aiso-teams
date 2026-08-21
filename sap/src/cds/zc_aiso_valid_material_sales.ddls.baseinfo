@@ -3,13 +3,10 @@
 {
 "FROM":
 [
-"KNVV",
-"TVKOT"
+"ZI_AISO_VALID_MATERIAL_SALES"
 ],
 "ASSOCIATED":
-[
-"TVKOT"
-],
+[],
 "BASE":
 [],
 "ANNO_REF":
