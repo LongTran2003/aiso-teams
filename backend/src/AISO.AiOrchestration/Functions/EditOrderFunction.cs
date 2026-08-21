@@ -99,7 +99,7 @@ public sealed class EditOrderFunction : IFunction
             if (string.IsNullOrWhiteSpace(draftRef))
                 draftRef = existing.CustomerReference ?? string.Empty;
 
-            var draftDate = ReadString(parameters, "req_delivery_date");
+            var draftDate = ReadString(parameters, "reqDeliveryDate");
             if (string.IsNullOrWhiteSpace(draftDate))
             {
                 draftDate = existing.RequestedDeliveryDate?.ToString("yyyy-MM-dd") ?? string.Empty;
@@ -108,16 +108,16 @@ public sealed class EditOrderFunction : IFunction
             var explicitQty = parameters.TryGetProperty("qty", out var qtyEl) && qtyEl.ValueKind == JsonValueKind.Number;
             var explicitMaterial = ReadString(parameters, "material") != null;
 
-            var lineOp = (ReadString(parameters, "line_op") ?? string.Empty).Trim().ToUpperInvariant();
-            if (lineOp is not ("U" or "I" or "D" or "NONE"))
+            var rawLineOp = ReadString(parameters, "lineOperation");
+            var lineOp = rawLineOp switch
             {
-                lineOp = explicitQty || explicitMaterial ? "U" : "NONE";
-            }
+                "Update quantity / material" => "U",
+                "Add line" => "I",
+                "Delete line" => "D",
+                _ => explicitQty || explicitMaterial ? "U" : "none"
+            };
 
-            if (lineOp == "NONE")
-                lineOp = "none";
-
-            var itemNo = ReadString(parameters, "item_no");
+            var itemNo = ReadString(parameters, "itemNumber");
             var targetItem = existing.Items?.FirstOrDefault(); // Default
 
             if (!string.IsNullOrWhiteSpace(itemNo))
