@@ -218,7 +218,7 @@ public class SapClient : ISapClient
         {
             DocType = dto.DocType,
             SalesOrg = dto.SalesOrg,
-            DistrChannel = dto.DistChannel,
+            DistChannel = dto.DistChannel,
             Division = dto.Division,
             Customer = FormatCustomerNumber(dto.Customer),
             Currency = dto.Currency,
@@ -1457,7 +1457,7 @@ public class SapClient : ISapClient
                 .Select(r => new SapValidCustomer(
                     r.Customer!.Trim(),
                     r.SalesOrg!.Trim().ToUpperInvariant(),
-                    (r.DistrChannel ?? string.Empty).Trim().ToUpperInvariant(),
+                    (r.DistChannel ?? string.Empty).Trim().ToUpperInvariant(),
                     (r.Division ?? string.Empty).Trim().ToUpperInvariant(),
                     r.CustomerName))
                 .ToList();

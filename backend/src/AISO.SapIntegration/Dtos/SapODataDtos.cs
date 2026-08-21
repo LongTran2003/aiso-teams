@@ -37,7 +37,7 @@ internal class SapValidCustomerDto
 {
     public string? Customer { get; set; }
     public string? SalesOrg { get; set; }
-    public string? DistrChannel { get; set; }
+    public string? DistChannel { get; set; }
     public string? Division { get; set; }
     public string? CustomerName { get; set; }
     public string? Country { get; set; }
