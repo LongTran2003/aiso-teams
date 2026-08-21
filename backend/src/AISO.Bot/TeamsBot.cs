@@ -1619,11 +1619,12 @@ public class TeamsBot : TeamsActivityHandler
                         }
                         catch (Exception ex) when (ex is not OperationCanceledException)
                         {
-                            _logger.LogError(ex, "Failed to load Step 3 data for sales order (action=create_so_step2_submit)");
+                            _logger.LogError(ex, "Failed to load Step 3 data for sales order (action=create_so_step2_submit) salesArea={SalesArea}", salesAreaKey);
+                            var inner = ex.InnerException is null ? string.Empty : $" | inner: {ex.InnerException.Message}";
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
                                     "STEP2_LOAD_FAILED",
-                                    $"Could not load materials for SalesArea {salesAreaKey}. {ex.Message}")),
+                                    $"{ex.GetType().Name}: {ex.Message}{inner}")),
                                 cancellationToken);
                             return;
                         }
