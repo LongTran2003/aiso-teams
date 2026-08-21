@@ -1657,12 +1657,39 @@ public class TeamsBot : TeamsActivityHandler
                                 _logger.LogWarning("Step 3 loaded with errors: {Errors}", string.Join(" | ", step3Errors));
                             }
 
-                            await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep3Card(
+                            if (materialChoices.Count == 0)
+                            {
+                                _logger.LogWarning("Step 3 has no materials to render for salesArea={SalesArea}", salesAreaKey);
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "STEP2_NO_MATERIALS",
+                                        $"No materials are available for SalesArea {salesAreaKey} {string.Join(';', step3Errors)}")),
+                                    cancellationToken);
+                                return;
+                            }
+
+                            Attachment step3Card;
+                            try
+                            {
+                                step3Card = TeamsCardBuilder.BuildCreateOrderStep3Card(
                                     customerLabel,
                                     customerKey,
                                     salesAreaKey,
-                                    materialChoices)),
+                                    materialChoices);
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogError(ex, "Failed to build Step 3 card payload");
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "STEP2_CARD_BUILD_FAILED",
+                                        $"{ex.GetType().Name}: {ex.Message}")),
+                                    cancellationToken);
+                                return;
+                            }
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(step3Card),
                                 cancellationToken);
                             return;
                         }
