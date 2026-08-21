@@ -148,36 +148,48 @@
     },
     {
       "type": "TextBlock",
-      "text": "Example commands (EN)",
+      "text": "▸ Examples (EN)",
       "weight": "Bolder",
       "spacing": "Medium",
       "size": "Small",
-      "$when": "${role == 'Employee'}"
+      "$when": "${role == 'Employee'}",
+      "selectAction": {
+        "type": "Action.ToggleVisibility",
+        "targetElements": ["examples-en-employee"]
+      }
     },
     {
       "type": "TextBlock",
+      "id": "examples-en-employee",
       "text": "• recent orders\n• show my sales orders\n• show open orders\n• show orders of TV01\n• show open orders of FU24\n• show order 13122\n• show overdue orders\n• create order / tạo đơn (up to 5 materials on form)\n• edit order 13122 / sửa đơn 13122\n• update reference 13122 to 'PO-99'\n• show revenue kpi\n• kpi by customer 1000\n• kpi by product MAT-01\n• request release 13122\n• reject order 13122\n• cancel order 13122\n• forward order 13122 to DEV-xxx\n• help · logout",
       "wrap": true,
       "spacing": "Small",
       "fontType": "Monospace",
       "size": "Small",
+      "isVisible": false,
       "$when": "${role == 'Employee'}"
     },
     {
       "type": "TextBlock",
-      "text": "Ví dụ lệnh (VI)",
+      "text": "▸ Ví dụ lệnh (VI)",
       "weight": "Bolder",
       "spacing": "Medium",
       "size": "Small",
-      "$when": "${role == 'Employee'}"
+      "$when": "${role == 'Employee'}",
+      "selectAction": {
+        "type": "Action.ToggleVisibility",
+        "targetElements": ["examples-vi-employee"]
+      }
     },
     {
       "type": "TextBlock",
+      "id": "examples-vi-employee",
       "text": "• đơn hàng gần đây · show my sales orders\n• đơn của tôi · show overdue orders\n• kiểm tra đơn 13122 · tạo đơn\n• sửa đơn 13122 · edit order 13122\n• yêu cầu duyệt 13122 · xin duyệt 13122\n• hủy đơn 13122 · reject order 13122\n• chuyển đơn 13122 cho DEV-xxx\n• cập nhật reference 13122 thành 'PO-99'\n• hướng dẫn · đăng xuất",
       "wrap": true,
       "spacing": "Small",
       "fontType": "Monospace",
       "size": "Small",
+      "isVisible": false,
       "$when": "${role == 'Employee'}"
     },
     {
@@ -229,36 +241,48 @@
     },
     {
       "type": "TextBlock",
-      "text": "Try saying (EN)",
+      "text": "▸ Try saying (EN)",
       "weight": "Bolder",
       "spacing": "Medium",
       "size": "Small",
-      "$when": "${role == 'Manager'}"
+      "$when": "${role == 'Manager'}",
+      "selectAction": {
+        "type": "Action.ToggleVisibility",
+        "targetElements": ["examples-en-manager"]
+      }
     },
     {
       "type": "TextBlock",
+      "id": "examples-en-manager",
       "text": "• show pending approvals\n• approve order 13122 · reject approval 13122\n• show order 13122 · cancel order 13122\n• show revenue kpi · logout",
       "wrap": true,
       "spacing": "Small",
       "fontType": "Monospace",
       "size": "Small",
+      "isVisible": false,
       "$when": "${role == 'Manager'}"
     },
     {
       "type": "TextBlock",
-      "text": "Ví dụ lệnh (VI)",
+      "text": "▸ Ví dụ lệnh (VI)",
       "weight": "Bolder",
       "spacing": "Medium",
       "size": "Small",
-      "$when": "${role == 'Manager'}"
+      "$when": "${role == 'Manager'}",
+      "selectAction": {
+        "type": "Action.ToggleVisibility",
+        "targetElements": ["examples-vi-manager"]
+      }
     },
     {
       "type": "TextBlock",
+      "id": "examples-vi-manager",
       "text": "• chờ duyệt · danh sách chờ duyệt\n• phê duyệt đơn 13122 · duyệt đơn 13122\n• từ chối duyệt 13122 · không duyệt 13122\n• hủy đơn 13122 · kiểm tra đơn 13122\n• đăng xuất",
       "wrap": true,
       "spacing": "Small",
       "fontType": "Monospace",
       "size": "Small",
+      "isVisible": false,
       "$when": "${role == 'Manager'}"
     },
     {
@@ -310,36 +334,48 @@
     },
     {
       "type": "TextBlock",
-      "text": "Try saying (EN)",
+      "text": "▸ Try saying (EN)",
       "weight": "Bolder",
       "spacing": "Medium",
       "size": "Small",
-      "$when": "${role == 'Admin'}"
+      "$when": "${role == 'Admin'}",
+      "selectAction": {
+        "type": "Action.ToggleVisibility",
+        "targetElements": ["examples-en-admin"]
+      }
     },
     {
       "type": "TextBlock",
+      "id": "examples-en-admin",
       "text": "• list users · manage user DEV-xxx\n• view audit log · force release 13122 · force cancel 13122 · logout",
       "wrap": true,
       "spacing": "Small",
       "fontType": "Monospace",
       "size": "Small",
+      "isVisible": false,
       "$when": "${role == 'Admin'}"
     },
     {
       "type": "TextBlock",
-      "text": "Ví dụ lệnh (VI)",
+      "text": "▸ Ví dụ lệnh (VI)",
       "weight": "Bolder",
       "spacing": "Medium",
       "size": "Small",
-      "$when": "${role == 'Admin'}"
+      "$when": "${role == 'Admin'}",
+      "selectAction": {
+        "type": "Action.ToggleVisibility",
+        "targetElements": ["examples-vi-admin"]
+      }
     },
     {
       "type": "TextBlock",
+      "id": "examples-vi-admin",
       "text": "• danh sách user · nhật ký audit\n• ép release 13122 · ép hủy 13122\n• đăng xuất",
       "wrap": true,
       "spacing": "Small",
       "fontType": "Monospace",
       "size": "Small",
+      "isVisible": false,
       "$when": "${role == 'Admin'}"
     },
     {
