@@ -1220,11 +1220,11 @@ public class SapClient : ISapClient
 
             return result.Value
                 .Where(r => !string.IsNullOrWhiteSpace(r.SalesOrg)
-                            && !string.IsNullOrWhiteSpace(r.DistChannel)
+                            && !string.IsNullOrWhiteSpace(r.DistrChannel)
                             && !string.IsNullOrWhiteSpace(r.Division))
                 .Select(r => new SapSalesArea(
                     r.SalesOrg!.Trim().ToUpperInvariant(),
-                    r.DistChannel!.Trim().ToUpperInvariant(),
+                    r.DistrChannel!.Trim().ToUpperInvariant(),
                     r.Division!.Trim().ToUpperInvariant()))
                 .GroupBy(a => a.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.First())
@@ -1454,7 +1454,7 @@ public class SapClient : ISapClient
                 .Select(r => new SapValidCustomer(
                     r.Customer!.Trim(),
                     r.SalesOrg!.Trim().ToUpperInvariant(),
-                    (r.DistChannel ?? string.Empty).Trim().ToUpperInvariant(),
+                    (r.DistrChannel ?? string.Empty).Trim().ToUpperInvariant(),
                     (r.Division ?? string.Empty).Trim().ToUpperInvariant(),
                     r.CustomerName))
                 .ToList();
