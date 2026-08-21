@@ -132,6 +132,8 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<SapOptions>(configuration.GetSection(SapOptions.SectionName));
 
+        var sapOptions = configuration.GetSection(SapOptions.SectionName).Get<SapOptions>() ?? new SapOptions();
+
         // Register SapTokenManager
         services.AddHttpClient<ISapTokenManager, SapTokenManager>((sp, client) =>
         {
@@ -152,23 +154,34 @@ public static class ServiceCollectionExtensions
         .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));
 
         // Register SapClient
-        services.AddHttpClient<ISapClient, SapClient>((sp, client) =>
+        if (sapOptions.UseMock)
         {
-            var sapOptions = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SapOptions>>().Value;
-            if (!string.IsNullOrEmpty(sapOptions.BaseUrl))
+            services.AddSingleton<ISapClient>(sp =>
             {
-                client.BaseAddress = new Uri(sapOptions.BaseUrl);
-            }
-
-            if (!string.IsNullOrEmpty(sapOptions.Username) && !string.IsNullOrEmpty(sapOptions.Password))
+                var logger = sp.GetService<ILoggerFactory>()?.CreateLogger<MockSapClient>();
+                return new MockSapClient(logger);
+            });
+        }
+        else
+        {
+            services.AddHttpClient<ISapClient, SapClient>((sp, client) =>
             {
-                var authHeader = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{sapOptions.Username}:{sapOptions.Password}"));
-                client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
-            }
+                var opts = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<SapOptions>>().Value;
+                if (!string.IsNullOrEmpty(opts.BaseUrl))
+                {
+                    client.BaseAddress = new Uri(opts.BaseUrl);
+                }
 
-            client.Timeout = TimeSpan.FromSeconds(sapOptions.TimeoutSeconds > 0 ? sapOptions.TimeoutSeconds : 30);
-        })
-        .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));
+                if (!string.IsNullOrEmpty(opts.Username) && !string.IsNullOrEmpty(opts.Password))
+                {
+                    var authHeader = Convert.ToBase64String(System.Text.Encoding.ASCII.GetBytes($"{opts.Username}:{opts.Password}"));
+                    client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", authHeader);
+                }
+
+                client.Timeout = TimeSpan.FromSeconds(opts.TimeoutSeconds > 0 ? opts.TimeoutSeconds : 30);
+            })
+            .AddTransientHttpErrorPolicy(policy => policy.WaitAndRetryAsync(3, _ => TimeSpan.FromSeconds(2)));
+        }
 
         return services;
     }
