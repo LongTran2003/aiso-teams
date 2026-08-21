@@ -148,9 +148,9 @@ def _get_adaptive_card_type(fn_name: str) -> str | None:
 
 def _mock_response(user_message: str) -> ChatResponse:
     """
-    Pháº£n há»“i giáº£ láº­p Ä‘á»ƒ dev/test khÃ´ng cáº§n key tháº­t.
-    Logic nháº­n diá»‡n intent Ä‘Æ¡n giáº£n dá»±a trÃªn keyword.
-    Há»— trá»£: CheckOrderStatus, GetOrderDetail, GetSalesOrders,
+    Phản hồi giả lập để dev/test không cần key thật.
+    Logic nhận diện intent đơn giản dựa trên keyword.
+    Hỗ trợ: CheckOrderStatus, GetOrderDetail, GetSalesOrders,
              GetKpiSummary, GetKpiByCustomer, GetKpiByProduct, GetOverdueOrders.
     """
     logger.info("Using MOCK Groq response (no real API key configured).")
@@ -158,11 +158,11 @@ def _mock_response(user_message: str) -> ChatResponse:
     tool_calls: list[ToolCall] = []
     intent = "general_query"
     card_type: str | None = None
-    reply = f"[MOCK] TÃ´i Ä‘Ã£ nháº­n Ä‘Æ°á»£c tin nháº¯n cá»§a báº¡n: '{user_message}'"
+    reply = f"[MOCK] Tôi đã nhận được tin nhắn của bạn: '{user_message}'"
 
     lower = user_message.lower()
 
-    # KPI keywords (kiá»ƒm tra trÆ°á»›c Ä‘á»ƒ trÃ¡nh nháº§m vá»›i order)
+    # KPI keywords (kiểm tra trước để tránh nhầm với order)
     if any(
         kw in lower
         for kw in (
@@ -170,15 +170,15 @@ def _mock_response(user_message: str) -> ChatResponse:
             "doanh thu",
             "revenue",
             "dashboard",
-            "hiá»‡u suáº¥t",
+            "hiệu suất",
             "performance",
         )
     ):
-        if any(kw in lower for kw in ("khÃ¡ch hÃ ng", "customer", "client")):
+        if any(kw in lower for kw in ("khách hàng", "customer", "client")):
             intent = "get_kpi_by_customer"
             fn_name = "GetKpiByCustomer"
         elif any(
-            kw in lower for kw in ("sáº£n pháº©m", "product", "material", "hÃ ng")
+            kw in lower for kw in ("sản phẩm", "product", "material", "hàng")
         ):
             intent = "get_kpi_by_product"
             fn_name = "GetKpiByProduct"
@@ -189,11 +189,11 @@ def _mock_response(user_message: str) -> ChatResponse:
             ToolCall(id="mock_kpi_001", function_name=fn_name, arguments={})
         )
         card_type = _get_adaptive_card_type(fn_name)
-        reply = "[MOCK] Äang truy xuáº¥t dá»¯ liá»‡u KPI tá»« SAP..."
+        reply = "[MOCK] Đang truy xuất dữ liệu KPI từ SAP..."
 
     elif any(
         kw in lower
-        for kw in ("quÃ¡ háº¡n", "overdue", "giao trá»…", "late delivery", "past due")
+        for kw in ("quá hạn", "overdue", "giao trễ", "late delivery", "past due")
     ):
         intent = "get_overdue_orders"
         tool_calls.append(
@@ -202,14 +202,14 @@ def _mock_response(user_message: str) -> ChatResponse:
             )
         )
         card_type = _get_adaptive_card_type("GetOverdueOrders")
-        reply = "[MOCK] Äang láº¥y danh sÃ¡ch Ä‘Æ¡n hÃ ng quÃ¡ háº¡n tá»« SAP..."
+        reply = "[MOCK] Đang lấy danh sách đơn hàng quá hạn từ SAP..."
 
     elif any(
         kw in lower
         for kw in (
-            "táº¡o Ä‘Æ¡n",
-            "táº¡o má»›i",
-            "Ä‘áº·t hÃ ng má»›i",
+            "tạo đơn",
+            "tạo mới",
+            "đặt hàng mới",
             "create order",
             "place order",
             "new order",
@@ -220,14 +220,14 @@ def _mock_response(user_message: str) -> ChatResponse:
             ToolCall(id="mock_create_001", function_name="CreateOrder", arguments={})
         )
         card_type = _get_adaptive_card_type("CreateOrder")
-        reply = "[MOCK] Vui lÃ²ng cung cáº¥p thÃ´ng tin khÃ¡ch hÃ ng vÃ  sáº£n pháº©m Ä‘á»ƒ táº¡o Ä‘Æ¡n hÃ ng má»›i."
+        reply = "[MOCK] Vui lòng cung cấp thông tin khách hàng và sản phẩm để tạo đơn hàng mới."
 
     elif any(
         kw in lower
         for kw in (
-            "cáº­p nháº­t reference",
-            "cáº­p nháº­t po",
-            "Ä‘á»•i po",
+            "cập nhật reference",
+            "cập nhật po",
+            "đổi po",
             "update reference",
             "update po",
             "change po",
@@ -246,12 +246,12 @@ def _mock_response(user_message: str) -> ChatResponse:
                 )
             )
             card_type = _get_adaptive_card_type("UpdateOrderReference")
-            reply = f"[MOCK] Vui lÃ²ng cung cáº¥p sá»‘ PO reference má»›i cho Ä‘Æ¡n hÃ ng {order_id}."
+            reply = f"[MOCK] Vui lòng cung cấp số PO reference mới cho đơn hàng {order_id}."
         else:
-            reply = "[MOCK] Vui lÃ²ng cung cáº¥p mÃ£ Ä‘Æ¡n hÃ ng cá»¥ thá»ƒ Ä‘á»ƒ tÃ´i thá»±c hiá»‡n."
+            reply = "[MOCK] Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện."
 
     elif any(
-        kw in lower for kw in ("chi tiáº¿t", "detail", "line item", "máº·t hÃ ng")
+        kw in lower for kw in ("chi tiết", "detail", "line item", "mặt hàng")
     ):
         match = re.search(r"(ord-\w+)", lower)
         order_id = match.group(1).upper() if match else ""
@@ -265,16 +265,45 @@ def _mock_response(user_message: str) -> ChatResponse:
                 )
             )
             card_type = _get_adaptive_card_type("GetOrderDetail")
-            reply = f"[MOCK] Äang láº¥y chi tiáº¿t Ä‘Æ¡n hÃ ng {order_id}..."
+            reply = f"[MOCK] Đang lấy chi tiết đơn hàng {order_id}..."
         else:
-            reply = "[MOCK] Vui lÃ²ng cung cáº¥p mÃ£ Ä‘Æ¡n hÃ ng cá»¥ thá»ƒ Ä‘á»ƒ tÃ´i thá»±c hiá»‡n."
+            reply = "[MOCK] Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện."
 
     elif any(
         kw in lower
-        for kw in ("Ä‘Æ¡n hÃ ng", "order", "ord-", "tráº¡ng thÃ¡i", "status")
+        for kw in (
+            "my order",
+            "my orders",
+            "my sale",
+            "của tôi",
+            "cua toi",
+            "đơn của tôi",
+            "đơn hàng của tôi",
+            "đơn hàng",
+            "đơn",
+            "order",
+            "ord-",
+            "trạng thái",
+            "status",
+        )
     ):
         match = re.search(r"(ord-\w+)", lower)
         order_id = match.group(1).upper() if match else ""
+
+        # Check for "my" keywords to set ownedByMe
+        has_my = any(
+            kw in lower
+            for kw in (
+                "my order",
+                "my orders",
+                "my sale",
+                "của tôi",
+                "cua toi",
+                "đơn của tôi",
+                "đơn hàng của tôi",
+            )
+        )
+
         if order_id:
             intent = "check_order_status"
             tool_calls.append(
@@ -285,17 +314,21 @@ def _mock_response(user_message: str) -> ChatResponse:
                 )
             )
             card_type = _get_adaptive_card_type("CheckOrderStatus")
-            reply = f"[MOCK] Äang kiá»ƒm tra tráº¡ng thÃ¡i Ä‘Æ¡n hÃ ng {order_id}..."
+            reply = f"[MOCK] Đang kiểm tra trạng thái đơn hàng {order_id}..."
         else:
-            # Danh sÃ¡ch Ä‘Æ¡n hÃ ng
+            # Danh sách đơn hàng - set ownedByMe=true nếu có "my"
             intent = "get_sales_orders"
+            args = {"ownedByMe": True} if has_my else {}
             tool_calls.append(
                 ToolCall(
-                    id="mock_list_001", function_name="GetSalesOrders", arguments={}
+                    id="mock_list_001", function_name="GetSalesOrders", arguments=args
                 )
             )
             card_type = _get_adaptive_card_type("GetSalesOrders")
-            reply = "[MOCK] Äang láº¥y danh sÃ¡ch Ä‘Æ¡n hÃ ng tá»« SAP..."
+            if has_my:
+                reply = "[MOCK] Đang lấy danh sách đơn hàng của bạn từ SAP..."
+            else:
+                reply = "[MOCK] Đang lấy danh sách đơn hàng từ SAP..."
 
     return ChatResponse(
         reply=reply, intent=intent, tool_calls=tool_calls, adaptive_card_type=card_type

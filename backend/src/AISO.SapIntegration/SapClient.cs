@@ -344,7 +344,7 @@ public class SapClient : ISapClient
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
         // Align with ZAISO_A_UPDATE_SO: NEW_REFERENCE, REQUESTED_DELIVERY_DATE, ITEMS
-        // (no CHANGE_* flags — SAP updates a header field only when it is non-initial).
+        // SAP now supports PLANT field in item updates.
         var payload = new Dictionary<string, object?>
         {
             ["REQUESTING_TEAMS_USER"] = dto.RequestingSapUser.Trim(),
@@ -352,6 +352,7 @@ public class SapClient : ISapClient
             {
                 ITEM_NO = PadItemNumber(i.ItemNumber),
                 MATERIAL = FormatMaterialNumber(i.Material),
+                PLANT = i.Plant ?? string.Empty,
                 ORDER_QTY = Math.Round(i.OrderQty ?? 0m, 3),
                 UNIT = i.Unit ?? string.Empty,
                 CHANGE_FLAG = (i.Operation ?? string.Empty).Trim().ToUpperInvariant()

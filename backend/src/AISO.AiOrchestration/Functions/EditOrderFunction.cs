@@ -45,19 +45,19 @@ public sealed class EditOrderFunction : IFunction
               "type": "string",
               "description": "Optional draft PO / customer reference."
             },
-            "req_delivery_date": {
+            "reqDeliveryDate": {
               "type": "string",
               "description": "Optional requested delivery date (yyyy-MM-dd)."
             },
-            "line_op": {
+            "lineOperation": {
               "type": "string",
-              "description": "Optional line operation: none, U, I, or D."
+              "description": "Optional line operation: 'Update quantity / material', 'Add line', 'Delete line', or omit for default."
             },
-            "item_no": { "type": "string" },
-            "material": { "type": "string" },
-            "qty": { "type": "number" },
-            "plant": { "type": "string" },
-            "unit": { "type": "string" }
+            "itemNumber": { "type": "string", "description": "Line item number to edit/delete." },
+            "material": { "type": "string", "description": "Material number for the line item." },
+            "qty": { "type": "number", "description": "Quantity for the line item." },
+            "plant": { "type": "string", "description": "Plant code." },
+            "unit": { "type": "string", "description": "Unit of measure." }
           },
           "required": ["order_id"]
         }

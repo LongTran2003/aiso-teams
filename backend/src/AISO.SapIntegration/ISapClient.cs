@@ -332,7 +332,7 @@ public sealed record UpdateSalesOrderItemDto
     public required string Operation { get; init; }
     public string? ItemNumber { get; init; }
     public string? Material { get; init; }
-    /// <summary>Not sent on update OData yet (ZAISO_S_SO_ITEM_UPDATE has no PLANT).</summary>
+    /// <summary>Plant code for the line item (supported by SAP ZAISO_S_SO_ITEM_UPDATE).</summary>
     public string? Plant { get; init; }
     public decimal? OrderQty { get; init; }
     public string? Unit { get; init; }
