@@ -47,7 +47,7 @@ Confirm the following:
 Until SAP data is fixed, the bot has two layered workarounds:
 
 1. **Material filter (Step 3)** – only show materials that have at least one `ValidMaterialPlant` row, so users don't pick materials that will fail the plant check.
-2. **Mock switch** – set environment variable `AISO__Sap__UseMock=true` (or `Sap:UseMock` in appsettings) to bypass the real SAP tenant entirely and serve canned mock data. Useful for end-to-end demos while the test system is being fixed.
+2. **Mock switch (now disabled)** – set environment variable `AISO__Sap__UseMock=true` (or `Sap:UseMock` in appsettings) to bypass the real SAP tenant entirely and serve canned mock data. Useful for end-to-end demos while the test system is being fixed. **Currently disabled – we now use the real SAP tenant with valid plants DL53/DL21/DL00.**
 
 `docs/sap-issue-material-plant-extension.md` tracks the underlying SAP issue.
 
