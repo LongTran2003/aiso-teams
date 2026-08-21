@@ -222,7 +222,7 @@ public class SapClient : ISapClient
             Division = dto.Division,
             Customer = FormatCustomerNumber(dto.Customer),
             Currency = dto.Currency,
-            OwnerSapUser = dto.RequestingSapUser.Trim(),
+            RequestingTeamsUser = dto.RequestingSapUser.Trim(),
             _Items = dto.Items.Select(i => new
             {
                 Material = FormatMaterialNumber(i.Material),
