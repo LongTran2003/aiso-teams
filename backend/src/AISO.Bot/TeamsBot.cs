@@ -1569,102 +1569,102 @@ public class TeamsBot : TeamsActivityHandler
                         string? salesAreaKey = null;
                         try
                         {
-                        salesAreaKey = valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken) ? areaToken.ToString()?.Trim() : null;
-                        var customerKey = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken) ? custToken.ToString()?.Trim() : null;
+                            salesAreaKey = valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken) ? areaToken.ToString()?.Trim() : null;
+                            var customerKey = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken) ? custToken.ToString()?.Trim() : null;
 
-                        if (string.IsNullOrWhiteSpace(salesAreaKey) || !SapSalesArea.TryParseKey(salesAreaKey, out var org, out var chan, out var div))
-                        {
-                            await turnContext.SendActivityAsync(MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Missing Sales Area context.")), cancellationToken);
+                            if (string.IsNullOrWhiteSpace(salesAreaKey) || !SapSalesArea.TryParseKey(salesAreaKey, out var org, out var chan, out var div))
+                            {
+                                await turnContext.SendActivityAsync(MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Missing Sales Area context.")), cancellationToken);
+                                return;
+                            }
+
+                            if (string.IsNullOrWhiteSpace(customerKey) || !SapValidCustomer.TryParseKey(customerKey, out var custId, out _, out _, out _))
+                            {
+                                await turnContext.SendActivityAsync(MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Please select a valid Customer.")), cancellationToken);
+                                return;
+                            }
+
+                            var step3Errors = new List<string>();
+
+                            async Task<IReadOnlyList<AISO.SapIntegration.SapValidMaterialSales>> SafeMaterialsAsync(string label, string? orgArg = null, string? chanArg = null)
+                            {
+                                try
+                                {
+                                    return await _sap.GetValidMaterialSalesAsync(salesOrg: orgArg, distChannel: chanArg, top: 100, ct: cancellationToken);
+                                }
+                                catch (Exception ex)
+                                {
+                                    step3Errors.Add($"{label}: {ex.Message}");
+                                    _logger.LogError(ex, "SAP call failed: {Label}", label);
+                                    return Array.Empty<AISO.SapIntegration.SapValidMaterialSales>();
+                                }
+                            }
+
+                            async Task<IReadOnlyList<AISO.SapIntegration.SapMaterial>> SafeMaterialsInfoAsync(string label)
+                            {
+                                try
+                                {
+                                    return await _sap.GetMaterialsAsync(cancellationToken);
+                                }
+                                catch (Exception ex)
+                                {
+                                    step3Errors.Add($"{label}: {ex.Message}");
+                                    _logger.LogError(ex, "SAP call failed: {Label}", label);
+                                    return Array.Empty<AISO.SapIntegration.SapMaterial>();
+                                }
+                            }
+
+                            async Task<IReadOnlyList<AISO.SapIntegration.SapValidCustomer>> SafeCustomersAsync(string label, string? orgArg)
+                            {
+                                try
+                                {
+                                    return await _sap.GetValidCustomersAsync(salesOrg: orgArg, ct: cancellationToken);
+                                }
+                                catch (Exception ex)
+                                {
+                                    step3Errors.Add($"{label}: {ex.Message}");
+                                    _logger.LogError(ex, "SAP call failed: {Label}", label);
+                                    return Array.Empty<AISO.SapIntegration.SapValidCustomer>();
+                                }
+                            }
+
+                            var materials = await SafeMaterialsAsync("materials-by-area", org, chan);
+                            if (materials.Count == 0)
+                                materials = await SafeMaterialsAsync("materials-any");
+
+                            var materialInfos = await SafeMaterialsInfoAsync("materials-info");
+                            var matDict = materialInfos.ToDictionary(m => m.Material, m => m.MaterialName);
+
+                            var materialChoices = materials
+                                .Select(m =>
+                                {
+                                    var name = matDict.TryGetValue(m.Material, out var n) ? n : "Unknown";
+                                    return new AISO.AiOrchestration.Functions.ConfirmCreateChoice(
+                                        $"{m.Material.TrimStart('0')} - {name}",
+                                        $"{m.Material}|{m.SalesOrg}|EA");
+                                })
+                                .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
+                                .Select(g => g.First())
+                                .ToList();
+
+                            var customerLabel = $"{custId.TrimStart('0')}";
+                            var customerObj = await SafeCustomersAsync("customers-by-area", org);
+                            var foundCust = customerObj.FirstOrDefault(c => string.Equals(c.Customer.TrimStart('0'), custId.TrimStart('0'), StringComparison.OrdinalIgnoreCase));
+                            if (foundCust != null) customerLabel = foundCust.Label;
+
+                            if (step3Errors.Count > 0)
+                            {
+                                _logger.LogWarning("Step 3 loaded with errors: {Errors}", string.Join(" | ", step3Errors));
+                            }
+
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep3Card(
+                                    customerLabel,
+                                    customerKey,
+                                    salesAreaKey,
+                                    materialChoices)),
+                                cancellationToken);
                             return;
-                        }
-
-                        if (string.IsNullOrWhiteSpace(customerKey) || !SapValidCustomer.TryParseKey(customerKey, out var custId, out _, out _, out _))
-                        {
-                            await turnContext.SendActivityAsync(MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Please select a valid Customer.")), cancellationToken);
-                            return;
-                        }
-
-                        var step3Errors = new List<string>();
-
-                        async Task<IReadOnlyList<AISO.SapIntegration.SapValidMaterialSales>> SafeMaterialsAsync(string label, string? orgArg = null, string? chanArg = null)
-                        {
-                            try
-                            {
-                                return await _sap.GetValidMaterialSalesAsync(salesOrg: orgArg, distChannel: chanArg, top: 100, ct: cancellationToken);
-                            }
-                            catch (Exception ex)
-                            {
-                                step3Errors.Add($"{label}: {ex.Message}");
-                                _logger.LogError(ex, "SAP call failed: {Label}", label);
-                                return Array.Empty<AISO.SapIntegration.SapValidMaterialSales>();
-                            }
-                        }
-
-                        async Task<IReadOnlyList<AISO.SapIntegration.SapMaterial>> SafeMaterialsInfoAsync(string label)
-                        {
-                            try
-                            {
-                                return await _sap.GetMaterialsAsync(cancellationToken);
-                            }
-                            catch (Exception ex)
-                            {
-                                step3Errors.Add($"{label}: {ex.Message}");
-                                _logger.LogError(ex, "SAP call failed: {Label}", label);
-                                return Array.Empty<AISO.SapIntegration.SapMaterial>();
-                            }
-                        }
-
-                        async Task<IReadOnlyList<AISO.SapIntegration.SapValidCustomer>> SafeCustomersAsync(string label, string? orgArg)
-                        {
-                            try
-                            {
-                                return await _sap.GetValidCustomersAsync(salesOrg: orgArg, ct: cancellationToken);
-                            }
-                            catch (Exception ex)
-                            {
-                                step3Errors.Add($"{label}: {ex.Message}");
-                                _logger.LogError(ex, "SAP call failed: {Label}", label);
-                                return Array.Empty<AISO.SapIntegration.SapValidCustomer>();
-                            }
-                        }
-
-                        var materials = await SafeMaterialsAsync("materials-by-area", org, chan);
-                        if (materials.Count == 0)
-                            materials = await SafeMaterialsAsync("materials-any");
-
-                        var materialInfos = await SafeMaterialsInfoAsync("materials-info");
-                        var matDict = materialInfos.ToDictionary(m => m.Material, m => m.MaterialName);
-
-                        var materialChoices = materials
-                            .Select(m =>
-                            {
-                                var name = matDict.TryGetValue(m.Material, out var n) ? n : "Unknown";
-                                return new AISO.AiOrchestration.Functions.ConfirmCreateChoice(
-                                    $"{m.Material.TrimStart('0')} - {name}",
-                                    $"{m.Material}|{m.SalesOrg}|EA");
-                            })
-                            .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
-                            .Select(g => g.First())
-                            .ToList();
-
-                        var customerLabel = $"{custId.TrimStart('0')}";
-                        var customerObj = await SafeCustomersAsync("customers-by-area", org);
-                        var foundCust = customerObj.FirstOrDefault(c => string.Equals(c.Customer.TrimStart('0'), custId.TrimStart('0'), StringComparison.OrdinalIgnoreCase));
-                        if (foundCust != null) customerLabel = foundCust.Label;
-
-                        if (step3Errors.Count > 0)
-                        {
-                            _logger.LogWarning("Step 3 loaded with errors: {Errors}", string.Join(" | ", step3Errors));
-                        }
-
-                        await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep3Card(
-                                customerLabel,
-                                customerKey,
-                                salesAreaKey,
-                                materialChoices)),
-                            cancellationToken);
-                        return;
                         }
                         catch (Exception ex) when (ex is not OperationCanceledException)
                         {
