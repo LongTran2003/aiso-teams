@@ -218,7 +218,7 @@ public class SapClient : ISapClient
         {
             DocType = dto.DocType,
             SalesOrg = dto.SalesOrg,
-            DistChannel = dto.DistChannel,
+            DistrChannel = dto.DistChannel,
             Division = dto.Division,
             Customer = FormatCustomerNumber(dto.Customer),
             Currency = dto.Currency,
