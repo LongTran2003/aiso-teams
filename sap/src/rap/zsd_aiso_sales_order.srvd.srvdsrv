@@ -16,4 +16,5 @@ define service ZSD_AISO_SALES_ORDER {
   expose ZC_AISO_MATERIAL as Material;
   expose ZC_AISO_SO_ITEM as SalesOrderItems;
   expose ZC_AISO_VALID_MATERIAL_SALES as ValidMaterialSales;
+  expose ZC_AISO_USER_ROLE_QUERY as UserRoles;
 }
