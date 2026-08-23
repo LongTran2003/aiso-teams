@@ -1,4 +1,4 @@
-{
+﻿{
   "type": "AdaptiveCard",
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "version": "1.5",
@@ -72,13 +72,13 @@
                   "items": [
                     {
                       "type": "TextBlock",
-                      "text": "${soNumber} · ${customerLabel}",
+                      "text": "${soNumber} Â· ${customerLabel}",
                       "wrap": true,
                       "spacing": "None"
                     },
                     {
                       "type": "TextBlock",
-                      "text": "${orderDate} · ${status} · ${formattedNetValue}",
+                      "text": "${orderDate} Â· ${status} Â· ${formattedNetValue}",
                       "isSubtle": true,
                       "size": "Small",
                       "wrap": true,

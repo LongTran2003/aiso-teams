@@ -10,7 +10,7 @@ namespace AISO.AiOrchestration.Functions;
 /// Returns the requesting user's profile snapshot:
 /// identity (SAP user, role, sales org) + order-status breakdown + top recent orders.
 ///
-/// Triggered by "my profile" / "hồ sơ của tôi" / "thông tin của tôi" shortcuts.
+/// Triggered by "my profile" / "há»“ sÆ¡ cá»§a tÃ´i" / "thÃ´ng tin cá»§a tÃ´i" shortcuts.
 /// Sales org is read from <see cref="IUserScopeLookup"/> (Postgres fallback) so the
 /// command works without depending on the new SAP <c>ZI_AISO_USER_ROLE</c> GET endpoint
 /// that the SAP team is still exposing.
@@ -40,7 +40,7 @@ public sealed class MyProfileFunction : IFunction
     public string Description =>
         "Returns the current user's profile: SAP user id, display name, role, sales org, " +
         "and an order-status breakdown (Total/Open/Blocked/PartiallyDelivered/Delivered/Invoiced/Cancelled) " +
-        "plus the 5 most recent sales orders they own. Use for 'my profile' / 'hồ sơ của tôi'.";
+        "plus the 5 most recent sales orders they own. Use for 'my profile' / 'há»“ sÆ¡ cá»§a tÃ´i'.";
 
     public string ParametersJsonSchema => """
         {
@@ -117,8 +117,8 @@ public sealed class MyProfileFunction : IFunction
             LoadError: null);
 
         _logger.LogInformation(
-            "MyProfile for {SapUser}: total={Total}, open={Open}, topReturned={Top}",
-            requestingSapUser, counts.Total, top.Count);
+            "MyProfile for {SapUser}: total {Total}, open {Open}, topReturned {Top}",
+            requestingSapUser, counts.Total, counts.Open, top.Count);
 
         return FunctionResult.Ok(response);
     }
