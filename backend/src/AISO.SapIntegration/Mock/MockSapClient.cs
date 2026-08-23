@@ -554,6 +554,33 @@ public sealed class MockSapClient : ISapClient
         return Task.FromResult<bool?>(known);
     }
 
+    /// <summary>
+    /// Returns a mock SAP user-role row for known demo SAP users (DEV-*).
+    /// Unknown SAP users yield <c>null</c>, matching the real
+    /// <c>SapClient.GetUserRoleAsync</c> contract.
+    /// </summary>
+    public Task<SapUserRoleRow?> GetUserRoleAsync(string sapUserId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(sapUserId))
+            return Task.FromResult<SapUserRoleRow?>(null);
+
+        var normalized = sapUserId.Trim().ToUpperInvariant();
+        SapUserRoleRow? row = normalized switch
+        {
+            // Demo seed: Employee + TV01
+            "DEV-249" => new SapUserRoleRow(normalized, "EMPLOYEE", "TV01"),
+            // Demo seed: Manager + UE00
+            "DEV-024" => new SapUserRoleRow(normalized, "MANAGER", "UE00"),
+            // Quân: Admin + DN00 (smoke test for Admin)
+            "DEV-230" => new SapUserRoleRow(normalized, "ADMIN", "DN00"),
+            // Generic DEV-* users get a default Employee + TV01 row.
+            _ when normalized.StartsWith("DEV-", StringComparison.Ordinal)
+                => new SapUserRoleRow(normalized, "EMPLOYEE", "TV01"),
+            _ => null,
+        };
+        return Task.FromResult(row);
+    }
+
     public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(string? salesOrg = null, CancellationToken ct = default)
     {
         IReadOnlyList<SapSalesArea> allAreas =

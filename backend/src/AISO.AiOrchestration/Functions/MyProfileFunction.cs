@@ -65,9 +65,11 @@ public sealed class MyProfileFunction : IFunction
 
         _logger.LogInformation("Executing MyProfile for {SapUser}", requestingSapUser);
 
-        // Identity (Postgres fallback for sales org, until SAP exposes ZI_AISO_USER_ROLE GET).
-        var role = await _scopeLookup.GetRoleBySapUserAsync(requestingSapUser, ct);
-        var salesOrg = await _scopeLookup.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
+        // Identity: try SAP (ZAISO_USER_ROLE) first via ISapClient.GetUserRoleAsync,
+        // fall back to Postgres user_mappings when SAP has no row, is unreachable,
+        // or returns an error. The fallback chain keeps the bot usable even when
+        // the new ZC_AISO_USER_ROLE_QUERY view is not yet activated in DEV.
+        var identity = await ResolveIdentityAsync(requestingSapUser, ct);
 
         // Orders owned by the current user (top=200 for approximate stats).
         var query = new SalesOrdersQuery
@@ -84,15 +86,15 @@ public sealed class MyProfileFunction : IFunction
         catch (SapODataException ex) when (ex.HttpStatusCode >= 500 || ex.HttpStatusCode == 400)
         {
             _logger.LogWarning(ex, "SAP error while loading own orders for {SapUser}", requestingSapUser);
-            // Build a partial response so the user still sees their identity + role + sales org.
+            // Build a partial response so the user still sees their identity.
             return FunctionResult.Ok(new MyProfileResponse(
                 SapUser: requestingSapUser,
-                Role: role,
-                SalesOrg: salesOrg,
+                Role: identity.Role,
+                SalesOrg: identity.SalesOrg,
                 Counts: MyProfileOrderCounts.Empty,
                 Approximate: false,
                 TopOrders: Array.Empty<SalesOrder>(),
-                SalesOrgSource: MyProfileSalesOrgSource.Postgres,
+                SalesOrgSource: identity.Source,
                 LoadError: $"Could not load your orders: {ex.Message}"));
         }
 
@@ -108,19 +110,90 @@ public sealed class MyProfileFunction : IFunction
 
         var response = new MyProfileResponse(
             SapUser: requestingSapUser,
-            Role: role,
-            SalesOrg: salesOrg,
+            Role: identity.Role,
+            SalesOrg: identity.SalesOrg,
             Counts: counts,
             Approximate: approximate,
             TopOrders: top,
-            SalesOrgSource: MyProfileSalesOrgSource.Postgres,
+            SalesOrgSource: identity.Source,
             LoadError: null);
 
         _logger.LogInformation(
-            "MyProfile for {SapUser}: total {Total}, open {Open}, topReturned {Top}",
-            requestingSapUser, counts.Total, counts.Open, top.Count);
+            "MyProfile for {SapUser}: total {Total}, open {Open}, topReturned {Top}, source {Source}",
+            requestingSapUser, counts.Total, counts.Open, top.Count, identity.Source);
 
         return FunctionResult.Ok(response);
+    }
+
+    /// <summary>
+    /// Reads role + sales org from SAP first; falls back to Postgres
+    /// (<see cref="IUserScopeLookup"/>) when SAP returns no row, the
+    /// <c>UserRoles</c> entity set is not published yet (404), or the call
+    /// fails. The returned <see cref="MyProfileSalesOrgSource"/> tells the
+    /// card which path contributed the value (useful for debugging and
+    /// for future card copy like "from SAP master data").
+    /// </summary>
+    private async Task<(UserRole Role, string? SalesOrg, MyProfileSalesOrgSource Source)> ResolveIdentityAsync(
+        string sapUserId, CancellationToken ct)
+    {
+        SapUserRoleRow? sapRow = null;
+        try
+        {
+            sapRow = await _sap.GetUserRoleAsync(sapUserId, ct);
+        }
+        catch (Exception ex)
+        {
+            // Network / OData failure — never block the profile response.
+            _logger.LogWarning(ex,
+                "SAP GetUserRoleAsync failed for {SapUser}; falling back to Postgres",
+                sapUserId);
+        }
+
+        if (sapRow is not null
+            && (!string.IsNullOrWhiteSpace(sapRow.Role) || !string.IsNullOrWhiteSpace(sapRow.SalesOrg)))
+        {
+            // SAP contributes both role + sales org in a single row. We still
+            // ask Postgres for the role when SAP returns no role text, because
+            // the Postgres mapping is the most up-to-date RBAC source today.
+            var role = ParseSapRole(sapRow.Role);
+            var pgRole = await _scopeLookup.GetRoleBySapUserAsync(sapUserId, ct);
+            var finalRole = role == UserRole.Employee && pgRole > UserRole.Employee
+                ? pgRole
+                : (role != UserRole.Employee ? role : pgRole);
+
+            // Sales org always comes from SAP when present (single source of truth).
+            var salesOrg = string.IsNullOrWhiteSpace(sapRow.SalesOrg)
+                ? await _scopeLookup.GetSalesOrgBySapUserAsync(sapUserId, ct)
+                : sapRow.SalesOrg;
+
+            return (finalRole, salesOrg, MyProfileSalesOrgSource.SapUserRole);
+        }
+
+        // Fallback: Postgres user_mappings only.
+        var fallbackRole = await _scopeLookup.GetRoleBySapUserAsync(sapUserId, ct);
+        var fallbackOrg = await _scopeLookup.GetSalesOrgBySapUserAsync(sapUserId, ct);
+        return (fallbackRole, fallbackOrg, MyProfileSalesOrgSource.Postgres);
+    }
+
+    /// <summary>
+    /// Maps the SAP-side <c>Role</c> string (e.g. <c>EMPLOYEE</c> /
+    /// <c>MANAGER</c> / <c>ADMIN</c>) to <see cref="UserRole"/>. Unknown
+    /// values fall back to <see cref="UserRole.Employee"/> so the bot
+    /// never blocks the user.
+    /// </summary>
+    private static UserRole ParseSapRole(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+            return UserRole.Employee;
+
+        var normalized = raw.Trim().ToUpperInvariant();
+        return normalized switch
+        {
+            "ADMIN" => UserRole.Admin,
+            "MANAGER" or "MGR" => UserRole.Manager,
+            "EMPLOYEE" or "USER" => UserRole.Employee,
+            _ => UserRole.Employee,
+        };
     }
 }
 

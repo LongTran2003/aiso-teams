@@ -34,7 +34,8 @@ public class MyProfileFunctionTests
         Assert.Equal("DEV-249", payload.SapUser);
         Assert.Equal(UserRole.Employee, payload.Role);
         Assert.Equal("TV01", payload.SalesOrg);
-        Assert.Equal(MyProfileSalesOrgSource.Postgres, payload.SalesOrgSource);
+        // MockSapClient returns a SAP user-role row for DEV-249 → expect SapUserRole.
+        Assert.Equal(MyProfileSalesOrgSource.SapUserRole, payload.SalesOrgSource);
         Assert.True(payload.Counts.Total > 0);
         Assert.NotEmpty(payload.TopOrders);
         Assert.All(payload.TopOrders, o => Assert.Equal("DEV-249", o.OwnerSapUser));
