@@ -228,23 +228,30 @@ public sealed class MockSapClient : ISapClient
         int top = 30,
         CancellationToken ct = default)
     {
+        // CDS v5: (Material, SalesOrg, DistChannel, Plant) — same Material can repeat per plant.
         var allMaterials = new List<SapValidMaterialSales>
         {
-            new("000000000000000110", "1000", "10"),
-            new("000000000000000111", "1000", "10"),
-            new("000000000000000113", "1000", "10"),
-            new("000000000000000110", "1000", "00"),
-            new("000000000000000111", "1000", "00"),
-            new("000000000000000113", "1000", "00")
+            new("000000000000000110", "1000", "10", "1010"),
+            new("000000000000000111", "1000", "10", "1010"),
+            new("000000000000000113", "1000", "10", "1010"),
+            new("000000000000000110", "1000", "00", "1010"),
+            new("000000000000000111", "1000", "00", "1010"),
+            new("000000000000000113", "1000", "00", "1010"),
+            // Same material but in a different valid plant — must not appear twice in dropdown.
+            new("000000000000000110", "1000", "10", "1020")
         };
 
         IEnumerable<SapValidMaterialSales> filtered = allMaterials;
         if (!string.IsNullOrWhiteSpace(salesOrg))
             filtered = filtered.Where(m => string.Equals(m.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase));
         if (!string.IsNullOrWhiteSpace(distChannel))
-            filtered = filtered.Where(m => string.Equals(m.DistrChannel, distChannel, StringComparison.OrdinalIgnoreCase));
+            filtered = filtered.Where(m => string.Equals(m.DistChannel, distChannel, StringComparison.OrdinalIgnoreCase));
 
-        IReadOnlyList<SapValidMaterialSales> list = filtered.ToList();
+        // Match the SAP client dedupe behaviour: distinct by Material, keep first plant.
+        IReadOnlyList<SapValidMaterialSales> list = filtered
+            .GroupBy(m => m.Material)
+            .Select(g => g.First())
+            .ToList();
         return Task.FromResult(list);
     }
 

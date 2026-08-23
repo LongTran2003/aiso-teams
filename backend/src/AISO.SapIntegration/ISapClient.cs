@@ -287,10 +287,18 @@ public sealed record SapValidMaterialPlant(
     string BaseUnit);
 
 /// <summary>OData <c>ValidMaterialSales</c> row.</summary>
+/// <remarks>
+/// CDS v5 added <c>Plant</c> as part of the key, so the same
+/// (Material, SalesOrg, DistChannel) may now appear under several valid
+/// plants. The HTTP layer dedupes by <see cref="Material"/> and returns
+/// the first plant encountered; downstream code can ignore <see cref="Plant"/>
+/// for the create-SO suggestion dropdown.
+/// </remarks>
 public sealed record SapValidMaterialSales(
     string Material,
     string SalesOrg,
-    string DistrChannel);
+    string DistChannel,
+    string Plant = "");
 
 public sealed record CreateSalesOrderDto
 {

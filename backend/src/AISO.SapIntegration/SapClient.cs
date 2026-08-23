@@ -1353,13 +1353,13 @@ public class SapClient : ISapClient
         CancellationToken ct = default)
     {
         var builder = new ODataQueryBuilder("ValidMaterialSales")
-            .AddCustomParam("$select", "Material,SalesOrg,DistrChannel")
+            .AddCustomParam("$select", "Material,SalesOrg,DistChannel,Plant")
             .Top(Math.Clamp(top, 1, 200));
 
         if (!string.IsNullOrWhiteSpace(salesOrg))
             builder.Filter("SalesOrg", "eq", salesOrg.Trim().ToUpperInvariant());
         if (!string.IsNullOrWhiteSpace(distChannel))
-            builder.Filter("DistrChannel", "eq", distChannel.Trim().ToUpperInvariant());
+            builder.Filter("DistChannel", "eq", distChannel.Trim().ToUpperInvariant());
 
         var url = builder.Build();
         _logger.LogInformation("Calling SAP OData: {Url}", url);
@@ -1379,12 +1379,18 @@ public class SapClient : ISapClient
             if (result?.Value == null)
                 return Array.Empty<SapValidMaterialSales>();
 
+            // CDS v5 added Plant to the key, so the same Material can now come back
+            // once per valid plant for the (SalesOrg, DistChannel) combo. Dedupe by
+            // Material for the step3 dropdown — keep the first plant encountered.
             return result.Value
                 .Where(r => !string.IsNullOrWhiteSpace(r.Material))
+                .GroupBy(r => r.Material)
+                .Select(g => g.First())
                 .Select(r => new SapValidMaterialSales(
                     Material: FormatMaterialNumber(r.Material),
                     SalesOrg: r.SalesOrg ?? string.Empty,
-                    DistrChannel: r.DistrChannel ?? string.Empty))
+                    DistChannel: r.DistChannel ?? string.Empty,
+                    Plant: r.Plant ?? string.Empty))
                 .ToList();
         }
         catch (Exception ex)
