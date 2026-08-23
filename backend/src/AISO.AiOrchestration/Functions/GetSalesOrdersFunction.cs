@@ -107,6 +107,17 @@ public sealed class GetSalesOrdersFunction : IFunction
             Top = GetInt(parameters, "top") ?? 10
         };
 
+        // Guard: for "my orders" / "đơn của tôi" we MUST have a real SAP user,
+        // otherwise the SAP filter is meaningless and may return confusing errors.
+        if (ownedByMe == true && string.IsNullOrWhiteSpace(requestingSapUser))
+        {
+            const string msg = "Your Teams account is not linked to a SAP user yet. " +
+                               "Say \"hi\" or \"link\" to connect your SAP account, then retry.";
+            _logger.LogWarning("getSalesOrders: ownedByMe=true but requestingSapUser is empty");
+
+            return FunctionResult.Fail(msg);
+        }
+
         _logger.LogInformation(
             "Executing getSalesOrders: customer={Customer}, salesOrg={SalesOrg}, " +
             "from={FromDate}, to={ToDate}, status={Status}, owner={Owner}, top={Top}",
@@ -170,6 +181,37 @@ public sealed class GetSalesOrdersFunction : IFunction
                 ownedByMe == true ? "My sales orders" : "Sales orders");
 
             return FunctionResult.Ok(emptyResponse);
+        }
+        catch (SapODataException ex) when (ex.HttpStatusCode >= 500)
+        {
+            // 5xx SAP error → user-friendly message, NOT the raw SAP stack trace.
+            _logger.LogError(ex,
+                "SAP backend error {Status} for GetSalesOrders. Owner={Owner}",
+                ex.HttpStatusCode, query.OwnerSapUser);
+
+            return FunctionResult.Fail(
+                $"SAP returned {ex.HttpStatusCode}. Please try again or contact support if it persists.");
+        }
+        catch (OperationCanceledException)
+        {
+            // Turn timeout or caller cancellation. Surface a clear retry hint
+            // instead of the raw "The operation was canceled" text.
+            _logger.LogWarning(
+                "getSalesOrders canceled by timeout/caller for owner={Owner}",
+                query.OwnerSapUser);
+
+            return FunctionResult.Fail(
+                "The request took too long and was canceled. " +
+                "Try narrowing the filter (a smaller date range, a specific sales org) " +
+                "or retry in a moment.");
+        }
+        catch (HttpRequestException ex)
+        {
+            // SAP endpoint refused / DNS / TLS — common with real SAP when network is flaky.
+            _logger.LogError(ex, "Network error calling SAP for GetSalesOrders");
+
+            return FunctionResult.Fail(
+                "Could not reach SAP. Check your connection and try again.");
         }
     }
 
