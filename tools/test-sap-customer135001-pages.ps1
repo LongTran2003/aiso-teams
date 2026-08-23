@@ -28,7 +28,11 @@ function Test-Entity {
     if ($FilterOData) {
         $queryParts += ('$' + "filter=$FilterOData")
     }
-    $url = "$pathPart" + '?' + [string]::Join('&', $queryParts)
+        $url = "$pathPart" + '?' + [string]::Join('&', $queryParts)
+
+    # Small pause so SAP gateway doesn't 401 the next call from the same
+    # session when several probe URLs hit it back-to-back.
+    Start-Sleep -Seconds 2
 
     Write-Host ""
     Write-Host "=== $Label ===" -ForegroundColor Cyan
