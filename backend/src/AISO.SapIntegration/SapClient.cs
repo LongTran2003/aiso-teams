@@ -1191,10 +1191,14 @@ public class SapClient : ISapClient
 
     public async Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(string? salesOrg = null, CancellationToken ct = default)
     {
-        var url = new ODataQueryBuilder("SalesArea")
+        var builder = new ODataQueryBuilder("SalesArea")
             .AddCustomParam("sap-client", "324")
-            .Top(30)
-            .Build();
+            .Top(200);
+
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            builder.Filter("SalesOrg", "eq", salesOrg.Trim().ToUpperInvariant());
+
+        var url = builder.Build();
 
         _logger.LogInformation("Calling SAP OData: {Url} (filter: SalesOrg={SalesOrg})", url, salesOrg ?? "<all>");
 
@@ -1224,6 +1228,7 @@ public class SapClient : ISapClient
                             && !string.IsNullOrWhiteSpace(r.DistrChannel)
                             && !string.IsNullOrWhiteSpace(r.Division));
 
+            // Defensive client-side filter in case the OData filter was ignored by the gateway.
             if (!string.IsNullOrWhiteSpace(salesOrg))
             {
                 query = query.Where(r => string.Equals(r.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase));

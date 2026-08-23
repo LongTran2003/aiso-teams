@@ -526,6 +526,72 @@ public class SapClientTests
         Assert.Contains(Uri.EscapeDataString(expectedFragment), builder.Build());
     }
 
+    [Fact]
+    public async Task GetSalesAreasAsync_WithSalesOrg_AddsServerSideFilter()
+    {
+        // Three rows across two SalesOrgs so we can prove the server-side filter narrowed the result.
+        const string body = """
+            {"value":[
+              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"TV01","DistrChannel":"10","Division":"00","SalesOrgName":"TV"}
+            ]}
+            """;
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        var areas = await client.GetSalesAreasAsync("UE00");
+
+        Assert.Single(areas);
+        Assert.Equal("UE00", areas[0].SalesOrg);
+        Assert.Equal("WH", areas[0].DistChannel);
+        Assert.Equal("AS", areas[0].Division);
+        // Server-side filter must be present in the URL — not just client-side.
+        // ODataQueryBuilder escapes the filter value: 'UE00' → %27UE00%27.
+        var uri = handler.RequestUris.Single();
+        Assert.Contains("SalesArea", uri);
+        Assert.Contains("&$filter=", uri);
+        Assert.Contains("SalesOrg", uri);
+        Assert.Contains("%27UE00%27", uri);
+        // Top must be high enough to cover a fresh org like UE00 (previous bug: Top(30) silently dropped it).
+        Assert.Contains("$top=200", uri);
+    }
+
+    [Fact]
+    public async Task GetSalesAreasAsync_WithEmptySalesOrg_DoesNotFilter()
+    {
+        const string body = """
+            {"value":[
+              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"TV01","DistrChannel":"10","Division":"00","SalesOrgName":"TV"}
+            ]}
+            """;
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        var areas = await client.GetSalesAreasAsync(null);
+
+        Assert.Equal(2, areas.Count);
+        var uri = handler.RequestUris.Single();
+        Assert.DoesNotContain("&$filter=", uri);
+    }
+
+    [Fact]
+    public async Task GetSalesAreasAsync_ServerReturnsMixedOrgs_DefensiveClientFilterKeepsOnlyRequestedOrg()
+    {
+        // Simulates a gateway that ignored $filter and returned mixed rows.
+        const string body = """
+            {"value":[
+              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"TV01","DistrChannel":"10","Division":"00","SalesOrgName":"TV"}
+            ]}
+            """;
+        var client = CreateClient(HttpStatusCode.OK, body, out _);
+
+        var areas = await client.GetSalesAreasAsync("UE00");
+
+        Assert.Single(areas);
+        Assert.Equal("UE00", areas[0].SalesOrg);
+    }
+
     private sealed class StubTokenManager : ISapTokenManager
     {
         public Task<SapAuthContext> GetAuthContextAsync(CancellationToken cancellationToken = default)
