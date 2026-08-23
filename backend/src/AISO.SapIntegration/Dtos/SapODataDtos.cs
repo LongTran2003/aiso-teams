@@ -111,6 +111,20 @@ internal class SapUserRoleDto
     public string? SalesOrg { get; set; }
 }
 
+/// <summary>
+/// CDS view <c>ZC_AISO_USER_ROLE_QUERY</c> row (read-only projection over
+/// <c>ZAISO_USER_ROLE</c>, exposed as the OData <c>UserRoles</c> entity set).
+/// Field names match the CDS element names after PascalCase mapping.
+/// </summary>
+internal class SapUserRoleQueryDto
+{
+    public string? SapUser { get; set; }
+    public string? SalesOrg { get; set; }
+    public string? Role { get; set; }
+    public string? ValidFrom { get; set; }
+    public string? ValidTo { get; set; }
+}
+
 // KPI DTOs — field names must match SAP CDS view element names (PascalCase via OData)
 internal class SapKpiRevenueDto
 {

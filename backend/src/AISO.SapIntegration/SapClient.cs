@@ -1572,6 +1572,80 @@ public class SapClient : ISapClient
         }
     }
 
+    /// <summary>
+    /// Reads role + sales org + validity window from
+    /// <c>ZC_AISO_USER_ROLE_QUERY</c> via the OData <c>UserRoles</c> alias.
+    /// Returns <c>null</c> when the user has no row, the entity set is not
+    /// published yet (404), the filter is rejected (400), or the network
+    /// fails — callers should fall back to <c>IUserScopeLookup</c>.
+    /// </summary>
+    public async Task<SapUserRoleRow?> GetUserRoleAsync(string sapUserId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(sapUserId))
+            return null;
+
+        var normalized = sapUserId.Trim().ToUpperInvariant();
+        var url = new ODataQueryBuilder("UserRoles")
+            .AddCustomParam("sap-client", "324")
+            .Filter("SapUser", "eq", normalized)
+            .Top(1)
+            .Build();
+
+        _logger.LogInformation("Calling SAP OData user-role query: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (response.StatusCode is System.Net.HttpStatusCode.NotFound
+                or System.Net.HttpStatusCode.BadRequest)
+            {
+                // Entity set not published yet (e.g. CDS view not activated) —
+                // caller should fall back to Postgres user_mappings.
+                _logger.LogWarning(
+                    "SAP UserRoles lookup unavailable for {SapUser}: {StatusCode}",
+                    normalized,
+                    (int)response.StatusCode);
+                return null;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "SAP UserRoles lookup failed for {SapUser}: {StatusCode}",
+                    normalized,
+                    (int)response.StatusCode);
+                return null;
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleQueryDto>>(
+                rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var row = result?.Value?.FirstOrDefault();
+            if (row is null)
+            {
+                _logger.LogInformation(
+                    "SAP UserRoles returned no row for {SapUser}", normalized);
+                return null;
+            }
+
+            DateOnly? validFrom = DateOnly.TryParse(row.ValidFrom, out var vf) ? vf : null;
+            DateOnly? validTo = DateOnly.TryParse(row.ValidTo, out var vt) ? vt : null;
+
+            return new SapUserRoleRow(
+                SapUser: row.SapUser?.Trim() ?? normalized,
+                Role: string.IsNullOrWhiteSpace(row.Role) ? null : row.Role.Trim(),
+                SalesOrg: string.IsNullOrWhiteSpace(row.SalesOrg) ? null : row.SalesOrg.Trim().ToUpperInvariant(),
+                ValidFrom: validFrom,
+                ValidTo: validTo);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SAP UserRoles lookup error for {SapUser}", normalized);
+            return null;
+        }
+    }
+
     private static string BuildPeriodLabel(DateOnly? from, DateOnly? to)
     {
         if (from.HasValue && to.HasValue)

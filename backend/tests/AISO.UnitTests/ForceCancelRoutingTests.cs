@@ -252,6 +252,9 @@ public class ForceCancelRoutingTests
             => throw new NotImplementedException();
         public Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default)
             => throw new NotImplementedException();
+
+        public Task<SapUserRoleRow?> GetUserRoleAsync(string sapUserId, CancellationToken ct = default)
+            => throw new NotImplementedException();
         public Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<SapMaterial>>(Array.Empty<SapMaterial>());
 
         public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(string? salesOrg = null, CancellationToken ct = default)
