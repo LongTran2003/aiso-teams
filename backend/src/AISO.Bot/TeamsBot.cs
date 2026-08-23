@@ -2758,6 +2758,21 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
+            if (result.Payload is AISO.AiOrchestration.Functions.MyProfileResponse myProfileResponse)
+            {
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildMyProfileCard(myProfileResponse),
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with My profile card for {SapUser} (total={Total})",
+                    myProfileResponse.SapUser,
+                    myProfileResponse.Counts.Total);
+                return;
+            }
+
             if (result.Payload is AISO.AiOrchestration.Functions.GetSalesOrdersResponse getOrdersResponse)
             {
                 var orders = getOrdersResponse.Orders;

@@ -111,6 +111,27 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
+        // "my profile" — before generic "show … order" so a profile request never
+        // falls through to GetSalesOrders (defensive: profile text does not contain
+        // "order"/"đơn", but ordering keeps intent routing predictable).
+        if (IsMyProfileIntent(text))
+        {
+            var fn = _registry.GetByName("MyProfile");
+            if (fn is not null)
+            {
+                var paramsJson = "{}";
+                using var doc = JsonDocument.Parse(paramsJson);
+                var result = await fn.ExecuteAsync(doc.RootElement, requestingSapUser, ct);
+                return new DispatchResult
+                {
+                    Handled = true,
+                    FunctionName = fn.Name,
+                    Result = result,
+                    ParametersJson = paramsJson
+                };
+            }
+        }
+
         // Manager: pending approvals (EN + VI) — before generic "show … order" / "đơn"
         if (IsPendingApprovalsIntent(text))
         {
@@ -605,6 +626,16 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
         || text.Contains("đơn hàng của tôi")
         || text.Contains("don hang cua toi")
         || (text.Contains("my") && (text.Contains("order") || text.Contains("orders")));
+
+    private static bool IsMyProfileIntent(string text) =>
+        text is "my profile" or "my info" or "my account"
+        || text.Contains("my profile")
+        || text.Contains("thông tin của tôi")
+        || text.Contains("thong tin cua toi")
+        || text.Contains("hồ sơ của tôi")
+        || text.Contains("ho so cua toi")
+        || text.Contains("thông tin tài khoản")
+        || text.Contains("thong tin tai khoan");
 
     private static bool IsOverdueOrdersIntent(string text) =>
         text.Contains("overdue")

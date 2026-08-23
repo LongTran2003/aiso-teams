@@ -90,6 +90,7 @@
       "actions": [
         { "type": "Action.Submit", "title": "Recent orders", "data": { "msteams": { "type": "messageBack", "displayText": "Recent orders", "text": "recent orders" } } },
         { "type": "Action.Submit", "title": "My Orders", "data": { "msteams": { "type": "messageBack", "displayText": "My Orders", "text": "show my sales orders" } } },
+        { "type": "Action.Submit", "title": "My profile", "data": { "msteams": { "type": "messageBack", "displayText": "My profile", "text": "my profile" } } },
         { "type": "Action.Submit", "title": "Revenue KPI", "data": { "msteams": { "type": "messageBack", "displayText": "Revenue KPI", "text": "show revenue kpi" } } },
         { "type": "Action.Submit", "title": "Request release", "data": { "msteams": { "type": "messageBack", "displayText": "Request release", "text": "request release" } } },
         { "type": "Action.Submit", "title": "Create order", "data": { "msteams": { "type": "messageBack", "displayText": "Create order", "text": "create order" } } }

@@ -1,0 +1,121 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": "My profile",
+      "size": "Large",
+      "weight": "Bolder",
+      "wrap": true
+    },
+    {
+      "type": "TextBlock",
+      "text": "${displayName} (${sapUser})",
+      "weight": "Bolder",
+      "spacing": "Medium",
+      "wrap": true
+    },
+    {
+      "type": "FactSet",
+      "facts": [
+        { "title": "Role", "value": "${role}" },
+        { "title": "Sales org", "value": "${salesOrg}" },
+        { "title": "Total orders", "value": "${total}" },
+        { "title": "Open", "value": "${open}" },
+        { "title": "Blocked", "value": "${blocked}" },
+        { "title": "Partially delivered", "value": "${partial}" },
+        { "title": "Delivered", "value": "${delivered}" },
+        { "title": "Invoiced", "value": "${invoiced}" },
+        { "title": "Cancelled", "value": "${cancelled}" }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "${approximateHint}",
+      "isSubtle": true,
+      "size": "Small",
+      "wrap": true,
+      "spacing": "Small"
+    },
+    {
+      "type": "TextBlock",
+      "text": "${loadError}",
+      "color": "Attention",
+      "size": "Small",
+      "wrap": true,
+      "isVisible": "${hasLoadError}"
+    },
+    {
+      "type": "Container",
+      "separator": true,
+      "$when": "${hasTopOrders}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Recent orders",
+          "weight": "Bolder",
+          "spacing": "Medium",
+          "wrap": true
+        },
+        {
+          "type": "Container",
+          "$data": "${topOrders}",
+          "items": [
+            {
+              "type": "ColumnSet",
+              "columns": [
+                {
+                  "type": "Column",
+                  "width": "stretch",
+                  "items": [
+                    {
+                      "type": "TextBlock",
+                      "text": "${soNumber} Â· ${customerLabel}",
+                      "wrap": true,
+                      "spacing": "None"
+                    },
+                    {
+                      "type": "TextBlock",
+                      "text": "${orderDate} Â· ${status} Â· ${formattedNetValue}",
+                      "isSubtle": true,
+                      "size": "Small",
+                      "wrap": true,
+                      "spacing": "None"
+                    }
+                  ]
+                },
+                {
+                  "type": "Column",
+                  "width": "auto",
+                  "verticalContentAlignment": "Center",
+                  "items": [
+                    {
+                      "type": "ActionSet",
+                      "actions": [
+                        {
+                          "type": "Action.Submit",
+                          "title": "View",
+                          "data": {
+                            "msteams": {
+                              "type": "messageBack",
+                              "displayText": "View ${soNumber}",
+                              "text": "show order ${soNumber}"
+                            },
+                            "action": "view_details",
+                            "salesOrderId": "${soNumber}"
+                          }
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
