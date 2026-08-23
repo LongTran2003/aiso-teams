@@ -76,13 +76,13 @@
                   "items": [
                     {
                       "type": "TextBlock",
-                      "text": "${soNumber} Â· ${customerLabel}",
+                      "text": "${soNumber} · ${customerLabel}",
                       "wrap": true,
                       "spacing": "None"
                     },
                     {
                       "type": "TextBlock",
-                      "text": "${orderDate} Â· ${status} Â· ${formattedNetValue}",
+                      "text": "${orderDate} · ${status} · ${formattedNetValue}",
                       "isSubtle": true,
                       "size": "Small",
                       "wrap": true,
