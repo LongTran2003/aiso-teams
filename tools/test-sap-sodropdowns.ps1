@@ -21,22 +21,20 @@ function Test-Entity {
         [int]$Top = 5
     )
 
-# Build URL via array-join to avoid PowerShell host aliasing 'sap' on
-        # some terminals (observed: 'sap-client' was rewritten to '-client'
-        # when interpolated through StringBuilder on the user's host).
-        $sapParam = 'sa' + 'p-client=324'
-        $fmtParam = '$' + 'format=json'
-        $topParam = '$' + "top=$Top"
-        $parts = @(
-            "$base/$Entity"
-            $sapParam
-            $fmtParam
-            $topParam
-        )
+    # The '?' separator between path and query is mandatory for the
+    # SAP gateway; previous revisions joined with '&' and got 400s.
+    # Use named vars for the literal tokens so PSReadLine on the user's
+    # host can't substitute them at parse time.
+    $pathPart = "$base/$Entity"
+    $sapParam = 'sa' + 'p-client=324'
+    $fmtParam = '$' + 'format=json'
+    $topParam = '$' + "top=$Top"
+    $queryParts = @($sapParam, $fmtParam, $topParam)
     if ($FilterOData) {
-        $parts += ('$' + "filter=$FilterOData")
+        $queryParts += ('$' + "filter=$FilterOData")
     }
-    $url = [string]::Join('&', $parts)
+    $url = "$pathPart" + '?' + [string]::Join('&', $queryParts)
+
     Write-Host ""
     Write-Host "=== $Label ===" -ForegroundColor Cyan
     Write-Host "URL: $url"
