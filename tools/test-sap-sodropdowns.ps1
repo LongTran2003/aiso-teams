@@ -21,14 +21,22 @@ function Test-Entity {
         [int]$Top = 5
     )
 
-    $sb = New-Object System.Text.StringBuilder
-    [void]$sb.Append("$base/$Entity?sap-client=324")
-    [void]$sb.Append("&`$format=json")
-    [void]$sb.Append("&`$top=$Top")
+# Build URL via array-join to avoid PowerShell host aliasing 'sap' on
+        # some terminals (observed: 'sap-client' was rewritten to '-client'
+        # when interpolated through StringBuilder on the user's host).
+        $sapParam = 'sa' + 'p-client=324'
+        $fmtParam = '$' + 'format=json'
+        $topParam = '$' + "top=$Top"
+        $parts = @(
+            "$base/$Entity"
+            $sapParam
+            $fmtParam
+            $topParam
+        )
     if ($FilterOData) {
-        [void]$sb.Append("&`$filter=$FilterOData")
+        $parts += ('$' + "filter=$FilterOData")
     }
-    $url = $sb.ToString()
+    $url = [string]::Join('&', $parts)
     Write-Host ""
     Write-Host "=== $Label ===" -ForegroundColor Cyan
     Write-Host "URL: $url"
