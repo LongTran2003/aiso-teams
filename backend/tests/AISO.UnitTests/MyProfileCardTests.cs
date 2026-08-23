@@ -16,6 +16,7 @@ public class MyProfileCardTests
             SapUser: "DEV-249",
             Role: UserRole.Manager,
             SalesOrg: "TV01",
+            Email: "long.tran@example.com",
             Counts: new MyProfileOrderCounts(12, 5, 1, 2, 3, 1, 0),
             Approximate: false,
             TopOrders: Array.Empty<SalesOrder>(),
@@ -38,6 +39,7 @@ public class MyProfileCardTests
             SapUser: "DEV-249",
             Role: UserRole.Employee,
             SalesOrg: null,
+            Email: null,
             Counts: new MyProfileOrderCounts(200, 100, 0, 0, 50, 30, 20),
             Approximate: true,
             TopOrders: Array.Empty<SalesOrder>(),
@@ -74,6 +76,7 @@ public class MyProfileCardTests
             SapUser: "DEV-249",
             Role: UserRole.Employee,
             SalesOrg: "TV01",
+            Email: "long.tran@example.com",
             Counts: new MyProfileOrderCounts(1, 1, 0, 0, 0, 0, 0),
             Approximate: false,
             TopOrders: top,
@@ -94,6 +97,7 @@ public class MyProfileCardTests
             SapUser: "DEV-249",
             Role: UserRole.Employee,
             SalesOrg: "TV01",
+            Email: null,
             Counts: MyProfileOrderCounts.Empty,
             Approximate: false,
             TopOrders: Array.Empty<SalesOrder>(),
@@ -103,5 +107,68 @@ public class MyProfileCardTests
         var json = JsonConvert.SerializeObject(TeamsCardBuilder.BuildMyProfileCard(response).Content);
 
         Assert.Contains("SAP returned 500", json);
+    }
+
+    [Fact]
+    public void BuildMyProfileCard_ShowsEmailFact_WhenEmailAvailable()
+    {
+        var response = new MyProfileResponse(
+            SapUser: "DEV-249",
+            Role: UserRole.Employee,
+            SalesOrg: "TV01",
+            Email: "long.tran@example.com",
+            Counts: new MyProfileOrderCounts(1, 1, 0, 0, 0, 0, 0),
+            Approximate: false,
+            TopOrders: Array.Empty<SalesOrder>(),
+            SalesOrgSource: MyProfileSalesOrgSource.SapUserRole,
+            LoadError: null);
+
+        var json = JsonConvert.SerializeObject(TeamsCardBuilder.BuildMyProfileCard(response).Content);
+
+        Assert.Contains("long.tran@example.com", json);
+    }
+
+    [Fact]
+    public void BuildMyProfileCard_HidesEmailFact_WhenEmailNull()
+    {
+        var response = new MyProfileResponse(
+            SapUser: "DEV-249",
+            Role: UserRole.Employee,
+            SalesOrg: "TV01",
+            Email: null,
+            Counts: new MyProfileOrderCounts(1, 1, 0, 0, 0, 0, 0),
+            Approximate: false,
+            TopOrders: Array.Empty<SalesOrder>(),
+            SalesOrgSource: MyProfileSalesOrgSource.SapUserRole,
+            LoadError: null);
+
+        var json = JsonConvert.SerializeObject(TeamsCardBuilder.BuildMyProfileCard(response).Content);
+
+        // The Email fact is rendered as a FactSet row with title "Email".
+        // When the user has no email, hasEmail="false" tells the host (M365 /
+        // Bot Framework) to hide the row. We assert the fact is present in
+        // the rendered JSON, so the host can decide what to show.
+        Assert.Contains("\"title\":\"Email\"", json);
+    }
+
+    [Fact]
+    public void BuildMyProfileCard_TreatsWhitespaceEmailAsNull()
+    {
+        var response = new MyProfileResponse(
+            SapUser: "DEV-249",
+            Role: UserRole.Employee,
+            SalesOrg: "TV01",
+            Email: "   ",
+            Counts: new MyProfileOrderCounts(1, 1, 0, 0, 0, 0, 0),
+            Approximate: false,
+            TopOrders: Array.Empty<SalesOrder>(),
+            SalesOrgSource: MyProfileSalesOrgSource.Postgres,
+            LoadError: null);
+
+        var json = JsonConvert.SerializeObject(TeamsCardBuilder.BuildMyProfileCard(response).Content);
+
+        // Whitespace is treated as missing so the card hides the row via the
+        // same `hasEmail=false` binding used for null email.
+        Assert.Contains("\"title\":\"Email\"", json);
     }
 }
