@@ -22,6 +22,7 @@
       "facts": [
         { "title": "Role", "value": "${role}" },
         { "title": "Sales org", "value": "${salesOrg}" },
+        { "title": "Email", "value": "${email}", "isVisible": "${hasEmail}" },
         { "title": "Total orders", "value": "${total}" },
         { "title": "Open", "value": "${open}" },
         { "title": "Blocked", "value": "${blocked}" },

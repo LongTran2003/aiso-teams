@@ -120,6 +120,48 @@ public class MyProfileFunctionTests
         Assert.Equal(1, counts.Cancelled);
     }
 
+    [Fact]
+    public async Task MyProfile_PopulatesEmail_WhenScopeLookupReturnsOne()
+    {
+        var fn = CreateFunctionWithScope(out _, out _, email: "long.tran@example.com");
+        using var doc = JsonDocument.Parse("{}");
+
+        var result = await fn.ExecuteAsync(doc.RootElement, "DEV-249");
+
+        Assert.True(result.Success);
+        var payload = (MyProfileResponse)result.Payload!;
+        Assert.Equal("long.tran@example.com", payload.Email);
+    }
+
+    [Fact]
+    public async Task MyProfile_LeavesEmailNull_WhenScopeLookupHasNone()
+    {
+        // Tests the "unlinked" rendering path — card hides the row entirely.
+        var fn = CreateFunctionWithScope(out _, out _, email: null);
+        using var doc = JsonDocument.Parse("{}");
+
+        var result = await fn.ExecuteAsync(doc.RootElement, "DEV-249");
+
+        Assert.True(result.Success);
+        var payload = (MyProfileResponse)result.Payload!;
+        Assert.Null(payload.Email);
+    }
+
+    private static MyProfileFunction CreateFunctionWithScope(
+        out MockSapClient sap,
+        out StubScopeLookup scope,
+        string? email)
+    {
+        sap = new MockSapClient();
+        scope = new StubScopeLookup
+        {
+            Role = UserRole.Employee,
+            SalesOrg = "TV01",
+            Email = email,
+        };
+        return new MyProfileFunction(sap, scope, NullLogger<MyProfileFunction>.Instance);
+    }
+
     private static SalesOrder Order(string soNumber, SalesOrderStatus status) => new()
     {
         SoNumber = soNumber,
@@ -138,6 +180,7 @@ public class MyProfileFunctionTests
     {
         public UserRole Role { get; set; } = UserRole.Employee;
         public string? SalesOrg { get; set; }
+        public string? Email { get; set; }
 
         public Task<UserRole> GetRoleBySapUserAsync(string sapUserId, CancellationToken ct = default)
             => Task.FromResult(Role);
@@ -149,7 +192,7 @@ public class MyProfileFunctionTests
             => Task.FromResult<string?>(null);
 
         public Task<string?> GetEmailBySapUserAsync(string sapUserId, CancellationToken ct = default)
-            => Task.FromResult<string?>(null);
+            => Task.FromResult(Email);
 
         public Task<DelegationInfo> GetDelegationInfoAsync(string sapUserId, CancellationToken ct = default)
             => Task.FromResult(new DelegationInfo(null, null));

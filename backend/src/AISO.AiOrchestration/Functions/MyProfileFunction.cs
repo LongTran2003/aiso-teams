@@ -71,6 +71,12 @@ public sealed class MyProfileFunction : IFunction
         // the new ZC_AISO_USER_ROLE_QUERY view is not yet activated in DEV.
         var identity = await ResolveIdentityAsync(requestingSapUser, ct);
 
+        // Email comes from Postgres (SapLinkAssignments.TeamsEmail) which is
+        // synced from Microsoft Entra ID. SAP does not carry email today.
+        // Read in parallel with the orders query below to avoid paying the cost
+        // twice when the SAP orders request is slow.
+        var emailTask = _scopeLookup.GetEmailBySapUserAsync(requestingSapUser, ct);
+
         // Orders owned by the current user (top=200 for approximate stats).
         var query = new SalesOrdersQuery
         {
@@ -87,10 +93,12 @@ public sealed class MyProfileFunction : IFunction
         {
             _logger.LogWarning(ex, "SAP error while loading own orders for {SapUser}", requestingSapUser);
             // Build a partial response so the user still sees their identity.
+            var partialEmail = await SafeGetEmailAsync(emailTask, requestingSapUser, ct);
             return FunctionResult.Ok(new MyProfileResponse(
                 SapUser: requestingSapUser,
                 Role: identity.Role,
                 SalesOrg: identity.SalesOrg,
+                Email: partialEmail,
                 Counts: MyProfileOrderCounts.Empty,
                 Approximate: false,
                 TopOrders: Array.Empty<SalesOrder>(),
@@ -108,10 +116,13 @@ public sealed class MyProfileFunction : IFunction
             .Take(5)
             .ToList();
 
+        var email = await SafeGetEmailAsync(emailTask, requestingSapUser, ct);
+
         var response = new MyProfileResponse(
             SapUser: requestingSapUser,
             Role: identity.Role,
             SalesOrg: identity.SalesOrg,
+            Email: email,
             Counts: counts,
             Approximate: approximate,
             TopOrders: top,
@@ -119,10 +130,29 @@ public sealed class MyProfileFunction : IFunction
             LoadError: null);
 
         _logger.LogInformation(
-            "MyProfile for {SapUser}: total {Total}, open {Open}, topReturned {Top}, source {Source}",
-            requestingSapUser, counts.Total, counts.Open, top.Count, identity.Source);
+            "MyProfile for {SapUser}: total {Total}, open {Open}, topReturned {Top}, source {Source}, email {HasEmail}",
+            requestingSapUser, counts.Total, counts.Open, top.Count, identity.Source,
+            !string.IsNullOrWhiteSpace(email));
 
         return FunctionResult.Ok(response);
+    }
+
+    /// <summary>
+    /// Awaits the email task and swallows any DB error so a missing link row
+    /// never blocks the profile response. The card simply omits the email line.
+    /// </summary>
+    private async Task<string?> SafeGetEmailAsync(Task<string?> emailTask, string sapUserId, CancellationToken ct)
+    {
+        try
+        {
+            var value = await emailTask.WaitAsync(ct);
+            return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Email lookup failed for {SapUser}; card will omit email", sapUserId);
+            return null;
+        }
     }
 
     /// <summary>
@@ -206,6 +236,7 @@ public sealed record MyProfileResponse(
     string SapUser,
     UserRole Role,
     string? SalesOrg,
+    string? Email,
     MyProfileOrderCounts Counts,
     bool Approximate,
     IReadOnlyList<SalesOrder> TopOrders,

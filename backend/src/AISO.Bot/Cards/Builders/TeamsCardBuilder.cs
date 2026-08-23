@@ -73,6 +73,8 @@ internal static class TeamsCardBuilder
                 displayName = string.IsNullOrWhiteSpace(response.SapUser) ? "(unknown)" : response.SapUser,
                 role = response.Role.ToString(),
                 salesOrg = string.IsNullOrWhiteSpace(response.SalesOrg) ? "(none)" : response.SalesOrg,
+                email = string.IsNullOrWhiteSpace(response.Email) ? "(unlinked)" : response.Email,
+                hasEmail = string.IsNullOrWhiteSpace(response.Email) ? "false" : "true",
                 total = response.Counts.Total,
                 open = response.Counts.Open,
                 blocked = response.Counts.Blocked,
