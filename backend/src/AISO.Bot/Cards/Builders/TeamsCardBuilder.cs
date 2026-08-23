@@ -35,8 +35,8 @@ internal static class TeamsCardBuilder
             .Select(c => new
             {
                 icon = c.Icon,
-                en   = c.En,
-                vi   = c.Vi,
+                en = c.En,
+                vi = c.Vi,
                 note = c.Note ?? string.Empty,
                 flow = c.Flow,
             })
@@ -55,10 +55,10 @@ internal static class TeamsCardBuilder
     private static (UserRole role, string label) NormalizeRole(string? role) =>
         role?.Trim().ToLowerInvariant() switch
         {
-            "admin"    => (UserRole.Admin,    "Admin"),
-            "manager"  => (UserRole.Manager,  "Manager"),
+            "admin" => (UserRole.Admin, "Admin"),
+            "manager" => (UserRole.Manager, "Manager"),
             "employee" => (UserRole.Employee, "Employee"),
-            _          => (UserRole.Employee, "Employee"),
+            _ => (UserRole.Employee, "Employee"),
         };
 
     public static Attachment BuildEmptyCard() =>

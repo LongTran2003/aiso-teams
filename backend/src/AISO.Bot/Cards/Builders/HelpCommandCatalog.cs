@@ -10,7 +10,7 @@ namespace AISO.Bot.Cards.Builders;
 /// </summary>
 internal sealed record HelpCommand(
     string Flow,         // "browse" | "detail" | "act" | "kpi" | "admin" | "session"
-    int    Step,         // ordering inside a flow
+    int Step,         // ordering inside a flow
     string Icon,         // short glyph (Teams TextBlock friendly)
     string En,           // primary English phrase
     string Vi,           // primary Vietnamese phrase
@@ -121,12 +121,12 @@ internal static class HelpCommandCatalog
 
     private static int FlowOrder(string flow) => flow switch
     {
-        "browse"  => 1,
-        "detail"  => 2,
-        "act"     => 3,
-        "kpi"     => 4,
-        "admin"   => 5,
+        "browse" => 1,
+        "detail" => 2,
+        "act" => 3,
+        "kpi" => 4,
+        "admin" => 5,
         "session" => 6,
-        _         => 99,
+        _ => 99,
     };
 }
