@@ -3,6 +3,7 @@ using System.Diagnostics;
 using AISO.AiOrchestration;
 using AISO.Bot.Cards;
 using AISO.Bot.Cards.Builders;
+using AISO.Bot.Notifications;
 using AISO.Domain.Approvals;
 using AISO.Domain.SalesOrders;
 using AISO.Domain.Users;
@@ -328,6 +329,10 @@ public class TeamsBot : TeamsActivityHandler
 
                         try
                         {
+                            // Capture prior values for the change-notification email before we mutate.
+                            var oldRole = await _scopeLookup.GetRoleBySapUserAsync(sapUserId, cancellationToken);
+                            var oldSalesOrg = await _scopeLookup.GetSalesOrgBySapUserAsync(sapUserId, cancellationToken);
+
                             var updated = await _botUserAdmin.UpdateAccessAsync(
                                 sapUserId,
                                 newRole,
@@ -385,6 +390,42 @@ public class TeamsBot : TeamsActivityHandler
                                         sapSyncWarning)),
                                     cancellationToken);
                                 return;
+                            }
+
+                            // Notify the affected user via email — best effort, mutation already succeeded.
+                            // Skip when nothing actually changed (no role + no sales-org delta).
+                            if (UserAccessChangeEmailBuilder.HasChange(oldRole, updated.Role, oldSalesOrg, updated.SalesOrg))
+                            {
+                                try
+                                {
+                                    var targetEmail = await _scopeLookup.GetEmailBySapUserAsync(updated.SapUserId, cancellationToken);
+                                    if (!string.IsNullOrWhiteSpace(targetEmail))
+                                    {
+                                        var subject = _config["Email:SalesOrgChangeSubject"]
+                                            ?? "Your AISO access has been updated";
+                                        var html = UserAccessChangeEmailBuilder.Build(
+                                            displayName: string.IsNullOrWhiteSpace(updated.DisplayName) ? updated.SapUserId : updated.DisplayName,
+                                            adminSapUser: adminSap ?? "an administrator",
+                                            oldRole: oldRole,
+                                            newRole: updated.Role,
+                                            oldSalesOrg: oldSalesOrg,
+                                            newSalesOrg: updated.SalesOrg);
+                                        await _emailService.SendEmailAsync(targetEmail, subject, html, cancellationToken);
+                                    }
+                                    else
+                                    {
+                                        _logger.LogInformation(
+                                            "Skipped access-change email for {SapUser}: no Teams email on file",
+                                            updated.SapUserId);
+                                    }
+                                }
+                                catch (Exception emailEx)
+                                {
+                                    _logger.LogWarning(
+                                        emailEx,
+                                        "Failed to send access-change email for {SapUser}",
+                                        updated.SapUserId);
+                                }
                             }
 
                             await turnContext.SendActivityAsync(
