@@ -71,7 +71,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "1. **List users** → Manage to set Role / SalesOrg (confirm card)\n2. **View audit log** for who did what\n3. Force release / force cancel only for emergencies",
+          "text": "1. **List users** → Manage to set Role / SalesOrg (confirm card)\n2. **View audit log** for who did what\n3. Force release / force cancel only for emergencies\n4. Manage approval delegation for Managers",
           "wrap": true,
           "spacing": "Small"
         }
@@ -97,105 +97,8 @@
       "spacing": "Small"
     },
     {
-      "type": "Container",
-      "style": "emphasis",
-      "spacing": "Medium",
-      "$when": "${role == 'Employee'}",
-      "selectAction": {
-        "type": "Action.ToggleVisibility",
-        "targetElements": [
-          "examples-en-employee",
-          "examples-vi-employee",
-          "examples-chevron-en-employee",
-          "examples-chevron-vi-employee"
-        ]
-      },
-      "items": [
-        {
-          "type": "ColumnSet",
-          "columns": [
-            {
-              "type": "Column",
-              "width": "auto",
-              "verticalContentAlignment": "Center",
-              "items": [
-                {
-                  "type": "TextBlock",
-                  "id": "examples-chevron-en-employee",
-                  "text": "▸",
-                  "weight": "Bolder",
-                  "size": "Medium"
-                }
-              ]
-            },
-            {
-              "type": "Column",
-              "width": "stretch",
-              "verticalContentAlignment": "Center",
-              "items": [
-                {
-                  "type": "TextBlock",
-                  "text": "Try saying (EN) / Ví dụ lệnh (VI) — Employee",
-                  "weight": "Bolder",
-                  "wrap": true
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "Container",
-      "id": "examples-en-employee",
-      "spacing": "Medium",
-      "isVisible": false,
-      "$when": "${role == 'Employee'}",
-      "items": [
-        {
-          "type": "TextBlock",
-          "text": "Try saying (EN)",
-          "weight": "Bolder",
-          "size": "Small",
-          "wrap": true
-        },
-        {
-          "type": "ColumnSet",
-          "columns": [
-            {
-              "type": "Column",
-              "width": "stretch",
-              "items": [
-                {
-                  "type": "TextBlock",
-                  "text": "• recent orders\n• show my sales orders\n• show open orders\n• show orders of TV01\n• show open orders of FU24\n• show order 13122\n• show overdue orders\n• create order (up to 5 materials)\n• edit order 13122\n• update reference 13122 to 'PO-99'\n• show revenue kpi\n• kpi by customer 1000\n• kpi by product MAT-01\n• request release 13122\n• reject order 13122\n• cancel order 13122\n• forward order 13122 to DEV-xxx\n• help · logout",
-                  "wrap": true,
-                  "fontType": "Monospace",
-                  "size": "Small"
-                }
-              ]
-            },
-            {
-              "type": "Column",
-              "width": "stretch",
-              "items": [
-                {
-                  "type": "TextBlock",
-                  "id": "examples-vi-employee",
-                  "text": "• đơn hàng gần đây\n• đơn của tôi\n• kiểm tra đơn 13122\n• sửa đơn 13122\n• cập nhật reference 13122 thành 'PO-99'\n• hủy đơn 13122\n• chuyển đơn 13122 cho DEV-xxx\n• yêu cầu duyệt 13122\n• hướng dẫn · đăng xuất",
-                  "wrap": true,
-                  "fontType": "Monospace",
-                  "size": "Small"
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
       "type": "TextBlock",
-      "text": "Commands for Manager",
+      "text": "Shortcuts",
       "weight": "Bolder",
       "spacing": "Medium",
       "$when": "${role == 'Manager'}"
@@ -206,106 +109,11 @@
       "actions": [
         { "type": "Action.Submit", "title": "Pending approvals", "data": { "msteams": { "type": "messageBack", "displayText": "Pending approvals", "text": "show pending approvals" } } },
         { "type": "Action.Submit", "title": "Approve order", "data": { "msteams": { "type": "messageBack", "displayText": "Approve order", "text": "approve order" } } },
-        { "type": "Action.Submit", "title": "Reject approval", "data": { "msteams": { "type": "messageBack", "displayText": "Reject approval", "text": "reject approval" } } }
+        { "type": "Action.Submit", "title": "Reject approval", "data": { "msteams": { "type": "messageBack", "displayText": "Reject approval", "text": "reject approval" } } },
+        { "type": "Action.Submit", "title": "Delegate approval", "data": { "msteams": { "type": "messageBack", "displayText": "Delegate approval", "text": "delegate approval" } } },
+        { "type": "Action.Submit", "title": "My delegations", "data": { "msteams": { "type": "messageBack", "displayText": "My delegations", "text": "list my delegations" } } }
       ],
       "spacing": "Small"
-    },
-    {
-      "type": "Container",
-      "style": "emphasis",
-      "spacing": "Medium",
-      "$when": "${role == 'Manager'}",
-      "selectAction": {
-        "type": "Action.ToggleVisibility",
-        "targetElements": [
-          "examples-en-manager",
-          "examples-vi-manager",
-          "examples-chevron-en-manager",
-          "examples-chevron-vi-manager"
-        ]
-      },
-      "items": [
-        {
-          "type": "ColumnSet",
-          "columns": [
-            {
-              "type": "Column",
-              "width": "auto",
-              "verticalContentAlignment": "Center",
-              "items": [
-                {
-                  "type": "TextBlock",
-                  "id": "examples-chevron-en-manager",
-                  "text": "▸",
-                  "weight": "Bolder",
-                  "size": "Medium"
-                }
-              ]
-            },
-            {
-              "type": "Column",
-              "width": "stretch",
-              "verticalContentAlignment": "Center",
-              "items": [
-                {
-                  "type": "TextBlock",
-                  "text": "Try saying (EN) / Ví dụ lệnh (VI) — Manager",
-                  "weight": "Bolder",
-                  "wrap": true
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "type": "Container",
-      "id": "examples-en-manager",
-      "spacing": "Medium",
-      "isVisible": false,
-      "$when": "${role == 'Manager'}",
-      "items": [
-        {
-          "type": "TextBlock",
-          "text": "Try saying (EN) · Ví dụ lệnh (VI)",
-          "weight": "Bolder",
-          "size": "Small",
-          "wrap": true
-        },
-        {
-          "type": "ColumnSet",
-          "columns": [
-            {
-              "type": "Column",
-              "width": "stretch",
-              "items": [
-                {
-                  "type": "TextBlock",
-                  "text": "• show pending approvals\n• approve order 13122\n• reject approval 13122\n• show order 13122\n• cancel order 13122\n• show revenue kpi\n• logout",
-                  "wrap": true,
-                  "fontType": "Monospace",
-                  "size": "Small"
-                }
-              ]
-            },
-            {
-              "type": "Column",
-              "width": "stretch",
-              "items": [
-                {
-                  "type": "TextBlock",
-                  "id": "examples-vi-manager",
-                  "text": "• chờ duyệt · danh sách chờ duyệt\n• phê duyệt đơn 13122 · duyệt đơn 13122\n• từ chối duyệt 13122 · không duyệt 13122\n• hủy đơn 13122 · kiểm tra đơn 13122\n• đăng xuất",
-                  "wrap": true,
-                  "fontType": "Monospace",
-                  "size": "Small"
-                }
-              ]
-            }
-          ]
-        }
-      ]
     },
     {
       "type": "TextBlock",
@@ -328,15 +136,9 @@
       "type": "Container",
       "style": "emphasis",
       "spacing": "Medium",
-      "$when": "${role == 'Admin'}",
       "selectAction": {
         "type": "Action.ToggleVisibility",
-        "targetElements": [
-          "examples-en-admin",
-          "examples-vi-admin",
-          "examples-chevron-en-admin",
-          "examples-chevron-vi-admin"
-        ]
+        "targetElements": ["commands-section", "chevron-down", "chevron-up"]
       },
       "items": [
         {
@@ -349,10 +151,18 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "id": "examples-chevron-en-admin",
+                  "id": "chevron-down",
                   "text": "▸",
                   "weight": "Bolder",
                   "size": "Medium"
+                },
+                {
+                  "type": "TextBlock",
+                  "id": "chevron-up",
+                  "text": "▾",
+                  "weight": "Bolder",
+                  "size": "Medium",
+                  "isVisible": false
                 }
               ]
             },
@@ -363,7 +173,7 @@
               "items": [
                 {
                   "type": "TextBlock",
-                  "text": "Try saying (EN) / Ví dụ lệnh (VI) — Admin",
+                  "text": "All commands you can say (${role})",
                   "weight": "Bolder",
                   "wrap": true
                 }
@@ -375,47 +185,38 @@
     },
     {
       "type": "Container",
-      "id": "examples-en-admin",
+      "id": "commands-section",
       "spacing": "Medium",
       "isVisible": false,
-      "$when": "${role == 'Admin'}",
+      "$when": "${hasCommands == 'true'}",
       "items": [
         {
           "type": "TextBlock",
-          "text": "Try saying (EN) · Ví dụ lệnh (VI)",
-          "weight": "Bolder",
+          "text": "Tap a heading to expand · arranged by flow",
+          "isSubtle": true,
           "size": "Small",
-          "wrap": true
+          "wrap": true,
+          "spacing": "Small"
         },
         {
-          "type": "ColumnSet",
-          "columns": [
+          "type": "Container",
+          "$data": "${commands}",
+          "items": [
             {
-              "type": "Column",
-              "width": "stretch",
-              "items": [
-                {
-                  "type": "TextBlock",
-                  "text": "• list users\n• manage user DEV-xxx\n• view audit log\n• force release 13122\n• force cancel 13122\n• logout",
-                  "wrap": true,
-                  "fontType": "Monospace",
-                  "size": "Small"
-                }
-              ]
+              "type": "TextBlock",
+              "text": "${icon} ${en}  ·  ${vi}",
+              "wrap": true,
+              "fontType": "Monospace",
+              "size": "Small",
+              "spacing": "Small"
             },
             {
-              "type": "Column",
-              "width": "stretch",
-              "items": [
-                {
-                  "type": "TextBlock",
-                  "id": "examples-vi-admin",
-                  "text": "• danh sách user\n• nhật ký audit\n• ép release 13122\n• ép hủy 13122\n• đăng xuất",
-                  "wrap": true,
-                  "fontType": "Monospace",
-                  "size": "Small"
-                }
-              ]
+              "type": "TextBlock",
+              "text": "${note}",
+              "isSubtle": true,
+              "wrap": true,
+              "size": "Small",
+              "spacing": "None"
             }
           ]
         }

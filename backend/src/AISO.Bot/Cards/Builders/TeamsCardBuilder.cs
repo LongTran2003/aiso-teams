@@ -27,8 +27,39 @@ internal static class TeamsCardBuilder
                 assignedSapUserId = assignedSapUserId?.Trim().ToUpperInvariant() ?? string.Empty
             });
 
-    public static Attachment BuildHelpCard(string? role = null) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("help.json", new { role = role ?? "Employee" });
+    public static Attachment BuildHelpCard(string? role = null)
+    {
+        var (parsedRole, roleLabel) = NormalizeRole(role);
+        var commands = HelpCommandCatalog
+            .ForRole(parsedRole)
+            .Select(c => new
+            {
+                icon = c.Icon,
+                en   = c.En,
+                vi   = c.Vi,
+                note = c.Note ?? string.Empty,
+                flow = c.Flow,
+            })
+            .ToList();
+
+        return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "help.json",
+            new
+            {
+                role = roleLabel,
+                hasCommands = commands.Count > 0 ? "true" : "false",
+                commands
+            });
+    }
+
+    private static (UserRole role, string label) NormalizeRole(string? role) =>
+        role?.Trim().ToLowerInvariant() switch
+        {
+            "admin"    => (UserRole.Admin,    "Admin"),
+            "manager"  => (UserRole.Manager,  "Manager"),
+            "employee" => (UserRole.Employee, "Employee"),
+            _          => (UserRole.Employee, "Employee"),
+        };
 
     public static Attachment BuildEmptyCard() =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("empty.json");
