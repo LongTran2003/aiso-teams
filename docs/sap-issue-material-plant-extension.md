@@ -34,6 +34,12 @@ SAP returns:
 VALIDATION - Material not extended to plant 1010
 ```
 
+## Open Questions for SAP Team
+1. Which `SalesOrg` / `DistrChannel` do plants `DL53`, `DL21`, `DL00` belong to? The bot currently supports sales orgs `TV01, FU24, UE00, UW00, DN00, DS00` (see `GetSalesOrdersFunction` enum). Need the correct SalesOrg so the "Create sales order" flow can target the right area.
+2. Are VF6 / VF8 / VF9 (`000000000000000110/111/113`) extended to plants `DL53`, `DL21`, or `DL00`? Please confirm:
+   - Which `PLANT` exists in `VALID_MATERIAL_PLANT` for each material.
+   - Which `SALESORG` + `DISTR_CHANNEL` combination is valid for these materials.
+
 ## Suggested SAP Action
 In **MM02 → Sales view**, extend each affected material to plant `1010` for SalesOrg `1000` / DistrChannel `10` / Division `00`, OR
 in **MM02 → Plant / Storage Location**, create the plant extension for `1010` so the material is enabled for sales-order line items targeting that plant.
