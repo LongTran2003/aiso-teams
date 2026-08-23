@@ -44,6 +44,8 @@ internal static class HelpCommandCatalog
                 "show overdue orders",    "đơn quá hạn",              UserRole.Employee),
             new HelpCommand("browse", 7, "•",
                 "show pending approvals", "chờ duyệt",                UserRole.Manager),
+            new HelpCommand("browse", 8, "•",
+                "my profile",             "hồ sơ của tôi",            UserRole.Employee, Note: "your counts + sales org"),
 
             // -------- detail: look at one --------
             new HelpCommand("detail", 1, "•",

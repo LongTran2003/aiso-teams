@@ -59,6 +59,9 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IFunction, GetKpiByProductFunction>();
         services.AddSingleton<IFunction, GetOverdueOrdersFunction>();
 
+        // Identity / personal dashboards
+        services.AddSingleton<IFunction, MyProfileFunction>();
+
         services.AddSingleton<IFunctionRegistry, FunctionRegistry>();
 
         // AI Service integration: register HTTP client for AI microservice.

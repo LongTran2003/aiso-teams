@@ -64,6 +64,38 @@ internal static class TeamsCardBuilder
     public static Attachment BuildEmptyCard() =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("empty.json");
 
+    public static Attachment BuildMyProfileCard(MyProfileResponse response) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "my-profile.json",
+            new
+            {
+                sapUser = response.SapUser,
+                displayName = string.IsNullOrWhiteSpace(response.SapUser) ? "(unknown)" : response.SapUser,
+                role = response.Role.ToString(),
+                salesOrg = string.IsNullOrWhiteSpace(response.SalesOrg) ? "(none)" : response.SalesOrg,
+                total = response.Counts.Total,
+                open = response.Counts.Open,
+                blocked = response.Counts.Blocked,
+                partial = response.Counts.PartiallyDelivered,
+                delivered = response.Counts.Delivered,
+                invoiced = response.Counts.Invoiced,
+                cancelled = response.Counts.Cancelled,
+                approximateHint = response.Approximate
+                    ? $"Counts are approximate — showing the {MyProfileFunction.MaxOrdersForStats} most recent orders. You may own more."
+                    : $"Counts are exact ({response.Counts.Total} order(s) owned).",
+                hasLoadError = string.IsNullOrEmpty(response.LoadError) ? "false" : "true",
+                loadError = response.LoadError ?? string.Empty,
+                hasTopOrders = response.TopOrders.Count > 0 ? "true" : "false",
+                topOrders = response.TopOrders.Select(o => new
+                {
+                    soNumber = o.SoNumber,
+                    customerLabel = string.IsNullOrWhiteSpace(o.CustomerName) ? o.CustomerId : $"{o.CustomerId} · {o.CustomerName}",
+                    orderDate = o.OrderDate.ToString("dd MMM yyyy"),
+                    status = o.Status.ToString(),
+                    formattedNetValue = $"{o.NetValue:N0} {o.Currency}"
+                }).ToList()
+            });
+
     public static Attachment BuildLoadingCard() =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("loading.json");
 
