@@ -103,7 +103,10 @@ public sealed class MyProfileFunction : IFunction
                 Approximate: false,
                 TopOrders: Array.Empty<SalesOrder>(),
                 SalesOrgSource: identity.Source,
-                LoadError: $"Could not load your orders: {ex.Message}"));
+                LoadError: $"Could not load your orders: {ex.Message}",
+                SalesOrgValidFrom: identity.ValidFrom,
+                SalesOrgValidTo: identity.ValidTo,
+                SalesOrgIsActive: ComputeActive(identity.ValidFrom, identity.ValidTo)));
         }
 
         var counts = MyProfileOrderCounts.From(orders);
@@ -127,7 +130,10 @@ public sealed class MyProfileFunction : IFunction
             Approximate: approximate,
             TopOrders: top,
             SalesOrgSource: identity.Source,
-            LoadError: null);
+            LoadError: null,
+            SalesOrgValidFrom: identity.ValidFrom,
+            SalesOrgValidTo: identity.ValidTo,
+            SalesOrgIsActive: ComputeActive(identity.ValidFrom, identity.ValidTo));
 
         _logger.LogInformation(
             "MyProfile for {SapUser}: total {Total}, open {Open}, topReturned {Top}, source {Source}, email {HasEmail}",
@@ -163,7 +169,7 @@ public sealed class MyProfileFunction : IFunction
     /// card which path contributed the value (useful for debugging and
     /// for future card copy like "from SAP master data").
     /// </summary>
-    private async Task<(UserRole Role, string? SalesOrg, MyProfileSalesOrgSource Source)> ResolveIdentityAsync(
+    private async Task<(UserRole Role, string? SalesOrg, MyProfileSalesOrgSource Source, DateOnly? ValidFrom, DateOnly? ValidTo)> ResolveIdentityAsync(
         string sapUserId, CancellationToken ct)
     {
         SapUserRoleRow? sapRow = null;
@@ -196,13 +202,14 @@ public sealed class MyProfileFunction : IFunction
                 ? await _scopeLookup.GetSalesOrgBySapUserAsync(sapUserId, ct)
                 : sapRow.SalesOrg;
 
-            return (finalRole, salesOrg, MyProfileSalesOrgSource.SapUserRole);
+            return (finalRole, salesOrg, MyProfileSalesOrgSource.SapUserRole, sapRow.ValidFrom, sapRow.ValidTo);
         }
 
-        // Fallback: Postgres user_mappings only.
+        // Fallback: Postgres user_mappings only. Postgres does not track
+        // validity windows today, so we report null + unknown status.
         var fallbackRole = await _scopeLookup.GetRoleBySapUserAsync(sapUserId, ct);
         var fallbackOrg = await _scopeLookup.GetSalesOrgBySapUserAsync(sapUserId, ct);
-        return (fallbackRole, fallbackOrg, MyProfileSalesOrgSource.Postgres);
+        return (fallbackRole, fallbackOrg, MyProfileSalesOrgSource.Postgres, null, null);
     }
 
     /// <summary>
@@ -225,6 +232,25 @@ public sealed class MyProfileFunction : IFunction
             _ => UserRole.Employee,
         };
     }
+
+    /// <summary>
+    /// Computes whether the sales-org validity window covers "today" in the
+    /// bot's local date. Returns <c>null</c> when either bound is missing so
+    /// the card can hide the status line (we only show a definitive answer
+    /// when we have both bounds from SAP).
+    /// </summary>
+    private static bool? ComputeActive(DateOnly? validFrom, DateOnly? validTo)
+    {
+        if (!validFrom.HasValue && !validTo.HasValue)
+            return null;
+
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        if (validFrom.HasValue && today < validFrom.Value)
+            return false;
+        if (validTo.HasValue && today > validTo.Value)
+            return false;
+        return true;
+    }
 }
 
 /// <summary>
@@ -241,7 +267,10 @@ public sealed record MyProfileResponse(
     bool Approximate,
     IReadOnlyList<SalesOrder> TopOrders,
     MyProfileSalesOrgSource SalesOrgSource,
-    string? LoadError);
+    string? LoadError,
+    DateOnly? SalesOrgValidFrom = null,
+    DateOnly? SalesOrgValidTo = null,
+    bool? SalesOrgIsActive = null);
 
 /// <summary>Counts grouped by status, plus the grand total.</summary>
 public sealed record MyProfileOrderCounts(
