@@ -1,26 +1,16 @@
-# Probe pagination behavior of ZI_AISO_VALID_CUSTOMER for UE00/WH/AS.
+# Probe pagination behavior of ZI_AISO_VALID_CUSTOMER for UE00/WH/AS:
+#   - top=300 to see whether the result set really has more than 200 rows
+#   - top=200 skip=200 to see whether the next page contains 135001
+#   - top=50  to see whether 135001 is in the first 50
 #
-# Uses inline Basic Authorization header instead of -Credential $cred
-# because PowerShell's Get-Credential object doesn't always re-send the
-# password correctly on subsequent Invoke-WebRequest calls within the
-# same PS session.
+# NOTE: keeps the Get-Credential + Invoke-WebRequest -Credential pattern
+# from test-sap-customer135001.ps1 which already returns HTTP 200. The
+# inline Basic header rewrite returned 401 on the warm-up, so the
+# header hashtable form is rejected by SAP gateway here.
 #
 # Usage: .\test-sap-customer135001-pages.ps1
 
-$user = "ZAISO_BOT_US"
-$securePass = Read-Host "SAP password for $user" -AsSecureString
-$BSTR = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePass)
-$plainPass = [Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-[Runtime.InteropServices.Marshal]::ZeroFreeBSTR($BSTR)
-$basicAuth = "Basic " + [Convert]::ToBase64String(
-    [Text.Encoding]::UTF8.GetBytes("${user}:${plainPass}")
-)
-$commonHeaders = @{
-    Authorization = $basicAuth
-    Accept        = "application/json"
-}
-$plainPass = $null
-
+$cred = Get-Credential -UserName "ZAISO_BOT_US" -Message "SAP password for ZAISO_BOT_US"
 $base = "https://s40lp1.ucc.cit.tum.de/sap/opu/odata4/sap/zsb_aiso_so_v4/srvd_a2x/sap/zsd_aiso_sales_order/0001"
 
 function Test-Entity {
@@ -45,13 +35,11 @@ function Test-Entity {
     }
     $url = "$pathPart" + '?' + [string]::Join('&', $queryParts)
 
-    Start-Sleep -Seconds 3
-
     Write-Host ""
     Write-Host "=== $Label ===" -ForegroundColor Cyan
     Write-Host "URL: $url"
     try {
-        $resp = Invoke-WebRequest -Uri $url -Headers $commonHeaders -UseBasicParsing -Method Get -TimeoutSec 30
+        $resp = Invoke-WebRequest -Uri $url -Credential $cred -UseBasicParsing -Method Get
         Write-Host "HTTP $($resp.StatusCode)"
         $body = $resp.Content | ConvertFrom-Json
         if ($body.value.Count -eq 0) {
@@ -69,8 +57,7 @@ function Test-Entity {
     }
 }
 
-# Warm-up — same shape as the previously-working probe so we can confirm
-# the inline header is accepted before we trust the new shapes below.
+# Warm-up: same shape as the previously-working probe
 Test-Entity -Label "WARMUP: UE00 only top=5" `
     -Entity "ValidCustomer" `
     -FilterOData "SalesOrg%20eq%20'UE00'" `
