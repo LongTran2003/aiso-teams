@@ -75,6 +75,12 @@ internal static class TeamsCardBuilder
                 salesOrg = string.IsNullOrWhiteSpace(response.SalesOrg) ? "(none)" : response.SalesOrg,
                 email = string.IsNullOrWhiteSpace(response.Email) ? "(unlinked)" : response.Email,
                 hasEmail = string.IsNullOrWhiteSpace(response.Email) ? "false" : "true",
+                salesOrgValidFrom = response.SalesOrgValidFrom?.ToString("dd MMM yyyy") ?? "",
+                salesOrgValidTo = response.SalesOrgValidTo?.ToString("dd MMM yyyy") ?? "",
+                hasValidFrom = response.SalesOrgValidFrom.HasValue ? "true" : "false",
+                hasValidTo = response.SalesOrgValidTo.HasValue ? "true" : "false",
+                salesOrgStatus = DescribeSalesOrgStatus(response.SalesOrgIsActive),
+                hasSalesOrgStatus = response.SalesOrgIsActive.HasValue ? "true" : "false",
                 total = response.Counts.Total,
                 open = response.Counts.Open,
                 blocked = response.Counts.Blocked,
@@ -97,6 +103,19 @@ internal static class TeamsCardBuilder
                     formattedNetValue = $"{o.NetValue:N0} {o.Currency}"
                 }).ToList()
             });
+
+    /// <summary>
+    /// Renders the Sales-org validity status into a short label the card can
+    /// colour: <c>Active</c>, <c>Expired</c>, <c>Pending</c>. Only called when
+    /// <c>SalesOrgIsActive</c> has a value (the template hides the row otherwise).
+    /// </summary>
+    private static string DescribeSalesOrgStatus(bool? isActive)
+        => isActive switch
+        {
+            true => "Active",
+            false => "Expired or pending",
+            _ => "Unknown",
+        };
 
     public static Attachment BuildLoadingCard() =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("loading.json");

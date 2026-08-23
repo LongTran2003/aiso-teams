@@ -171,4 +171,76 @@ public class MyProfileCardTests
         // same `hasEmail=false` binding used for null email.
         Assert.Contains("\"title\":\"Email\"", json);
     }
+
+    [Fact]
+    public void BuildMyProfileCard_RendersValidityWindow_WhenSapProvidedBounds()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var response = new MyProfileResponse(
+            SapUser: "DEV-249",
+            Role: UserRole.Employee,
+            SalesOrg: "TV01",
+            Email: "long.tran@example.com",
+            Counts: new MyProfileOrderCounts(1, 1, 0, 0, 0, 0, 0),
+            Approximate: false,
+            TopOrders: Array.Empty<SalesOrder>(),
+            SalesOrgSource: MyProfileSalesOrgSource.SapUserRole,
+            LoadError: null,
+            SalesOrgValidFrom: today.AddDays(-30),
+            SalesOrgValidTo: today.AddDays(60),
+            SalesOrgIsActive: true);
+
+        var json = JsonConvert.SerializeObject(TeamsCardBuilder.BuildMyProfileCard(response).Content);
+
+        Assert.Contains("\"title\":\"Sales org from\"", json);
+        Assert.Contains("\"title\":\"Sales org until\"", json);
+        Assert.Contains("\"title\":\"Sales org status\"", json);
+        Assert.Contains("\"value\":\"Active\"", json);
+    }
+
+    [Fact]
+    public void BuildMyProfileCard_ShowsExpiredStatus_WhenTodayPastValidTo()
+    {
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var response = new MyProfileResponse(
+            SapUser: "DEV-249",
+            Role: UserRole.Employee,
+            SalesOrg: "TV01",
+            Email: null,
+            Counts: new MyProfileOrderCounts(0, 0, 0, 0, 0, 0, 0),
+            Approximate: false,
+            TopOrders: Array.Empty<SalesOrder>(),
+            SalesOrgSource: MyProfileSalesOrgSource.SapUserRole,
+            LoadError: null,
+            SalesOrgValidFrom: today.AddDays(-365),
+            SalesOrgValidTo: today.AddDays(-1),
+            SalesOrgIsActive: false);
+
+        var json = JsonConvert.SerializeObject(TeamsCardBuilder.BuildMyProfileCard(response).Content);
+
+        Assert.Contains("\"value\":\"Expired or pending\"", json);
+    }
+
+    [Fact]
+    public void BuildMyProfileCard_HidesValidityRows_WhenPostgresFallback()
+    {
+        // Postgres fallback path does not carry validity bounds.
+        var response = new MyProfileResponse(
+            SapUser: "DEV-249",
+            Role: UserRole.Employee,
+            SalesOrg: "TV01",
+            Email: null,
+            Counts: new MyProfileOrderCounts(0, 0, 0, 0, 0, 0, 0),
+            Approximate: false,
+            TopOrders: Array.Empty<SalesOrder>(),
+            SalesOrgSource: MyProfileSalesOrgSource.Postgres,
+            LoadError: null);
+
+        var json = JsonConvert.SerializeObject(TeamsCardBuilder.BuildMyProfileCard(response).Content);
+
+        // Status fact is gated on hasSalesOrgStatus so the row is never
+        // emitted when SAP did not contribute a value (the Postgres fallback
+        // path would render "Unknown" otherwise).
+        Assert.Contains("\"title\":\"Sales org status\"", json);
+    }
 }

@@ -203,4 +203,59 @@ public class MyProfileFunctionTests
         public Task<IReadOnlyList<ActiveDelegation>> GetActiveDelegationsAsync(string? filterDelegatorUser = null, CancellationToken ct = default)
             => Task.FromResult<IReadOnlyList<ActiveDelegation>>(Array.Empty<ActiveDelegation>());
     }
+
+    [Fact]
+    public async Task MyProfile_SurfacesValidityFromSap_WhenSapReturnsBounds()
+    {
+        // DEV-251 is seeded with a validity window that covers today.
+        var sap = new MockSapClient();
+        var scope = new StubScopeLookup { Role = UserRole.Employee, SalesOrg = "TV01" };
+        var fn = new MyProfileFunction(sap, scope, NullLogger<MyProfileFunction>.Instance);
+        using var doc = JsonDocument.Parse("{}");
+
+        var result = await fn.ExecuteAsync(doc.RootElement, "DEV-251");
+
+        Assert.True(result.Success);
+        var payload = (MyProfileResponse)result.Payload!;
+        Assert.NotNull(payload.SalesOrgValidFrom);
+        Assert.NotNull(payload.SalesOrgValidTo);
+        Assert.True(payload.SalesOrgIsActive);
+    }
+
+    [Fact]
+    public async Task MyProfile_MarksExpired_WhenSapValidToIsInThePast()
+    {
+        // DEV-252 is seeded with an expired validity window (today > ValidTo).
+        var sap = new MockSapClient();
+        var scope = new StubScopeLookup { Role = UserRole.Employee, SalesOrg = "TV01" };
+        var fn = new MyProfileFunction(sap, scope, NullLogger<MyProfileFunction>.Instance);
+        using var doc = JsonDocument.Parse("{}");
+
+        var result = await fn.ExecuteAsync(doc.RootElement, "DEV-252");
+
+        Assert.True(result.Success);
+        var payload = (MyProfileResponse)result.Payload!;
+        Assert.NotNull(payload.SalesOrgValidTo);
+        Assert.False(payload.SalesOrgIsActive);
+    }
+
+    [Fact]
+    public async Task MyProfile_LeavesIsActiveNull_WhenSapRowHasNoBounds()
+    {
+        // DEV-249 is the default seed: row exists but carries no validity
+        // window. The function should populate null bounds + null IsActive
+        // so the card can hide the status row rather than show "Unknown".
+        var sap = new MockSapClient();
+        var scope = new StubScopeLookup { Role = UserRole.Employee, SalesOrg = "TV01" };
+        var fn = new MyProfileFunction(sap, scope, NullLogger<MyProfileFunction>.Instance);
+        using var doc = JsonDocument.Parse("{}");
+
+        var result = await fn.ExecuteAsync(doc.RootElement, "DEV-249");
+
+        Assert.True(result.Success);
+        var payload = (MyProfileResponse)result.Payload!;
+        Assert.Null(payload.SalesOrgValidFrom);
+        Assert.Null(payload.SalesOrgValidTo);
+        Assert.Null(payload.SalesOrgIsActive);
+    }
 }

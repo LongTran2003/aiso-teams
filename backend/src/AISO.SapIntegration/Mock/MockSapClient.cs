@@ -573,6 +573,21 @@ public sealed class MockSapClient : ISapClient
             "DEV-024" => new SapUserRoleRow(normalized, "MANAGER", "UE00"),
             // Quân: Admin + DN00 (smoke test for Admin)
             "DEV-230" => new SapUserRoleRow(normalized, "ADMIN", "DN00"),
+            // DEV-251: Employee + TV01 with a validity window that covers today.
+            // Used by B3 tests to assert MyProfileResponse.SalesOrgIsActive.
+            "DEV-251" => new SapUserRoleRow(
+                normalized,
+                "EMPLOYEE",
+                "TV01",
+                ValidFrom: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-30),
+                ValidTo: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(60)),
+            // DEV-252: Employee + TV01 with expired window (today > ValidTo).
+            "DEV-252" => new SapUserRoleRow(
+                normalized,
+                "EMPLOYEE",
+                "TV01",
+                ValidFrom: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-365),
+                ValidTo: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1)),
             // Generic DEV-* users get a default Employee + TV01 row.
             _ when normalized.StartsWith("DEV-", StringComparison.Ordinal)
                 => new SapUserRoleRow(normalized, "EMPLOYEE", "TV01"),
