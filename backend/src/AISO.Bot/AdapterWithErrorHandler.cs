@@ -18,6 +18,8 @@ public class AdapterWithErrorHandler : CloudAdapter
         {
             logger.LogError(exception, "[OnTurnError] unhandled error: {Message}", exception.Message);
 
+            var isColdStart = exception is OperationCanceledException;
+
             try
             {
                 var errorCard = BuildUnhandledErrorCard(exception);
@@ -26,13 +28,19 @@ public class AdapterWithErrorHandler : CloudAdapter
             }
             catch
             {
-                await turnContext.SendActivityAsync(
-                    "Unexpected bot error. Please try again.");
-
-                if (turnContext.Activity.ChannelId == "msteams")
+                // Cold-start or already-cancelled context: try a plain text message.
+                // Some failures won't even allow SendActivity — best-effort only.
+                try
                 {
                     await turnContext.SendActivityAsync(
-                        "To continue, restart the conversation or contact your admin.");
+                        isColdStart
+                            ? "The bot is starting up. Please send your message again in a moment."
+                            : "Unexpected bot error. Please try again.",
+                        cancellationToken: default);
+                }
+                catch
+                {
+                    // Give up gracefully — Teams will show its own fallback message.
                 }
             }
         };
@@ -49,6 +57,15 @@ public class AdapterWithErrorHandler : CloudAdapter
         {
             return TeamsCardBuilder.BuildErrorCard(
                 "UNAUTHENTICATED",
+                exception.Message);
+        }
+
+        // Cold-start race: App Service just woke up, SAP TLS handshake, JIT,
+        // or first request after deploy. The very next message usually works.
+        if (exception is OperationCanceledException)
+        {
+            return TeamsCardBuilder.BuildErrorCard(
+                "COLD_START",
                 exception.Message);
         }
 
