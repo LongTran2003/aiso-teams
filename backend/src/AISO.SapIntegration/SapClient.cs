@@ -1429,7 +1429,11 @@ public class SapClient : ISapClient
         int top,
         CancellationToken ct)
     {
-        var take = Math.Clamp(top, 1, 200);
+        // Cap raised from 200 → 500 to keep 135001 inside the dropdown
+        // even if ZI_AISO_VALID_CUSTOMER returns more rows for the
+        // UE00/WH/AS combo. The OData service is still capped server-side
+        // so the UI also offers a direct customer lookup fallback.
+        var take = Math.Clamp(top, 1, 500);
         var builder = new ODataQueryBuilder("ValidCustomer")
             .AddCustomParam("sap-client", "324")
             .Top(take);

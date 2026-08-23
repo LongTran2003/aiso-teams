@@ -1584,9 +1584,12 @@ public class TeamsBot : TeamsActivityHandler
                             return;
                         }
 
-                        var customers = await _sap.GetValidCustomersAsync(salesOrg: org, distChannel: chan, division: div, top: 100, ct: cancellationToken);
+                        // top raised from 100 → 500 now that SapClient caps at 500.
+                        // Without this, customers past row 200 (e.g. 135001) never
+                        // appear in the dropdown.
+                        var customers = await _sap.GetValidCustomersAsync(salesOrg: org, distChannel: chan, division: div, top: 500, ct: cancellationToken);
                         if (customers.Count == 0)
-                            customers = await _sap.GetValidCustomersAsync(top: 100, ct: cancellationToken);
+                            customers = await _sap.GetValidCustomersAsync(top: 500, ct: cancellationToken);
 
                         var customerChoices = customers
                             .Select(c => new AISO.AiOrchestration.Functions.ConfirmCreateChoice(c.Label, c.Key))
@@ -1612,6 +1615,7 @@ public class TeamsBot : TeamsActivityHandler
                         {
                             salesAreaKey = valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken) ? areaToken.ToString()?.Trim() : null;
                             var customerKey = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken) ? custToken.ToString()?.Trim() : null;
+                            var manualCustomerRaw = valueObj.TryGetValue("manualCustomer", StringComparison.OrdinalIgnoreCase, out var manualToken) ? manualToken.ToString()?.Trim() : null;
 
                             if (string.IsNullOrWhiteSpace(salesAreaKey) || !SapSalesArea.TryParseKey(salesAreaKey, out var org, out var chan, out var div))
                             {
@@ -1619,9 +1623,38 @@ public class TeamsBot : TeamsActivityHandler
                                 return;
                             }
 
+                            // Manual customer entry path: user typed a customer number that
+                            // wasn't in the dropdown. Fall back to a direct SAP lookup so we
+                            // don't silently submit a customer that isn't valid for the
+                            // selected sales area.
+                            if (string.IsNullOrWhiteSpace(customerKey) && !string.IsNullOrWhiteSpace(manualCustomerRaw))
+                            {
+                                var manualOk = await _sap.IsCustomerValidForSalesAreaAsync(
+                                    manualCustomerRaw,
+                                    org,
+                                    chan,
+                                    div,
+                                    cancellationToken);
+
+                                if (manualOk != true)
+                                {
+                                    await turnContext.SendActivityAsync(
+                                        MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                            "VALIDATION",
+                                            manualOk == null
+                                                ? "SAP is unavailable; cannot verify that customer."
+                                                : $"Customer '{manualCustomerRaw}' is not assigned to {org} / {chan} / {div}.")),
+                                        cancellationToken);
+                                    return;
+                                }
+
+                                customerKey = manualCustomerRaw.TrimStart('0');
+                                if (string.IsNullOrEmpty(customerKey)) customerKey = "0";
+                            }
+
                             if (string.IsNullOrWhiteSpace(customerKey) || !SapValidCustomer.TryParseKey(customerKey, out var custId, out _, out _, out _))
                             {
-                                await turnContext.SendActivityAsync(MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Please select a valid Customer.")), cancellationToken);
+                                await turnContext.SendActivityAsync(MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Please select a valid Customer or type one in the manual field.")), cancellationToken);
                                 return;
                             }
 

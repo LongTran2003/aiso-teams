@@ -31,8 +31,7 @@
       "id": "customer",
       "label": "Select Customer",
       "style": "compact",
-      "isRequired": true,
-      "errorMessage": "Customer is required",
+      "isRequired": false,
       "value": "${customer}",
       "choices": [
         {
@@ -41,6 +40,22 @@
           "value": "${value}"
         }
       ]
+    },
+    {
+      "type": "Input.Text",
+      "id": "manualCustomer",
+      "label": "Customer not in list? Type the customer number (e.g. 135001 or 0000135001)",
+      "placeholder": "135001",
+      "isRequired": false,
+      "regex": "^0*[0-9]{1,10}$",
+      "errorMessage": "Customer must be 1-10 digits"
+    },
+    {
+      "type": "TextBlock",
+      "text": "Either pick from the dropdown above OR enter a customer number below. If both are filled, the typed value wins.",
+      "size": "Small",
+      "isSubtle": true,
+      "wrap": true
     }
   ],
   "actions": [
