@@ -134,6 +134,16 @@ public sealed class CreateOrderFunction : IFunction
             })
             .ToList();
 
+        // If SAP is unreachable/returning 401, all three will be empty.
+        // Show a clear error so the user knows it's a system issue, not an empty dropdown.
+        if (areas.Count == 0 && customers.Count == 0 && materialChoices.Count == 0)
+        {
+            return FunctionResult.Fail(
+                "SAP system is currently unavailable or your account does not have access. " +
+                "Please contact your administrator. (Error: SalesArea/Customer/Material data unavailable)",
+                "SAP_UNAVAILABLE");
+        }
+
         // Prefer a ValidCustomer row matching draft customer (+ user org when possible).
         ConfirmCreateChoice? selected = null;
         if (customerChoices.Count > 0)
@@ -196,7 +206,7 @@ public sealed class CreateOrderFunction : IFunction
             "CreateOrder confirm step: customer={Customer} area={Org}/{Chan}/{Div} lines={LineCount} areas={AreaCount} customers={CustomerCount} by={User}",
             customer, salesOrg, distChannel, division, lines.Count, salesAreaChoices.Count, customerChoices.Count, requestingSapUser);
 
-        var debugInfo = $"[DEBUG] areas={areas.Count}, customers={customerChoices.Count}, materials={materialChoices.Count}, userOrg={userOrg ?? "(null)"}";
+        var debugInfo = string.Empty; // Reserved for future debug output
 
         return FunctionResult.Ok(new ConfirmCreateOrderResponse(
             Customer: customerFormValue,

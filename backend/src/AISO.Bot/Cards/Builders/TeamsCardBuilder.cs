@@ -191,6 +191,7 @@ internal static class TeamsCardBuilder
         "NOT_AUTHORIZED" => "Not authorized",
         "UNAUTHENTICATED" => "Session expired",
         "SAP_ERROR" => "SAP error",
+        "SAP_UNAVAILABLE" => "SAP unavailable",
         "COLD_START" => "Bot is starting up",
         _ => "Something went wrong"
     };
@@ -202,6 +203,7 @@ internal static class TeamsCardBuilder
         "VALIDATION" => "Check the details below and try again.",
         "UNAUTHENTICATED" => "Your session expired or is not authenticated. Send any message to sign in again.",
         "SAP_ERROR" => "SAP could not complete this request.",
+        "SAP_UNAVAILABLE" => "The SAP system is unreachable or your account does not have access. Please contact your administrator.",
         "COLD_START" => "The bot is warming up after a restart. Please send your message again in a few seconds — the next reply is usually faster.",
         _ => "The bot could not complete this request right now. Please try again in a moment."
     };
