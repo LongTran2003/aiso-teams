@@ -3279,6 +3279,14 @@ public class TeamsBot : TeamsActivityHandler
                         confirmCreate.SalesAreaKey),
                     cancellationToken);
 
+                // Also send debug info as a text message so it appears in Teams chat
+                if (!string.IsNullOrWhiteSpace(confirmCreate.DebugInfo))
+                {
+                    await turnContext.SendActivityAsync(
+                        MessageFactory.Text(confirmCreate.DebugInfo),
+                        cancellationToken);
+                }
+
                 _logger.LogInformation(
                     "Bot replied with confirm-create card for customer {Customer} ({LineCount} lines)",
                     confirmCreate.Customer,

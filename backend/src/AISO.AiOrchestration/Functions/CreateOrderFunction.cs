@@ -196,6 +196,8 @@ public sealed class CreateOrderFunction : IFunction
             "CreateOrder confirm step: customer={Customer} area={Org}/{Chan}/{Div} lines={LineCount} areas={AreaCount} customers={CustomerCount} by={User}",
             customer, salesOrg, distChannel, division, lines.Count, salesAreaChoices.Count, customerChoices.Count, requestingSapUser);
 
+        var debugInfo = $"[DEBUG] areas={areas.Count}, customers={customerChoices.Count}, materials={materialChoices.Count}, userOrg={userOrg ?? "(null)"}";
+
         return FunctionResult.Ok(new ConfirmCreateOrderResponse(
             Customer: customerFormValue,
             SalesOrg: salesOrg.Trim().ToUpperInvariant(),
@@ -207,7 +209,8 @@ public sealed class CreateOrderFunction : IFunction
             Division: division.Trim().ToUpperInvariant(),
             SalesAreaChoices: salesAreaChoices,
             CustomerChoices: customerChoices,
-            MaterialChoices: materialChoices));
+            MaterialChoices: materialChoices,
+            DebugInfo: debugInfo));
     }
 
     private static string? ReadString(JsonElement element, string name) =>
@@ -232,7 +235,8 @@ public sealed record ConfirmCreateOrderResponse(
     string Division = "00",
     IReadOnlyList<ConfirmCreateChoice>? SalesAreaChoices = null,
     IReadOnlyList<ConfirmCreateChoice>? CustomerChoices = null,
-    IReadOnlyList<ConfirmCreateChoice>? MaterialChoices = null)
+    IReadOnlyList<ConfirmCreateChoice>? MaterialChoices = null,
+    string? DebugInfo = null)
 {
     /// <summary>First line material (tests / legacy callers).</summary>
     public string Material => Lines.Count > 0 ? Lines[0].Material : string.Empty;
