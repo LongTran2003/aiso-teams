@@ -56,6 +56,9 @@ logs/
 # SAP - exported credentials
 sap/credentials.txt
 
+# Local dev tools
+tools/
+
 # Output / temporary
 output/
 tmp/
