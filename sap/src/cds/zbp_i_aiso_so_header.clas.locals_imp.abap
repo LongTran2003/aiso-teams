@@ -35,11 +35,13 @@ CLASS lcl_buffer DEFINITION.
              cid             TYPE string,
              requesting_user TYPE char100,
              customer        TYPE kunnr,
+             ship_to           TYPE kunnr,
              doc_type        TYPE auart,
              sales_org       TYPE vkorg,
              dist_channel    TYPE vtweg,
              division        TYPE spart,
              currency        TYPE waers,
+             req_delivery_date TYPE sydatum,
            END OF ty_create_header,
            tt_create_header TYPE TABLE OF ty_create_header WITH EMPTY KEY.
 
@@ -541,24 +543,6 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
 
     " ══ Validate customer + sales area ══
     DATA(lv_customer) = |{ ls_entity-Customer ALPHA = IN }|.
-    DATA: lv_debug_timestamp TYPE c LENGTH 14.
-CONCATENATE sy-datum sy-uzeit INTO lv_debug_timestamp.
-
-TRY.
-    DATA(lv_debug_id) = cl_system_uuid=>create_uuid_c32_static( ).
-  CATCH cx_uuid_error.
-    CLEAR lv_debug_id.
-ENDTRY.
-INSERT zaiso_audit FROM @( VALUE #(
-  mandt       = sy-mandt
-  audit_id    = lv_debug_id
-  sap_user    = sy-uname
-  action_type = 'DEBUG_CREATE'
-  so_number   = ''
-  status      = 'DEBUG'
-  remarks     = |CUST=[{ lv_customer }] SO=[{ ls_entity-SalesOrg }] DC=[{ ls_entity-DistChannel }] DV=[{ ls_entity-Division }]|
-  created_at  = lv_debug_timestamp
-) ).
     SELECT SINGLE kunnr FROM knvv
       INTO @DATA(lv_cust_valid)
       WHERE kunnr = @lv_customer
@@ -584,11 +568,13 @@ INSERT zaiso_audit FROM @( VALUE #(
       cid             = ls_entity-%cid
       requesting_user = ls_entity-RequestingTeamsUser
       customer        = lv_customer
+      ship_to         = |{ ls_entity-ShipToParty ALPHA = IN }|
       doc_type        = ls_entity-DocType
       sales_org       = ls_entity-SalesOrg
       dist_channel    = ls_entity-DistChannel
       division        = ls_entity-Division
       currency        = ls_entity-Currency
+      req_delivery_date     = ls_entity-RequestedDeliveryDate
     ) TO lcl_buffer=>gt_create_header.
 
     " ══ Register mapped (chưa có key, late numbering gán sau) ══
@@ -1346,7 +1332,7 @@ METHOD cleanup.
          lcl_buffer=>gt_create_items.      " ← THÊM
 ENDMETHOD.
 
-  METHOD adjust_numbers.
+    METHOD adjust_numbers.
   DATA: ls_header_in       TYPE bapisdhd1,
         ls_header_inx      TYPE bapisdhd1x,
         lt_partners        TYPE TABLE OF bapiparnr,
@@ -1366,11 +1352,52 @@ ENDMETHOD.
            lt_items_in, lt_items_inx, lt_schedules_in, lt_schedules_inx,
            lt_return, lv_so_number.
 
+    " ═══════════════════════════════════════════════
+    " BƯỚC 3 (all-or-nothing): validate MVKE cho TẤT CẢ item
+    " của header này TRƯỚC khi build bất kỳ BAPI table nào
+    " ═══════════════════════════════════════════════
+    DATA(lv_has_invalid_mvke) = abap_false.
+    DATA(lv_invalid_mvke_msg) = ''.
+
+    LOOP AT lcl_buffer=>gt_create_items INTO DATA(ls_check_mvke)
+         WHERE cid_ref = ls_hdr-cid.
+
+     SELECT SINGLE material FROM zi_aiso_valid_material_sales
+  INTO @DATA(lv_valid_material)
+  WHERE material  = @ls_check_mvke-material
+    AND salesorg  = @ls_hdr-sales_org
+    AND distchannel = @ls_hdr-dist_channel
+    AND plant     = @ls_check_mvke-plant.
+
+      IF sy-subrc <> 0.
+        lv_has_invalid_mvke = abap_true.
+        lv_invalid_mvke_msg = |Material { ls_check_mvke-material } chưa có sales view cho { ls_hdr-sales_org }/{ ls_hdr-dist_channel }|.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
+
+    IF lv_has_invalid_mvke = abap_true.
+      APPEND VALUE #( %pid        = ls_hdr-cid
+                       %fail-cause = if_abap_behv=>cause-not_found )
+             TO failed-salesorder.
+      APPEND VALUE #( %pid = ls_hdr-cid
+                       %msg = new_message(
+                         id = '00' number = '001'
+                         severity = if_abap_behv_message=>severity-error
+                         v1 = lv_invalid_mvke_msg ) )
+             TO reported-salesorder.
+      CONTINUE.  " skip toàn bộ header này, không gọi BAPI
+    ENDIF.
+
+    " ═══════════════════════════════════════════════
+    " Build header
+    " ═══════════════════════════════════════════════
     ls_header_in-doc_type   = ls_hdr-doc_type.
     ls_header_in-sales_org  = ls_hdr-sales_org.
     ls_header_in-distr_chan = ls_hdr-dist_channel.
     ls_header_in-division   = ls_hdr-division.
     ls_header_in-currency   = ls_hdr-currency.
+    ls_header_in-req_date_h = ls_hdr-req_delivery_date.
 
     ls_header_inx-doc_type   = 'X'.
     ls_header_inx-sales_org  = 'X'.
@@ -1378,18 +1405,42 @@ ENDMETHOD.
     ls_header_inx-division   = 'X'.
     ls_header_inx-currency   = 'X'.
     ls_header_inx-updateflag = 'I'.
+    ls_header_inx-req_date_h = 'X'.
 
-    " FIX: ALPHA conversion cho customer
-    APPEND VALUE #( partn_role = 'AG'
-                     partn_numb = |{ ls_hdr-customer ALPHA = IN }| ) TO lt_partners.
+    " ═══════════════════════════════════════════════
+    " BƯỚC 1: Sold-to (AG) + Ship-to (WE)
+    " ═══════════════════════════════════════════════
+    DATA(lv_customer_alpha) = |{ ls_hdr-customer ALPHA = IN }|.
 
+DATA(lv_ship_to) = ls_hdr-ship_to.
+
+IF lv_ship_to IS INITIAL.
+  " User không chọn Ship-to → fallback tự suy ra như cũ
+  SELECT SINGLE parvw, kunn2 FROM knvp
+    INTO @DATA(ls_ship_to)
+    WHERE kunnr = @lv_customer_alpha
+      AND vkorg = @ls_hdr-sales_org
+      AND vtweg = @ls_hdr-dist_channel
+      AND spart = @ls_hdr-division
+      AND parvw = 'WE'.
+
+  lv_ship_to = COND kunnr( WHEN sy-subrc = 0 AND ls_ship_to-kunn2 IS NOT INITIAL
+                            THEN ls_ship_to-kunn2
+                            ELSE lv_customer_alpha ).
+ENDIF.
+
+APPEND VALUE #( partn_role = 'AG' partn_numb = lv_customer_alpha ) TO lt_partners.
+APPEND VALUE #( partn_role = 'WE' partn_numb = lv_ship_to )        TO lt_partners.
+
+    " ═══════════════════════════════════════════════
+    " Build items + schedule lines (BƯỚC 2: req_date vào schedule)
+    " ═══════════════════════════════════════════════
     lv_item_no = 0.
     LOOP AT lcl_buffer=>gt_create_items INTO DATA(ls_itm)
          WHERE cid_ref = ls_hdr-cid.
 
       lv_item_no = lv_item_no + 10.
 
-      " FIX: ALPHA conversion cho material
       APPEND VALUE #( itm_number = lv_item_no
                        material   = |{ ls_itm-material ALPHA = IN }|
                        plant      = ls_itm-plant
@@ -1402,11 +1453,14 @@ ENDMETHOD.
                        target_qty = 'X'
                        target_qu  = 'X' ) TO lt_items_inx.
 
-      APPEND VALUE #( itm_number = lv_item_no
-                       req_qty    = ls_itm-order_qty ) TO lt_schedules_in.
+     APPEND VALUE #( itm_number = lv_item_no
+                 req_date   = COND #( WHEN ls_hdr-req_delivery_date IS NOT INITIAL
+                                       THEN ls_hdr-req_delivery_date ELSE space )
+                 req_qty    = ls_itm-order_qty ) TO lt_schedules_in.
 
-      APPEND VALUE #( itm_number = lv_item_no
-                       req_qty    = 'X' ) TO lt_schedules_inx.
+APPEND VALUE #( itm_number = lv_item_no
+                 req_date   = COND #( WHEN ls_hdr-req_delivery_date IS NOT INITIAL THEN 'X' ELSE space )
+                 req_qty    = 'X' ) TO lt_schedules_inx.
     ENDLOOP.
 
     CALL FUNCTION 'BAPI_SALESORDER_CREATEFROMDAT2'

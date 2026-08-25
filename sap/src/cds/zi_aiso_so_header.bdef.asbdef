@@ -22,7 +22,7 @@ lock master
   action forceCancel parameter zaiso_a_override result [1] $self;
   action forceRelease parameter zaiso_a_override result [1] $self;
 
-  field ( readonly ) SoNumber, OverallStatus, CustomerName, RequestedDeliveryDate,
+  field ( readonly ) SoNumber, OverallStatus, CustomerName,
                      NetValue, DocDate, CreatedBy, CreatedDate,
                      CreditStatus, DeliveryBlock, BillingStatus, IsCancelled,
                      HasInvalidMaterial;
