@@ -1739,7 +1739,17 @@ public class TeamsBot : TeamsActivityHandler
                             var materialChoices = filteredMaterials
                                 .Select(m =>
                                 {
-                                    var name = matDict.TryGetValue(m.Material, out var n) ? n : "Unknown";
+                                    // Prefer the MaterialName that already came back on the
+                                    // ValidMaterialSales row (single round-trip, no
+                                    // cross-lookup needed). Fall back to the broader
+                                    // Material entity's name. Never display "Unknown" so
+                                    // operators see real descriptions even when SAP didn't
+                                    // resolve one — we render the material code instead.
+                                    var name = !string.IsNullOrWhiteSpace(m.MaterialName)
+                                        ? m.MaterialName.Trim()
+                                        : (matDict.TryGetValue(m.Material, out var n) && !string.IsNullOrWhiteSpace(n)
+                                            ? n.Trim()
+                                            : $"Material {m.Material.TrimStart('0')}");
                                     var actualPlant = materialPlantsByMat.TryGetValue(m.Material, out var mp) && !string.IsNullOrWhiteSpace(mp.Plant)
                                         ? mp.Plant
                                         : "1010";
