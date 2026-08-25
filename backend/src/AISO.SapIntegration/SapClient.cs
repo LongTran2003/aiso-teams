@@ -1554,19 +1554,23 @@ public class SapClient : ISapClient
                 or System.Net.HttpStatusCode.BadRequest)
             {
                 // Entity set not published yet, or filter rejected — caller may fall back.
+                var errBody = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogWarning(
-                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode}",
+                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode} Body={Body}",
                     normalized,
-                    (int)response.StatusCode);
+                    (int)response.StatusCode,
+                    errBody);
                 return null;
             }
 
             if (!response.IsSuccessStatusCode)
             {
+                var errBody = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogWarning(
-                    "SAP UserRole lookup failed for {SapUser}: {StatusCode}",
+                    "SAP UserRole lookup failed for {SapUser}: {StatusCode} Body={Body}",
                     normalized,
-                    (int)response.StatusCode);
+                    (int)response.StatusCode,
+                    errBody);
                 return null;
             }
 
@@ -1611,19 +1615,23 @@ public class SapClient : ISapClient
             {
                 // Entity set not published yet (e.g. CDS view not activated) —
                 // caller should fall back to Postgres user_mappings.
+                var errBody = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogWarning(
-                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode}",
+                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode} Body={Body}",
                     normalized,
-                    (int)response.StatusCode);
+                    (int)response.StatusCode,
+                    errBody);
                 return null;
             }
 
             if (!response.IsSuccessStatusCode)
             {
+                var errBody = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogWarning(
-                    "SAP UserRole lookup failed for {SapUser}: {StatusCode}",
+                    "SAP UserRole lookup failed for {SapUser}: {StatusCode} Body={Body}",
                     normalized,
-                    (int)response.StatusCode);
+                    (int)response.StatusCode,
+                    errBody);
                 return null;
             }
 
