@@ -192,8 +192,6 @@
         "action": "create_so_confirm",
         "salesArea": "${salesAreaKey}",
         "customer": "${customerKey}",
-        "plant": "${plant}",
-        "unit": "${unit}",
         "purchaseOrderRef": "${purchaseOrderRef}",
         "requestedDeliveryDate": "${requestedDeliveryDate}"
       }

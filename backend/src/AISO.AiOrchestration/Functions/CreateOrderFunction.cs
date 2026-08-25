@@ -47,7 +47,9 @@ public sealed class CreateOrderFunction : IFunction
         var distChannel = ReadString(parameters, "dist_channel") ?? "10";
         var division = ReadString(parameters, "division") ?? "00";
         var currency = ReadString(parameters, "currency") ?? "USD";
-        var unit = "EA";
+        // No hard-coded "EA" default. If the LLM doesn't pass a unit we'll resolve
+        // the first available material's BaseUnit from SAP below.
+        string? unit = ReadString(parameters, "unit");
 
         var userOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
         if (string.IsNullOrWhiteSpace(salesOrg))
@@ -134,6 +136,11 @@ public sealed class CreateOrderFunction : IFunction
             })
             .ToList();
 
+        // If the LLM didn't pass a unit, resolve it from the first material's
+        // BaseUnit so we never silently fall back to a hard-coded "EA".
+        if (string.IsNullOrWhiteSpace(unit) && materialPlants.Count > 0)
+            unit = materialPlants[0].BaseUnit;
+
         // If SAP is unreachable/returning 401, all three will be empty.
         // Show a clear error so the user knows it's a system issue, not an empty dropdown.
         if (areas.Count == 0 && customers.Count == 0 && materialChoices.Count == 0)
@@ -213,7 +220,7 @@ public sealed class CreateOrderFunction : IFunction
             SalesOrg: salesOrg.Trim().ToUpperInvariant(),
             Currency: currency.Trim().ToUpperInvariant(),
             Plant: "", // Plant will be read from Material
-            Unit: unit.Trim().ToUpperInvariant(),
+            Unit: string.IsNullOrWhiteSpace(unit) ? string.Empty : unit.Trim().ToUpperInvariant(),
             Lines: lines,
             DistChannel: distChannel.Trim().ToUpperInvariant(),
             Division: division.Trim().ToUpperInvariant(),
