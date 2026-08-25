@@ -1539,7 +1539,7 @@ public class SapClient : ISapClient
             return false;
 
         var normalized = sapUserId.Trim().ToUpperInvariant();
-        var url = new ODataQueryBuilder("UserRoles")
+        var url = new ODataQueryBuilder("UserRole")
             .AddCustomParam("sap-client", "324")
             .Filter("SapUser", "eq", normalized)
             .Top(1)
@@ -1555,7 +1555,7 @@ public class SapClient : ISapClient
             {
                 // Entity set not published yet, or filter rejected — caller may fall back.
                 _logger.LogWarning(
-                    "SAP UserRoles lookup unavailable for {SapUser}: {StatusCode}",
+                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode}",
                     normalized,
                     (int)response.StatusCode);
                 return null;
@@ -1564,20 +1564,20 @@ public class SapClient : ISapClient
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning(
-                    "SAP UserRoles lookup failed for {SapUser}: {StatusCode}",
+                    "SAP UserRole lookup failed for {SapUser}: {StatusCode}",
                     normalized,
                     (int)response.StatusCode);
                 return null;
             }
 
             var rawJson = await response.Content.ReadAsStringAsync(ct);
-            var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleQueryDto>>(
+            var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleDto>>(
                 rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             return result?.Value is { Count: > 0 };
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "SAP UserRoles lookup error for {SapUser}", normalized);
+            _logger.LogWarning(ex, "SAP UserRole lookup error for {SapUser}", normalized);
             return null;
         }
     }
