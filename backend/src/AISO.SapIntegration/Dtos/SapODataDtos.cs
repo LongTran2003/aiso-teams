@@ -98,6 +98,11 @@ internal class SapSalesOrderItemDto
     public string? RejectionRsn { get; set; }
 }
 
+/// <summary>
+/// CDS view <c>ZI_AISO_USER_ROLE</c> row. Exposed as the OData
+/// <c>UserRole</c> entity set in <c>ZSD_AISO_SALES_ORDER</c>.
+/// Field names match the CDS element names after PascalCase mapping.
+/// </summary>
 internal class SapUserRoleDto
 {
     public string? SapUser { get; set; }
