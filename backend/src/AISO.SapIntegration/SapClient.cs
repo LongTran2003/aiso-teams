@@ -1550,33 +1550,34 @@ public class SapClient : ISapClient
         try
         {
             var response = await _httpClient.GetAsync(url, ct);
+            var rawBody = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogInformation(
+                "SAP UserRole lookup {SapUser}: status={StatusCode} body={Body}",
+                normalized,
+                (int)response.StatusCode,
+                rawBody);
             if (response.StatusCode is System.Net.HttpStatusCode.NotFound
                 or System.Net.HttpStatusCode.BadRequest)
             {
                 // Entity set not published yet, or filter rejected — caller may fall back.
-                var errBody = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogWarning(
-                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode} Body={Body}",
+                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode}",
                     normalized,
-                    (int)response.StatusCode,
-                    errBody);
+                    (int)response.StatusCode);
                 return null;
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                var errBody = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogWarning(
-                    "SAP UserRole lookup failed for {SapUser}: {StatusCode} Body={Body}",
+                    "SAP UserRole lookup failed for {SapUser}: {StatusCode}",
                     normalized,
-                    (int)response.StatusCode,
-                    errBody);
+                    (int)response.StatusCode);
                 return null;
             }
 
-            var rawJson = await response.Content.ReadAsStringAsync(ct);
             var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleDto>>(
-                rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                rawBody, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             return result?.Value is { Count: > 0 };
         }
         catch (Exception ex)
@@ -1610,34 +1611,35 @@ public class SapClient : ISapClient
         try
         {
             var response = await _httpClient.GetAsync(url, ct);
+            var rawBody = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogInformation(
+                "SAP UserRole lookup {SapUser}: status={StatusCode} body={Body}",
+                normalized,
+                (int)response.StatusCode,
+                rawBody);
             if (response.StatusCode is System.Net.HttpStatusCode.NotFound
                 or System.Net.HttpStatusCode.BadRequest)
             {
                 // Entity set not published yet (e.g. CDS view not activated) —
                 // caller should fall back to Postgres user_mappings.
-                var errBody = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogWarning(
-                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode} Body={Body}",
+                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode}",
                     normalized,
-                    (int)response.StatusCode,
-                    errBody);
+                    (int)response.StatusCode);
                 return null;
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                var errBody = await response.Content.ReadAsStringAsync(ct);
                 _logger.LogWarning(
-                    "SAP UserRole lookup failed for {SapUser}: {StatusCode} Body={Body}",
+                    "SAP UserRole lookup failed for {SapUser}: {StatusCode}",
                     normalized,
-                    (int)response.StatusCode,
-                    errBody);
+                    (int)response.StatusCode);
                 return null;
             }
 
-            var rawJson = await response.Content.ReadAsStringAsync(ct);
             var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleDto>>(
-                rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                rawBody, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             var row = result?.Value?.FirstOrDefault();
             if (row is null)
