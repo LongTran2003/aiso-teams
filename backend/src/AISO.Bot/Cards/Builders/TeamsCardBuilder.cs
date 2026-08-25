@@ -299,7 +299,8 @@ internal static class TeamsCardBuilder
 
         if (chanChoices.Count > 0)
         {
-            body.Add(new Dictionary<string, object> {
+            body.Add(new Dictionary<string, object>
+            {
                 ["type"] = "Input.ChoiceSet",
                 ["id"] = "distChannel",
                 ["label"] = "Distribution Channel",
@@ -312,7 +313,8 @@ internal static class TeamsCardBuilder
         }
         else
         {
-            body.Add(new Dictionary<string, object> {
+            body.Add(new Dictionary<string, object>
+            {
                 ["type"] = "TextBlock",
                 ["text"] = "(select Sales Organization to load)",
                 ["size"] = "Small",
@@ -325,7 +327,8 @@ internal static class TeamsCardBuilder
 
         if (divChoices.Count > 0)
         {
-            body.Add(new Dictionary<string, object> {
+            body.Add(new Dictionary<string, object>
+            {
                 ["type"] = "Input.ChoiceSet",
                 ["id"] = "division",
                 ["label"] = "Division",
@@ -338,7 +341,8 @@ internal static class TeamsCardBuilder
         }
         else
         {
-            body.Add(new Dictionary<string, object> {
+            body.Add(new Dictionary<string, object>
+            {
                 ["type"] = "TextBlock",
                 ["text"] = "(select Distribution Channel to load)",
                 ["size"] = "Small",
@@ -347,7 +351,8 @@ internal static class TeamsCardBuilder
             });
         }
 
-        return new Dictionary<string, object> {
+        return new Dictionary<string, object>
+        {
             ["type"] = "AdaptiveCard",
             ["$schema"] = "http://adaptivecards.io/schemas/adaptive-card.json",
             ["version"] = "1.5",
