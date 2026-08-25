@@ -1539,7 +1539,7 @@ public class SapClient : ISapClient
             return false;
 
         var normalized = sapUserId.Trim().ToUpperInvariant();
-        var url = new ODataQueryBuilder("UserRole")
+        var url = new ODataQueryBuilder("UserRoles")
             .AddCustomParam("sap-client", "324")
             .Filter("SapUser", "eq", normalized)
             .Top(1)
@@ -1554,62 +1554,6 @@ public class SapClient : ISapClient
                 or System.Net.HttpStatusCode.BadRequest)
             {
                 // Entity set not published yet, or filter rejected — caller may fall back.
-                _logger.LogWarning(
-                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode}",
-                    normalized,
-                    (int)response.StatusCode);
-                return null;
-            }
-
-            if (!response.IsSuccessStatusCode)
-            {
-                _logger.LogWarning(
-                    "SAP UserRole lookup failed for {SapUser}: {StatusCode}",
-                    normalized,
-                    (int)response.StatusCode);
-                return null;
-            }
-
-            var rawJson = await response.Content.ReadAsStringAsync(ct);
-            var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleDto>>(rawJson, JsonOptions);
-            return result?.Value is { Count: > 0 };
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "SAP UserRole lookup error for {SapUser}", normalized);
-            return null;
-        }
-    }
-
-    /// <summary>
-    /// Reads role + sales org + validity window from
-    /// <c>ZC_AISO_USER_ROLE_QUERY</c> via the OData <c>UserRoles</c> alias.
-    /// Returns <c>null</c> when the user has no row, the entity set is not
-    /// published yet (404), the filter is rejected (400), or the network
-    /// fails — callers should fall back to <c>IUserScopeLookup</c>.
-    /// </summary>
-    public async Task<SapUserRoleRow?> GetUserRoleAsync(string sapUserId, CancellationToken ct = default)
-    {
-        if (string.IsNullOrWhiteSpace(sapUserId))
-            return null;
-
-        var normalized = sapUserId.Trim().ToUpperInvariant();
-        var url = new ODataQueryBuilder("UserRoles")
-            .AddCustomParam("sap-client", "324")
-            .Filter("SapUser", "eq", normalized)
-            .Top(1)
-            .Build();
-
-        _logger.LogInformation("Calling SAP OData user-role query: {Url}", url);
-
-        try
-        {
-            var response = await _httpClient.GetAsync(url, ct);
-            if (response.StatusCode is System.Net.HttpStatusCode.NotFound
-                or System.Net.HttpStatusCode.BadRequest)
-            {
-                // Entity set not published yet (e.g. CDS view not activated) —
-                // caller should fall back to Postgres user_mappings.
                 _logger.LogWarning(
                     "SAP UserRoles lookup unavailable for {SapUser}: {StatusCode}",
                     normalized,
@@ -1629,28 +1573,82 @@ public class SapClient : ISapClient
             var rawJson = await response.Content.ReadAsStringAsync(ct);
             var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleQueryDto>>(
                 rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            return result?.Value is { Count: > 0 };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SAP UserRoles lookup error for {SapUser}", normalized);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Reads role + sales org + validity window from
+    /// <c>ZC_AISO_USER_ROLE_QUERY</c> via the OData <c>UserRoles</c> alias.
+    /// Returns <c>null</c> when the user has no row, the entity set is not
+    /// published yet (404), the filter is rejected (400), or the network
+    /// fails — callers should fall back to <c>IUserScopeLookup</c>.
+    /// </summary>
+    public async Task<SapUserRoleRow?> GetUserRoleAsync(string sapUserId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(sapUserId))
+            return null;
+
+        var normalized = sapUserId.Trim().ToUpperInvariant();
+        var url = new ODataQueryBuilder("UserRole")
+            .AddCustomParam("sap-client", "324")
+            .Filter("SapUser", "eq", normalized)
+            .Top(1)
+            .Build();
+
+        _logger.LogInformation("Calling SAP OData user-role query: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (response.StatusCode is System.Net.HttpStatusCode.NotFound
+                or System.Net.HttpStatusCode.BadRequest)
+            {
+                // Entity set not published yet (e.g. CDS view not activated) —
+                // caller should fall back to Postgres user_mappings.
+                _logger.LogWarning(
+                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode}",
+                    normalized,
+                    (int)response.StatusCode);
+                return null;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "SAP UserRole lookup failed for {SapUser}: {StatusCode}",
+                    normalized,
+                    (int)response.StatusCode);
+                return null;
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleDto>>(
+                rawJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
             var row = result?.Value?.FirstOrDefault();
             if (row is null)
             {
                 _logger.LogInformation(
-                    "SAP UserRoles returned no row for {SapUser}", normalized);
+                    "SAP UserRole returned no row for {SapUser}", normalized);
                 return null;
             }
 
-            DateOnly? validFrom = DateOnly.TryParse(row.ValidFrom, out var vf) ? vf : null;
-            DateOnly? validTo = DateOnly.TryParse(row.ValidTo, out var vt) ? vt : null;
-
             return new SapUserRoleRow(
                 SapUser: row.SapUser?.Trim() ?? normalized,
-                Role: string.IsNullOrWhiteSpace(row.Role) ? null : row.Role.Trim(),
+                Role: string.IsNullOrWhiteSpace(row.UserRole) ? null : row.UserRole.Trim(),
                 SalesOrg: string.IsNullOrWhiteSpace(row.SalesOrg) ? null : row.SalesOrg.Trim().ToUpperInvariant(),
-                ValidFrom: validFrom,
-                ValidTo: validTo);
+                ValidFrom: null,
+                ValidTo: null);
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "SAP UserRoles lookup error for {SapUser}", normalized);
+            _logger.LogWarning(ex, "SAP UserRole lookup error for {SapUser}", normalized);
             return null;
         }
     }

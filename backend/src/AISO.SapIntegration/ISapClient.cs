@@ -185,10 +185,10 @@ public interface ISapClient
 
     /// <summary>
     /// Read the current role + sales org for a SAP user from
-    /// <c>ZC_AISO_USER_ROLE_QUERY</c> (alias <c>UserRoles</c>, OData
+    /// <c>ZI_AISO_USER_ROLE</c> (alias <c>UserRole</c>, OData
     /// service <c>ZSD_AISO_SALES_ORDER</c>). Returns <c>null</c> when the
-    /// user has no row in <c>ZAISO_USER_ROLE</c> — caller should fall
-    /// back to <c>IUserScopeLookup</c> / Postgres.
+    /// user has no row — caller should fall back to
+    /// <c>IUserScopeLookup</c> / Postgres.
     /// </summary>
     Task<SapUserRoleRow?> GetUserRoleAsync(string sapUserId, CancellationToken ct = default);
 }
@@ -392,8 +392,8 @@ public sealed record SalesOrdersQuery
 }
 
 /// <summary>
-/// Single row from <c>ZC_AISO_USER_ROLE_QUERY</c> (CDS view over
-/// <c>ZAISO_USER_ROLE</c>). Exposed via the OData <c>UserRoles</c>
+/// Single row from <c>ZI_AISO_USER_ROLE</c> (CDS view over
+/// <c>ZAISO_USER_ROLE</c>). Exposed via the OData <c>UserRole</c>
 /// entity set on <c>ZSD_AISO_SALES_ORDER</c>.
 /// </summary>
 public sealed record SapUserRoleRow(
