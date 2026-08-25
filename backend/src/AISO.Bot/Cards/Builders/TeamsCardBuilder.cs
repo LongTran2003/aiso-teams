@@ -3,6 +3,7 @@ using AISO.AiOrchestration.Functions;
 using AISO.Domain.Approvals;
 using AISO.Domain.SalesOrders;
 using AISO.Domain.Users;
+using AISO.SapIntegration;
 using Microsoft.Bot.Schema;
 
 namespace AISO.Bot.Cards.Builders;
@@ -236,76 +237,237 @@ internal static class TeamsCardBuilder
             });
 
     public static Attachment BuildCreateOrderStep1Card(
-        IReadOnlyList<ConfirmCreateChoice> salesAreaChoices,
-        string? selectedSalesArea = null) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
-            "create-so-step1.json",
-            new
-            {
-                salesAreaChoices,
-                salesArea = selectedSalesArea ?? string.Empty
+        IReadOnlyList<SapSalesOrg> salesOrgs,
+        string? selectedSalesOrg = null,
+        IReadOnlyList<SapDistChannel>? distChannels = null,
+        string? selectedDistChannel = null,
+        IReadOnlyList<SapDivision>? divisions = null,
+        string? selectedDivision = null)
+    {
+        var card = BuildStep1CardData(
+            salesOrgs, selectedSalesOrg,
+            distChannels, selectedDistChannel,
+            divisions, selectedDivision);
+
+        return CardTemplateFileLoader.BuildAdaptiveCardFromObject(card);
+    }
+
+    private static object BuildStep1CardData(
+        IReadOnlyList<SapSalesOrg> salesOrgs,
+        string? selectedSalesOrg,
+        IReadOnlyList<SapDistChannel>? distChannels,
+        string? selectedDistChannel,
+        IReadOnlyList<SapDivision>? divisions,
+        string? selectedDivision)
+    {
+        var orgChoices = salesOrgs
+            .Select(o => new Dictionary<string, object> { ["title"] = $"{o.SalesOrg} — {o.SalesOrgName}", ["value"] = o.SalesOrg.ToUpperInvariant().Trim() })
+            .ToList();
+
+        var chanChoices = (distChannels ?? [])
+            .Select(c => new Dictionary<string, object> { ["title"] = c.DistChannel, ["value"] = c.DistChannel.ToUpperInvariant().Trim() })
+            .ToList();
+
+        var divChoices = (divisions ?? [])
+            .Select(d => new Dictionary<string, object> { ["title"] = d.Division, ["value"] = d.Division.ToUpperInvariant().Trim() })
+            .ToList();
+
+        var body = new List<object>
+        {
+            new Dictionary<string, object> {
+                ["type"] = "Container",
+                ["style"] = "Accent",
+                ["bleed"] = true,
+                ["items"] = new object[] {
+                    new Dictionary<string, object> { ["type"] = "TextBlock", ["text"] = "Create sales order (Step 1 of 4)", ["weight"] = "Bolder", ["size"] = "Medium", ["color"] = "Accent", ["wrap"] = true }
+                }
+            },
+            new Dictionary<string, object> { ["type"] = "TextBlock", ["text"] = "Sales Organization *", ["weight"] = "Bolder", ["size"] = "Small", ["spacing"] = "Medium", ["wrap"] = true },
+            new Dictionary<string, object> {
+                ["type"] = "Input.ChoiceSet",
+                ["id"] = "salesOrg",
+                ["label"] = "Sales Organization",
+                ["style"] = "compact",
+                ["isRequired"] = true,
+                ["errorMessage"] = "Please select a Sales Organization",
+                ["value"] = selectedSalesOrg ?? "",
+                ["choices"] = orgChoices
+            }
+        };
+
+        body.Add(new Dictionary<string, object> { ["type"] = "TextBlock", ["text"] = "Distribution Channel *", ["weight"] = "Bolder", ["size"] = "Small", ["spacing"] = "Medium", ["wrap"] = true });
+
+        if (chanChoices.Count > 0)
+        {
+            body.Add(new Dictionary<string, object> {
+                ["type"] = "Input.ChoiceSet",
+                ["id"] = "distChannel",
+                ["label"] = "Distribution Channel",
+                ["style"] = "compact",
+                ["isRequired"] = true,
+                ["errorMessage"] = "Please select a Distribution Channel",
+                ["value"] = selectedDistChannel ?? "",
+                ["choices"] = chanChoices
             });
+        }
+        else
+        {
+            body.Add(new Dictionary<string, object> {
+                ["type"] = "TextBlock",
+                ["text"] = "(select Sales Organization to load)",
+                ["size"] = "Small",
+                ["isSubtle"] = true,
+                ["wrap"] = true
+            });
+        }
+
+        body.Add(new Dictionary<string, object> { ["type"] = "TextBlock", ["text"] = "Division *", ["weight"] = "Bolder", ["size"] = "Small", ["spacing"] = "Medium", ["wrap"] = true });
+
+        if (divChoices.Count > 0)
+        {
+            body.Add(new Dictionary<string, object> {
+                ["type"] = "Input.ChoiceSet",
+                ["id"] = "division",
+                ["label"] = "Division",
+                ["style"] = "compact",
+                ["isRequired"] = true,
+                ["errorMessage"] = "Please select a Division",
+                ["value"] = selectedDivision ?? "",
+                ["choices"] = divChoices
+            });
+        }
+        else
+        {
+            body.Add(new Dictionary<string, object> {
+                ["type"] = "TextBlock",
+                ["text"] = "(select Distribution Channel to load)",
+                ["size"] = "Small",
+                ["isSubtle"] = true,
+                ["wrap"] = true
+            });
+        }
+
+        return new Dictionary<string, object> {
+            ["type"] = "AdaptiveCard",
+            ["$schema"] = "http://adaptivecards.io/schemas/adaptive-card.json",
+            ["version"] = "1.5",
+            ["body"] = body,
+            ["actions"] = new object[] {
+                new Dictionary<string, object> {
+                    ["type"] = "Action.Submit",
+                    ["title"] = "Next",
+                    ["style"] = "positive",
+                    ["data"] = new Dictionary<string, object> {
+                        ["msteams"] = new Dictionary<string, object> { ["type"] = "messageBack", ["displayText"] = "Next step", ["text"] = "Next" },
+                        ["action"] = "create_so_step1_submit"
+                    }
+                },
+                new Dictionary<string, object> {
+                    ["type"] = "Action.Submit",
+                    ["title"] = "Cancel",
+                    ["data"] = new Dictionary<string, object> {
+                        ["msteams"] = new Dictionary<string, object> { ["type"] = "messageBack", ["displayText"] = "cancel", ["text"] = "cancel" }
+                    }
+                }
+            }
+        };
+    }
 
     public static Attachment BuildCreateOrderStep2Card(
         string salesAreaLabel,
         string salesAreaKey,
+        string salesOrg,
+        string distChannel,
+        string division,
         IReadOnlyList<ConfirmCreateChoice> customerChoices,
-        string? selectedCustomer = null) =>
+        IReadOnlyList<SapDocType>? docTypes = null,
+        string? selectedDocType = null,
+        string? currency = null,
+        string? purchaseOrderRef = null,
+        string? requestedDeliveryDate = null,
+        string? shipToParty = null) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "create-so-step2.json",
             new
             {
                 salesAreaLabel,
                 salesAreaKey,
+                salesOrg,
+                distChannel,
+                division,
                 customerChoices,
-                customer = selectedCustomer ?? string.Empty
+                docTypeChoices = docTypes?.Select(d => new { title = $"{d.DocType} — {d.DocTypeName}", value = d.DocType }).ToList(),
+                selectedDocType = selectedDocType ?? "",
+                currency = currency ?? "USD",
+                purchaseOrderRef = purchaseOrderRef ?? "",
+                requestedDeliveryDate = requestedDeliveryDate ?? "",
+                shipToParty = shipToParty ?? "",
+                hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false"
             });
 
     public static Attachment BuildCreateOrderStep3Card(
         string customerLabel,
         string customerKey,
+        string salesAreaLabel,
         string salesAreaKey,
         IReadOnlyList<ConfirmCreateChoice> materialChoices,
-        string currency = "USD",
-        string plant = "1010",
-        string unit = "PC",
+        string? docType = null,
+        string? currency = null,
         string? purchaseOrderRef = null,
-        string? requestedDeliveryDate = null) =>
+        string? requestedDeliveryDate = null,
+        string? shipToParty = null) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "create-so-step3.json",
             new
             {
                 customerLabel,
                 customerKey,
+                salesAreaLabel,
                 salesAreaKey,
                 materialChoices,
-                currency,
-                plant,
-                unit,
-                purchaseOrderRef = purchaseOrderRef ?? string.Empty,
-                requestedDeliveryDate = requestedDeliveryDate ?? string.Empty,
-                material1 = string.Empty,
-                qty1 = 1m,
-                material2 = string.Empty,
-                qty2 = string.Empty,
-                material3 = string.Empty,
-                qty3 = string.Empty
+                docType = docType ?? "TA",
+                currency = currency ?? "USD",
+                purchaseOrderRef = purchaseOrderRef ?? "",
+                requestedDeliveryDate = requestedDeliveryDate ?? "",
+                shipToParty = shipToParty ?? "",
+                hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false"
             });
 
-    public static Attachment BuildConfirmCreateOrderCard(
-        string customer,
-        string salesOrg,
+    public static Attachment BuildCreateOrderStep4ReviewCard(
+        string salesAreaLabel,
+        string customerLabel,
+        string? shipToParty,
+        string docType,
         string currency,
-        string plant = "1010",
-        string unit = "PC",
-        IReadOnlyList<ConfirmCreateOrderLine>? lines = null) =>
-        BuildConfirmCreateOrderCard(new ConfirmCreateOrderResponse(
-            customer,
-            salesOrg,
-            currency,
-            plant,
-            unit,
-            NormalizeCreateLines(lines)));
+        string? purchaseOrderRef,
+        string? requestedDeliveryDate,
+        IReadOnlyList<ConfirmCreateOrderLine> lineItems,
+        string salesAreaKey,
+        string salesOrg,
+        string distChannel,
+        string division,
+        string customerKey,
+        string customerId) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "create-so-step4.json",
+            new
+            {
+                salesAreaLabel,
+                customerLabel,
+                shipToParty = string.IsNullOrWhiteSpace(shipToParty) ? "(default)" : shipToParty,
+                docType,
+                currency,
+                purchaseOrderRef = string.IsNullOrWhiteSpace(purchaseOrderRef) ? "-" : purchaseOrderRef,
+                requestedDeliveryDate = string.IsNullOrWhiteSpace(requestedDeliveryDate) ? "-" : requestedDeliveryDate,
+                lineItems = lineItems.Select(l => new { l.Material, l.Qty }).ToList(),
+                lineItemsJson = System.Text.Json.JsonSerializer.Serialize(lineItems),
+                salesAreaKey,
+                salesOrg,
+                distChannel,
+                division,
+                customerKey,
+                customerId
+            });
 
     /// <summary>Backward-compatible overload (single material).</summary>
     public static Attachment BuildConfirmCreateOrderCard(
@@ -317,12 +479,13 @@ internal static class TeamsCardBuilder
         string plant = "1010",
         string unit = "PC") =>
         BuildConfirmCreateOrderCard(
-            customer,
-            salesOrg,
-            currency,
-            plant,
-            unit,
-            new[] { new ConfirmCreateOrderLine(material, qty) });
+            new ConfirmCreateOrderResponse(
+                customer,
+                salesOrg,
+                currency,
+                plant,
+                unit,
+                new[] { new ConfirmCreateOrderLine(material, qty) }));
 
     public static Attachment BuildConfirmCreateOrderCard(ConfirmCreateOrderResponse draft)
     {
@@ -410,7 +573,9 @@ internal static class TeamsCardBuilder
             .Take(CreateOrderFunction.MaxLineSlots)
             .Select(l => new ConfirmCreateOrderLine(
                 l.Material.Trim().ToUpperInvariant(),
-                l.Qty < 1 ? 1m : l.Qty))
+                l.Qty < 1 ? 1m : l.Qty,
+                l.Plant,
+                l.Unit))
             .ToList();
     }
 

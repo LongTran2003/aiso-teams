@@ -265,6 +265,14 @@ public class ForceCancelRoutingTests
         public Task<bool?> IsCustomerValidForSalesAreaAsync(
             string customer, string salesOrg, string distChannel, string division, CancellationToken ct = default)
             => throw new NotImplementedException();
+        public Task<IReadOnlyList<SapSalesOrg>> GetSalesOrgListAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<SapSalesOrg>>([]);
+        public Task<IReadOnlyList<SapDistChannel>> GetDistChannelListAsync(string? salesOrg = null, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<SapDistChannel>>([]);
+        public Task<IReadOnlyList<SapDivision>> GetDivisionListAsync(string? salesOrg = null, string? distChannel = null, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<SapDivision>>([]);
+        public Task<IReadOnlyList<SapDocType>> GetDocTypeListAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<SapDocType>>([]);
     }
 
     private sealed class NoopApprovals : IOrderApprovalService

@@ -194,6 +194,14 @@ public class MyProfileIdentitySourceTests
             => _inner.GetValidCustomersAsync(s, d, div, t, ct);
         public Task<bool?> IsCustomerValidForSalesAreaAsync(string c, string s, string d, string div, CancellationToken ct = default)
             => _inner.IsCustomerValidForSalesAreaAsync(c, s, d, div, ct);
+        public Task<IReadOnlyList<SapSalesOrg>> GetSalesOrgListAsync(CancellationToken ct = default)
+            => _inner.GetSalesOrgListAsync(ct);
+        public Task<IReadOnlyList<SapDistChannel>> GetDistChannelListAsync(string? salesOrg = null, CancellationToken ct = default)
+            => _inner.GetDistChannelListAsync(salesOrg, ct);
+        public Task<IReadOnlyList<SapDivision>> GetDivisionListAsync(string? salesOrg = null, string? distChannel = null, CancellationToken ct = default)
+            => _inner.GetDivisionListAsync(salesOrg, distChannel, ct);
+        public Task<IReadOnlyList<SapDocType>> GetDocTypeListAsync(CancellationToken ct = default)
+            => _inner.GetDocTypeListAsync(ct);
     }
 
     /// <summary>Static config (no Postgres) for direct MyProfileFunction wiring.</summary>

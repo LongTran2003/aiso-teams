@@ -83,14 +83,16 @@ public class BilingualKeywordTests
     public void BuildConfirmCreateAndUpdateCards_IncludeActions()
     {
         var create = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmCreateOrderCard(
-            "10100001",
-            "1010",
-            "USD",
-            lines: new[]
-            {
-                new ConfirmCreateOrderLine("TG11", 2),
-                new ConfirmCreateOrderLine("DXTR1000", 5)
-            });
+            new ConfirmCreateOrderResponse(
+                Customer: "10100001",
+                SalesOrg: "1010",
+                Currency: "USD",
+                Plant: "1010",
+                Unit: "EA",
+                Lines: new[] {
+                    new ConfirmCreateOrderLine("TG11", 2),
+                    new ConfirmCreateOrderLine("DXTR1000", 5)
+                }));
         var createJson = Newtonsoft.Json.JsonConvert.SerializeObject(create.Content);
         Assert.Contains("create_so_confirm", createJson);
         Assert.Contains("10100001", createJson);

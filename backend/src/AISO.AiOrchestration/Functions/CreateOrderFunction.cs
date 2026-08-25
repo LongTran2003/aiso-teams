@@ -85,13 +85,24 @@ public sealed class CreateOrderFunction : IFunction
 
                 lines.Add(new ConfirmCreateOrderLine(
                     material.Trim().ToUpperInvariant(),
-                    qty));
+                    qty,
+                    plant ?? "",
+                    unit ?? ""));
             }
         }
 
+        // Load material plants early (needed for fallback line and material choices).
+        var materials = await _sap.GetMaterialsAsync(ct);
+        var materialPlants = await _sap.GetValidMaterialPlantsAsync(ct);
+
         if (lines.Count == 0)
         {
-            lines.Add(new ConfirmCreateOrderLine("TG11", 1m));
+            var fallbackMat = materialPlants.Count > 0 ? materialPlants[0] : null;
+            lines.Add(new ConfirmCreateOrderLine(
+                "TG11",
+                1m,
+                fallbackMat?.Plant ?? "1010",
+                fallbackMat?.BaseUnit ?? "EA"));
         }
 
         var areas = await _sap.GetSalesAreasAsync(
@@ -120,8 +131,12 @@ public sealed class CreateOrderFunction : IFunction
             .Select(g => g.First())
             .ToList();
 
-        var materials = await _sap.GetMaterialsAsync(ct);
-        var materialPlants = await _sap.GetValidMaterialPlantsAsync(ct);
+        // Load DocTypes via the new dedicated endpoint.
+        IReadOnlyList<SapDocType> docTypes;
+        try { docTypes = await _sap.GetDocTypeListAsync(ct); } catch { docTypes = Array.Empty<SapDocType>(); }
+        var docTypeChoices = docTypes
+            .Select(d => new ConfirmCreateChoice($"{d.DocType} — {d.DocTypeName}", d.DocType))
+            .ToList();
 
         // Fetch material names to enrich the label
         var matDict = materials.ToDictionary(m => m.Material, m => m.MaterialName);
@@ -227,6 +242,7 @@ public sealed class CreateOrderFunction : IFunction
             SalesAreaChoices: salesAreaChoices,
             CustomerChoices: customerChoices,
             MaterialChoices: materialChoices,
+            DocTypeChoices: docTypeChoices,
             DebugInfo: debugInfo));
     }
 
@@ -236,7 +252,7 @@ public sealed class CreateOrderFunction : IFunction
             : null;
 }
 
-public sealed record ConfirmCreateOrderLine(string Material, decimal Qty);
+public sealed record ConfirmCreateOrderLine(string Material, decimal Qty, string Plant = "", string Unit = "");
 
 public sealed record ConfirmCreateChoice(string Title, string Value);
 
@@ -253,6 +269,7 @@ public sealed record ConfirmCreateOrderResponse(
     IReadOnlyList<ConfirmCreateChoice>? SalesAreaChoices = null,
     IReadOnlyList<ConfirmCreateChoice>? CustomerChoices = null,
     IReadOnlyList<ConfirmCreateChoice>? MaterialChoices = null,
+    IReadOnlyList<ConfirmCreateChoice>? DocTypeChoices = null,
     string? DebugInfo = null)
 {
     /// <summary>First line material (tests / legacy callers).</summary>

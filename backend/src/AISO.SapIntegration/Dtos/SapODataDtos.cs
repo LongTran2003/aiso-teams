@@ -186,3 +186,29 @@ internal class SapOverdueOrderDto
     public decimal? NetValue { get; set; }
     public string? Currency { get; set; }
 }
+
+// New DTOs for cascading dropdown endpoints (Step 1 of 4)
+internal class SapSalesOrgDto
+{
+    public string? SalesOrg { get; set; }
+    public string? SalesOrgName { get; set; }
+}
+
+internal class SapDistChannelDto
+{
+    public string? SalesOrg { get; set; }
+    public string? DistChannel { get; set; }
+}
+
+internal class SapDivisionDto
+{
+    public string? SalesOrg { get; set; }
+    public string? DistChannel { get; set; }
+    public string? Division { get; set; }
+}
+
+internal class SapDocTypeDto
+{
+    public string? DocType { get; set; }
+    public string? DocTypeName { get; set; }
+}

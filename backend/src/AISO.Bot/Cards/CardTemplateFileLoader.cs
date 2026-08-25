@@ -52,4 +52,18 @@ internal static class CardTemplateFileLoader
             Content = JsonConvert.DeserializeObject(cardJson)
         };
     }
+
+    /// <summary>
+    /// Builds an Adaptive Card attachment from a raw object graph (no template file needed).
+    /// Used for dynamically generated cards like the cascading Step 1.
+    /// </summary>
+    public static Attachment BuildAdaptiveCardFromObject(object cardData)
+    {
+        var cardJson = JsonConvert.SerializeObject(cardData, Formatting.None);
+        return new Attachment
+        {
+            ContentType = "application/vnd.microsoft.card.adaptive",
+            Content = JsonConvert.DeserializeObject(cardJson)
+        };
+    }
 }

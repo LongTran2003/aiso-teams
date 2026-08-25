@@ -615,6 +615,83 @@ public sealed class MockSapClient : ISapClient
         return Task.FromResult<IReadOnlyList<SapSalesArea>>(filtered);
     }
 
+    public Task<IReadOnlyList<SapSalesOrg>> GetSalesOrgListAsync(CancellationToken ct = default)
+    {
+        IReadOnlyList<SapSalesOrg> orgs =
+        [
+            new("TV01", "Domestic Org"),
+            new("FU24", "FUrni"),
+            new("UE00", "UE Org"),
+            new("UW00", "UW Org"),
+            new("DN00", "DN Org"),
+            new("DS00", "DS Org")
+        ];
+        return Task.FromResult(orgs);
+    }
+
+    public Task<IReadOnlyList<SapDistChannel>> GetDistChannelListAsync(
+        string? salesOrg = null,
+        CancellationToken ct = default)
+    {
+        IReadOnlyList<SapDistChannel> allChannels =
+        [
+            new("TV01", "10"),
+            new("TV01", "20"),
+            new("FU24", "10"),
+            new("FU24", "FR"),
+            new("UE00", "10"),
+            new("UW00", "10"),
+            new("DN00", "10"),
+            new("DS00", "10")
+        ];
+
+        if (string.IsNullOrWhiteSpace(salesOrg))
+            return Task.FromResult(allChannels);
+
+        var filtered = allChannels
+            .Where(c => string.Equals(c.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        return Task.FromResult<IReadOnlyList<SapDistChannel>>(filtered);
+    }
+
+    public Task<IReadOnlyList<SapDivision>> GetDivisionListAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        CancellationToken ct = default)
+    {
+        IReadOnlyList<SapDivision> allDivisions =
+        [
+            new("TV01", "10", "00"),
+            new("TV01", "10", "AS"),
+            new("FU24", "10", "00"),
+            new("FU24", "10", "FS"),
+            new("FU24", "FR", "FG"),
+            new("UE00", "10", "00"),
+            new("UW00", "10", "00"),
+            new("DN00", "10", "00"),
+            new("DS00", "10", "00")
+        ];
+
+        IEnumerable<SapDivision> result = allDivisions;
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            result = result.Where(d => string.Equals(d.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(distChannel))
+            result = result.Where(d => string.Equals(d.DistChannel, distChannel, StringComparison.OrdinalIgnoreCase));
+
+        return Task.FromResult<IReadOnlyList<SapDivision>>(result.ToList());
+    }
+
+    public Task<IReadOnlyList<SapDocType>> GetDocTypeListAsync(CancellationToken ct = default)
+    {
+        IReadOnlyList<SapDocType> docTypes =
+        [
+            new("TA", "Sales Order"),
+            new("OR", "Order"),
+            new("ZOR", "Returns")
+        ];
+        return Task.FromResult(docTypes);
+    }
+
     public Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default)
     {
         IReadOnlyList<SapMaterial> materials =

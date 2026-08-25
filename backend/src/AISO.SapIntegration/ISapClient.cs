@@ -173,6 +173,31 @@ public interface ISapClient
         CancellationToken ct = default);
 
     /// <summary>
+    /// Sales organizations from <c>SalesOrgList</c>.
+    /// </summary>
+    Task<IReadOnlyList<SapSalesOrg>> GetSalesOrgListAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Distribution channels from <c>DistChannelList</c>, optionally filtered by SalesOrg.
+    /// </summary>
+    Task<IReadOnlyList<SapDistChannel>> GetDistChannelListAsync(
+        string? salesOrg = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Divisions from <c>DivisionList</c>, optionally filtered by SalesOrg + DistChannel.
+    /// </summary>
+    Task<IReadOnlyList<SapDivision>> GetDivisionListAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Order types from <c>DocTypeList</c>.
+    /// </summary>
+    Task<IReadOnlyList<SapDocType>> GetDocTypeListAsync(CancellationToken ct = default);
+
+    /// <summary>
     /// Whether customer is maintained for the sales area.
     /// <c>null</c> = lookup unavailable (caller may proceed).
     /// </summary>
@@ -231,6 +256,18 @@ public sealed record SapSalesArea(
         return true;
     }
 }
+
+/// <summary>OData <c>SalesOrgList</c> row.</summary>
+public sealed record SapSalesOrg(string SalesOrg, string SalesOrgName);
+
+/// <summary>OData <c>DistChannelList</c> row (keyed by SalesOrg + DistChannel).</summary>
+public sealed record SapDistChannel(string SalesOrg, string DistChannel);
+
+/// <summary>OData <c>DivisionList</c> row (keyed by SalesOrg + DistChannel + Division).</summary>
+public sealed record SapDivision(string SalesOrg, string DistChannel, string Division);
+
+/// <summary>OData <c>DocTypeList</c> row.</summary>
+public sealed record SapDocType(string DocType, string DocTypeName);
 
 /// <summary>OData <c>ValidCustomer</c> row (KNVV + name).</summary>
 public sealed record SapValidCustomer(
@@ -329,6 +366,12 @@ public sealed record CreateSalesOrderDto
 
     /// <summary>yyyy-MM-dd, normalised in SapClient before reaching SAP (REQUESTED_DELIVERY_DATE).</summary>
     public string? RequestedDeliveryDate { get; init; }
+
+    /// <summary>
+    /// Ship-to party customer number. Optional — if null/empty, SAP ABAP
+    /// falls back to deriving it from KNVP (role WE), then to the Sold-to.
+    /// </summary>
+    public string? ShipToParty { get; init; }
 }
 
 public sealed record CreateSalesOrderItemDto

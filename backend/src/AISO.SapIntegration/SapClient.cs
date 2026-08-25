@@ -1569,6 +1569,156 @@ public class SapClient : ISapClient
         }
     }
 
+    public async Task<IReadOnlyList<SapSalesOrg>> GetSalesOrgListAsync(CancellationToken ct = default)
+    {
+        var url = new ODataQueryBuilder("SalesOrgList").Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("SalesOrgList GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapSalesOrg>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapSalesOrgDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapSalesOrg>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.SalesOrg))
+                .Select(r => new SapSalesOrg(r.SalesOrg!, r.SalesOrgName ?? ""))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not SapODataException)
+        {
+            _logger.LogWarning(ex, "SalesOrgList lookup failed");
+            return Array.Empty<SapSalesOrg>();
+        }
+    }
+
+    public async Task<IReadOnlyList<SapDistChannel>> GetDistChannelListAsync(
+        string? salesOrg = null,
+        CancellationToken ct = default)
+    {
+        var builder = new ODataQueryBuilder("DistChannelList");
+
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            builder.Filter("SalesOrg", "eq", salesOrg.Trim().ToUpperInvariant());
+
+        var url = builder.Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("DistChannelList GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapDistChannel>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapDistChannelDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapDistChannel>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.DistChannel))
+                .Select(r => new SapDistChannel(
+                    (r.SalesOrg ?? "").Trim().ToUpperInvariant(),
+                    r.DistChannel!.Trim().ToUpperInvariant()))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not SapODataException)
+        {
+            _logger.LogWarning(ex, "DistChannelList lookup failed");
+            return Array.Empty<SapDistChannel>();
+        }
+    }
+
+    public async Task<IReadOnlyList<SapDivision>> GetDivisionListAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        CancellationToken ct = default)
+    {
+        var builder = new ODataQueryBuilder("DivisionList");
+
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            builder.Filter("SalesOrg", "eq", salesOrg.Trim().ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(distChannel))
+            builder.Filter("DistChannel", "eq", distChannel.Trim().ToUpperInvariant());
+
+        var url = builder.Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("DivisionList GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapDivision>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapDivisionDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapDivision>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.Division))
+                .Select(r => new SapDivision(
+                    (r.SalesOrg ?? "").Trim().ToUpperInvariant(),
+                    (r.DistChannel ?? "").Trim().ToUpperInvariant(),
+                    r.Division!.Trim().ToUpperInvariant()))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not SapODataException)
+        {
+            _logger.LogWarning(ex, "DivisionList lookup failed");
+            return Array.Empty<SapDivision>();
+        }
+    }
+
+    public async Task<IReadOnlyList<SapDocType>> GetDocTypeListAsync(CancellationToken ct = default)
+    {
+        var url = new ODataQueryBuilder("DocTypeList").Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("DocTypeList GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapDocType>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapDocTypeDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapDocType>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.DocType))
+                .Select(r => new SapDocType(r.DocType!, r.DocTypeName ?? ""))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not SapODataException)
+        {
+            _logger.LogWarning(ex, "DocTypeList lookup failed");
+            return Array.Empty<SapDocType>();
+        }
+    }
+
     public async Task<bool?> IsCustomerValidForSalesAreaAsync(
         string customer,
         string salesOrg,
