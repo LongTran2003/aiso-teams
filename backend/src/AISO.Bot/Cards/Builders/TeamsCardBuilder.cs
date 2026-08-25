@@ -268,7 +268,9 @@ internal static class TeamsCardBuilder
         IReadOnlyList<ConfirmCreateChoice> materialChoices,
         string currency = "USD",
         string plant = "1010",
-        string unit = "PC") =>
+        string unit = "PC",
+        string? purchaseOrderRef = null,
+        string? requestedDeliveryDate = null) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "create-so-step3.json",
             new
@@ -280,6 +282,8 @@ internal static class TeamsCardBuilder
                 currency,
                 plant,
                 unit,
+                purchaseOrderRef = purchaseOrderRef ?? string.Empty,
+                requestedDeliveryDate = requestedDeliveryDate ?? string.Empty,
                 material1 = string.Empty,
                 qty1 = 1m,
                 material2 = string.Empty,

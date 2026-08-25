@@ -22,6 +22,8 @@ internal class SapValidMaterialSalesDto
     public string SalesOrg { get; set; } = string.Empty;
     public string DistChannel { get; set; } = string.Empty;
     public string Plant { get; set; } = string.Empty;
+    public string? BaseUnit { get; set; }
+    public string? MaterialName { get; set; }
 }
 
 internal class SapSalesAreaDto

@@ -1743,9 +1743,12 @@ public class TeamsBot : TeamsActivityHandler
                                     var actualPlant = materialPlantsByMat.TryGetValue(m.Material, out var mp) && !string.IsNullOrWhiteSpace(mp.Plant)
                                         ? mp.Plant
                                         : "1010";
+                                    // Use real BaseUnit from SAP; fall back to "EA" only when the
+                                    // service cannot resolve one (e.g. older payloads).
+                                    var baseUnit = string.IsNullOrWhiteSpace(m.BaseUnit) ? "EA" : m.BaseUnit.Trim().ToUpperInvariant();
                                     return new AISO.AiOrchestration.Functions.ConfirmCreateChoice(
-                                        $"{m.Material.TrimStart('0')} - {name}",
-                                        $"{m.Material}|{actualPlant}|EA");
+                                        $"{m.Material.TrimStart('0')} - {name} ({baseUnit})",
+                                        $"{m.Material}|{actualPlant}|{baseUnit}");
                                 })
                                 .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
                                 .Select(g => g.First())
@@ -1884,6 +1887,16 @@ public class TeamsBot : TeamsActivityHandler
                             ? unitToken.ToString()?.Trim()
                             : "PC";
 
+                        // Header-level fields captured on the create-order card. Each line
+                        // item may override these; the bot maps to CreateSalesOrderItemDto
+                        // per row below.
+                        var headerPoNumber = valueObj.TryGetValue("purchaseOrderRef", StringComparison.OrdinalIgnoreCase, out var poToken)
+                            ? poToken.ToString()?.Trim()
+                            : null;
+                        var headerDeliveryDate = valueObj.TryGetValue("requestedDeliveryDate", StringComparison.OrdinalIgnoreCase, out var dateToken)
+                            ? dateToken.ToString()?.Trim()
+                            : null;
+
                         var lineItems = new List<CreateSalesOrderItemDto>();
                         for (var i = 1; i <= AISO.AiOrchestration.Functions.CreateOrderFunction.MaxLineSlots; i++)
                         {
@@ -1930,12 +1943,26 @@ public class TeamsBot : TeamsActivityHandler
                                 }
                             }
 
+                            // Per-line overrides for date, PO and description.
+                            var itemDate = valueObj.TryGetValue($"deliveryDate{i}", StringComparison.OrdinalIgnoreCase, out var dTok)
+                                ? dTok.ToString()?.Trim()
+                                : null;
+                            var itemPo = valueObj.TryGetValue($"poRef{i}", StringComparison.OrdinalIgnoreCase, out var pTok)
+                                ? pTok.ToString()?.Trim()
+                                : null;
+                            var itemDesc = valueObj.TryGetValue($"description{i}", StringComparison.OrdinalIgnoreCase, out var descTok)
+                                ? descTok.ToString()?.Trim()
+                                : null;
+
                             lineItems.Add(new CreateSalesOrderItemDto
                             {
                                 Material = itemMaterial.ToUpperInvariant(),
                                 OrderQty = qty,
                                 Plant = itemPlant,
-                                Unit = itemUnit.ToUpperInvariant()
+                                Unit = itemUnit.ToUpperInvariant(),
+                                RequestedDeliveryDate = string.IsNullOrWhiteSpace(itemDate) ? null : itemDate,
+                                PurchaseOrderRef = string.IsNullOrWhiteSpace(itemPo) ? null : itemPo,
+                                ItemDescription = string.IsNullOrWhiteSpace(itemDesc) ? null : itemDesc
                             });
                         }
 
@@ -1977,6 +2004,8 @@ public class TeamsBot : TeamsActivityHandler
                                     Customer = customer,
                                     Currency = string.IsNullOrWhiteSpace(currency) ? "USD" : currency.ToUpperInvariant(),
                                     RequestingSapUser = linkedSapUsername,
+                                    PurchaseOrderRef = string.IsNullOrWhiteSpace(headerPoNumber) ? null : headerPoNumber,
+                                    RequestedDeliveryDate = string.IsNullOrWhiteSpace(headerDeliveryDate) ? null : headerDeliveryDate,
                                     Items = lineItems
                                 },
                                 cancellationToken);

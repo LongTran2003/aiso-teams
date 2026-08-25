@@ -307,7 +307,9 @@ public sealed record SapValidMaterialSales(
     string Material,
     string SalesOrg,
     string DistChannel,
-    string Plant = "");
+    string Plant = "",
+    string BaseUnit = "",
+    string MaterialName = "");
 
 public sealed record CreateSalesOrderDto
 {
@@ -321,6 +323,12 @@ public sealed record CreateSalesOrderDto
 
     /// <summary>SAP user id of the creator (OData <c>REQUESTING_TEAMS_USER</c>).</summary>
     public string? RequestingSapUser { get; init; }
+
+    /// <summary>Customer-side purchase order reference (PO Number, NEW_REFERENCE).</summary>
+    public string? PurchaseOrderRef { get; init; }
+
+    /// <summary>yyyy-MM-dd, normalised in SapClient before reaching SAP (REQUESTED_DELIVERY_DATE).</summary>
+    public string? RequestedDeliveryDate { get; init; }
 }
 
 public sealed record CreateSalesOrderItemDto
@@ -329,6 +337,15 @@ public sealed record CreateSalesOrderItemDto
     public required string Plant { get; init; }
     public required decimal OrderQty { get; init; }
     public required string Unit { get; init; }
+
+    /// <summary>Per-item requested delivery date (overrides header date).</summary>
+    public string? RequestedDeliveryDate { get; init; }
+
+    /// <summary>Per-item customer purchase order reference (overrides header PO).</summary>
+    public string? PurchaseOrderRef { get; init; }
+
+    /// <summary>Free-text description for the line item.</summary>
+    public string? ItemDescription { get; init; }
 }
 
 /// <summary>Payload for SAP <c>updateSalesOrder</c> (ZAISO_A_UPDATE_SO: NEW_REFERENCE, REQUESTED_DELIVERY_DATE, ITEMS).</summary>
