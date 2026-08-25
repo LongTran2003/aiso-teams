@@ -1743,9 +1743,13 @@ public class TeamsBot : TeamsActivityHandler
                                     var actualPlant = materialPlantsByMat.TryGetValue(m.Material, out var mp) && !string.IsNullOrWhiteSpace(mp.Plant)
                                         ? mp.Plant
                                         : "1010";
+                                    // Use real BaseUnit from SAP. Leave empty when the service cannot resolve
+                                    // one so the operator sees "( )" instead of being misled by
+                                    // a hard-coded "EA".
+                                    var baseUnit = m.BaseUnit?.Trim().ToUpperInvariant() ?? string.Empty;
                                     return new AISO.AiOrchestration.Functions.ConfirmCreateChoice(
-                                        $"{m.Material.TrimStart('0')} - {name}",
-                                        $"{m.Material}|{actualPlant}|EA");
+                                        $"{m.Material.TrimStart('0')} - {name} ({baseUnit})",
+                                        $"{m.Material}|{actualPlant}|{baseUnit}");
                                 })
                                 .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
                                 .Select(g => g.First())
@@ -1877,12 +1881,26 @@ public class TeamsBot : TeamsActivityHandler
                         var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var curToken)
                             ? curToken.ToString()?.Trim()
                             : "USD";
-                        var plant = valueObj.TryGetValue("plant", StringComparison.OrdinalIgnoreCase, out var plantToken)
+                        // plant and unit are intentionally NOT defaulted here — each material
+                        // dropdown encodes its own "<Material>|<Plant>|<BaseUnit>" so we map
+                        // them per line item below. If older cards still send a header
+                        // plant/unit we honour it for back-compat, otherwise null.
+                        var headerPlant = valueObj.TryGetValue("plant", StringComparison.OrdinalIgnoreCase, out var plantToken)
                             ? plantToken.ToString()?.Trim()
-                            : "1010";
-                        var unit = valueObj.TryGetValue("unit", StringComparison.OrdinalIgnoreCase, out var unitToken)
+                            : null;
+                        var headerUnit = valueObj.TryGetValue("unit", StringComparison.OrdinalIgnoreCase, out var unitToken)
                             ? unitToken.ToString()?.Trim()
-                            : "PC";
+                            : null;
+
+                        // Header-level fields captured on the create-order card. Each line
+                        // item may override these; the bot maps to CreateSalesOrderItemDto
+                        // per row below.
+                        var headerPoNumber = valueObj.TryGetValue("purchaseOrderRef", StringComparison.OrdinalIgnoreCase, out var poToken)
+                            ? poToken.ToString()?.Trim()
+                            : null;
+                        var headerDeliveryDate = valueObj.TryGetValue("requestedDeliveryDate", StringComparison.OrdinalIgnoreCase, out var dateToken)
+                            ? dateToken.ToString()?.Trim()
+                            : null;
 
                         var lineItems = new List<CreateSalesOrderItemDto>();
                         for (var i = 1; i <= AISO.AiOrchestration.Functions.CreateOrderFunction.MaxLineSlots; i++)
@@ -1915,8 +1933,8 @@ public class TeamsBot : TeamsActivityHandler
                                 continue;
 
                             var itemMaterial = materialValue;
-                            var itemPlant = string.IsNullOrWhiteSpace(plant) ? (string.IsNullOrWhiteSpace(salesOrg) ? "1010" : salesOrg) : plant;
-                            var itemUnit = string.IsNullOrWhiteSpace(unit) ? "EA" : unit.ToUpperInvariant();
+                            var itemPlant = headerPlant ?? string.Empty;
+                            var itemUnit = headerUnit ?? string.Empty;
 
                             // The new Adaptive Card sends material choices in the format "Material|Plant|BaseUnit"
                             var parts = materialValue.Split('|', StringSplitOptions.RemoveEmptyEntries);
@@ -1930,12 +1948,39 @@ public class TeamsBot : TeamsActivityHandler
                                 }
                             }
 
+                            // Per-line overrides for date, PO and description.
+                            var itemDate = valueObj.TryGetValue($"deliveryDate{i}", StringComparison.OrdinalIgnoreCase, out var dTok)
+                                ? dTok.ToString()?.Trim()
+                                : null;
+                            var itemPo = valueObj.TryGetValue($"poRef{i}", StringComparison.OrdinalIgnoreCase, out var pTok)
+                                ? pTok.ToString()?.Trim()
+                                : null;
+                            var itemDesc = valueObj.TryGetValue($"description{i}", StringComparison.OrdinalIgnoreCase, out var descTok)
+                                ? descTok.ToString()?.Trim()
+                                : null;
+
+                            // Plant and Unit come straight from the dropdown / header — no
+                            // hard-coded "EA" / "1010" fallback. Validate so an empty Unit
+                            // (e.g. mis-encoded dropdown value) is caught before SAP rejects.
+                            if (string.IsNullOrWhiteSpace(itemPlant) || string.IsNullOrWhiteSpace(itemUnit))
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "VALIDATION",
+                                        $"Material {itemMaterial} is missing a Plant or BaseUnit. Please pick a different material.")),
+                                    cancellationToken);
+                                return;
+                            }
+
                             lineItems.Add(new CreateSalesOrderItemDto
                             {
                                 Material = itemMaterial.ToUpperInvariant(),
                                 OrderQty = qty,
                                 Plant = itemPlant,
-                                Unit = itemUnit.ToUpperInvariant()
+                                Unit = itemUnit.ToUpperInvariant(),
+                                RequestedDeliveryDate = string.IsNullOrWhiteSpace(itemDate) ? null : itemDate,
+                                PurchaseOrderRef = string.IsNullOrWhiteSpace(itemPo) ? null : itemPo,
+                                ItemDescription = string.IsNullOrWhiteSpace(itemDesc) ? null : itemDesc
                             });
                         }
 
@@ -1977,6 +2022,8 @@ public class TeamsBot : TeamsActivityHandler
                                     Customer = customer,
                                     Currency = string.IsNullOrWhiteSpace(currency) ? "USD" : currency.ToUpperInvariant(),
                                     RequestingSapUser = linkedSapUsername,
+                                    PurchaseOrderRef = string.IsNullOrWhiteSpace(headerPoNumber) ? null : headerPoNumber,
+                                    RequestedDeliveryDate = string.IsNullOrWhiteSpace(headerDeliveryDate) ? null : headerDeliveryDate,
                                     Items = lineItems
                                 },
                                 cancellationToken);

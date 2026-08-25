@@ -214,23 +214,47 @@ public class SapClient : ISapClient
         var url = "SalesOrder?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
-        var payload = new
+        // Align with ZAISO_A_CREATE_SO field naming (uppercase keys):
+        // DOC_TYPE, SALES_ORG, DIST_CHANNEL, DIVISION, CUSTOMER, CURRENCY,
+        // PURCHASE_ORDER_REF, REQUESTED_DELIVERY_DATE, ITEMS.
+        var payload = new Dictionary<string, object?>
         {
-            DocType = dto.DocType,
-            SalesOrg = dto.SalesOrg,
-            DistChannel = dto.DistChannel,
-            Division = dto.Division,
-            Customer = FormatCustomerNumber(dto.Customer),
-            Currency = dto.Currency,
-            RequestingTeamsUser = dto.RequestingSapUser.Trim(),
-            _Items = dto.Items.Select(i => new
+            ["DOC_TYPE"] = dto.DocType,
+            ["SALES_ORG"] = dto.SalesOrg,
+            ["DIST_CHANNEL"] = dto.DistChannel,
+            ["DIVISION"] = dto.Division,
+            ["CUSTOMER"] = FormatCustomerNumber(dto.Customer),
+            ["CURRENCY"] = dto.Currency,
+            ["REQUESTING_TEAMS_USER"] = dto.RequestingSapUser.Trim(),
+            ["ITEMS"] = dto.Items.Select(i =>
             {
-                Material = FormatMaterialNumber(i.Material),
-                Plant = i.Plant,
-                OrderQty = Math.Round(i.OrderQty, 3),
-                Unit = i.Unit
+                var item = new Dictionary<string, object?>
+                {
+                    ["MATERIAL"] = FormatMaterialNumber(i.Material),
+                    ["PLANT"] = i.Plant,
+                    ["ORDER_QTY"] = Math.Round(i.OrderQty, 3),
+                    ["UNIT"] = i.Unit
+                };
+                if (!string.IsNullOrWhiteSpace(i.ItemDescription))
+                    item["ITEM_DESCRIPTION"] = i.ItemDescription.Trim();
+                var lineDate = !string.IsNullOrWhiteSpace(i.RequestedDeliveryDate)
+                    ? i.RequestedDeliveryDate
+                    : dto.RequestedDeliveryDate;
+                if (!string.IsNullOrWhiteSpace(lineDate))
+                    item["REQUESTED_DELIVERY_DATE"] = NormalizeSapDate(lineDate);
+                var linePo = !string.IsNullOrWhiteSpace(i.PurchaseOrderRef)
+                    ? i.PurchaseOrderRef
+                    : dto.PurchaseOrderRef;
+                if (!string.IsNullOrWhiteSpace(linePo))
+                    item["PURCHASE_ORDER_REF"] = linePo.Trim();
+                return item;
             }).ToList()
         };
+
+        if (!string.IsNullOrWhiteSpace(dto.PurchaseOrderRef))
+            payload["PURCHASE_ORDER_REF"] = dto.PurchaseOrderRef.Trim();
+        if (!string.IsNullOrWhiteSpace(dto.RequestedDeliveryDate))
+            payload["REQUESTED_DELIVERY_DATE"] = NormalizeSapDate(dto.RequestedDeliveryDate);
 
         try
         {
@@ -1358,7 +1382,7 @@ public class SapClient : ISapClient
         CancellationToken ct = default)
     {
         var builder = new ODataQueryBuilder("ValidMaterialSales")
-            .AddCustomParam("$select", "Material,SalesOrg,DistChannel,Plant")
+            .AddCustomParam("$select", "Material,SalesOrg,DistChannel,Plant,BaseUnit,MaterialName")
             .Top(Math.Clamp(top, 1, 200));
 
         if (!string.IsNullOrWhiteSpace(salesOrg))
@@ -1395,7 +1419,9 @@ public class SapClient : ISapClient
                     Material: FormatMaterialNumber(r.Material),
                     SalesOrg: r.SalesOrg ?? string.Empty,
                     DistChannel: r.DistChannel ?? string.Empty,
-                    Plant: r.Plant ?? string.Empty))
+                    Plant: r.Plant ?? string.Empty,
+                    BaseUnit: r.BaseUnit ?? string.Empty,
+                    MaterialName: r.MaterialName ?? string.Empty))
                 .ToList();
         }
         catch (Exception ex)

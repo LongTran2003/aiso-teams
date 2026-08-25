@@ -33,6 +33,19 @@
       "value": "${currency}"
     },
     {
+      "type": "Input.Text",
+      "id": "purchaseOrderRef",
+      "label": "Customer PO Number (optional)",
+      "placeholder": "e.g. PO-4500001234",
+      "value": "${purchaseOrderRef}"
+    },
+    {
+      "type": "Input.Date",
+      "id": "requestedDeliveryDate",
+      "label": "Requested Delivery Date (optional)",
+      "value": "${requestedDeliveryDate}"
+    },
+    {
       "type": "TextBlock",
       "text": "Up to 3 line items per order",
       "spacing": "Medium",
@@ -55,6 +68,13 @@
               "errorMessage": "At least one material is required",
               "value": "${material1}",
               "choices": [ { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" } ]
+            },
+            {
+              "type": "Input.Text",
+              "id": "description1",
+              "label": "Line 1 description (optional)",
+              "placeholder": "e.g. 90 - Áo thun size M",
+              "value": ""
             }
           ]
         },
@@ -91,6 +111,13 @@
               "choices": [
                 { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" }
               ]
+            },
+            {
+              "type": "Input.Text",
+              "id": "description2",
+              "label": "Line 2 description (optional)",
+              "placeholder": "e.g. 90 - Áo thun size L",
+              "value": ""
             }
           ]
         },
@@ -125,6 +152,13 @@
               "choices": [
                 { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" }
               ]
+            },
+            {
+              "type": "Input.Text",
+              "id": "description3",
+              "label": "Line 3 description (optional)",
+              "placeholder": "e.g. 90 - Áo thun size XL",
+              "value": ""
             }
           ]
         },
@@ -158,8 +192,8 @@
         "action": "create_so_confirm",
         "salesArea": "${salesAreaKey}",
         "customer": "${customerKey}",
-        "plant": "${plant}",
-        "unit": "${unit}"
+        "purchaseOrderRef": "${purchaseOrderRef}",
+        "requestedDeliveryDate": "${requestedDeliveryDate}"
       }
     },
     {
