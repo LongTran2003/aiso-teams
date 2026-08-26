@@ -633,7 +633,7 @@ class AIOrchestrator:
         kwargs: dict[str, Any] = {
             "model": _GROQ_MODEL,
             "messages": messages,
-            "temperature": 0.1,
+            "temperature": 0.0,
         }
         subset_tools = self._get_subset_tools(user_message)
         if subset_tools:
