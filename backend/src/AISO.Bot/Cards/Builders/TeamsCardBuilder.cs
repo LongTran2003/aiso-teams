@@ -429,8 +429,8 @@ internal static class TeamsCardBuilder
             new
             {
                 customerLabel,
-                    customer = customerKey,
-                    salesAreaLabel,
+                customer = customerKey,
+                salesAreaLabel,
                 salesAreaKey,
                 salesOrg = salesOrg ?? "",
                 distChannel = distChannel ?? "",
