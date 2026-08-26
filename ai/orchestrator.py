@@ -383,7 +383,8 @@ class AIOrchestrator:
 
     def __init__(self) -> None:
         self._client = OpenAI(
-            api_key=_GROQ_API_KEY, base_url="https://api.groq.com/openai/v1"
+            api_key=_GROQ_API_KEY,
+            base_url=os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
         )
         self._system_prompt = _load_system_prompt()
         self._tools = _load_groq_tools()
