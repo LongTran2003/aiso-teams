@@ -1870,7 +1870,10 @@ public class TeamsBot : TeamsActivityHandler
                                 currency ?? "USD",
                                 purchaseOrderRef,
                                 requestedDeliveryDate,
-                                shipToParty)),
+                                shipToParty,
+                                salesOrg,
+                                distChannel,
+                                division)),
                             cancellationToken);
                         return;
                     }
@@ -1947,7 +1950,7 @@ public class TeamsBot : TeamsActivityHandler
                                 return;
                             }
 
-                            parsedItems.Add((itemMaterial.ToUpperInvariant(), qty, itemPlant, itemUnit.ToUpperInvariant()));
+                            parsedItems.Add((itemMaterial.ToUpperInvariant(), qty, itemPlant ?? "", (itemUnit ?? "").ToUpperInvariant()));
                         }
 
                         if (parsedItems.Count == 0)

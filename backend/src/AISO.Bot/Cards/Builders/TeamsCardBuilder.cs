@@ -419,7 +419,10 @@ internal static class TeamsCardBuilder
         string? currency = null,
         string? purchaseOrderRef = null,
         string? requestedDeliveryDate = null,
-        string? shipToParty = null) =>
+        string? shipToParty = null,
+        string? salesOrg = null,
+        string? distChannel = null,
+        string? division = null) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "create-so-step3.json",
             new
@@ -428,13 +431,18 @@ internal static class TeamsCardBuilder
                 customerKey,
                 salesAreaLabel,
                 salesAreaKey,
+                salesOrg = salesOrg ?? "",
+                distChannel = distChannel ?? "",
+                division = division ?? "",
                 materialChoices,
                 docType = docType ?? "TA",
                 currency = currency ?? "USD",
                 purchaseOrderRef = purchaseOrderRef ?? "",
                 requestedDeliveryDate = requestedDeliveryDate ?? "",
                 shipToParty = shipToParty ?? "",
-                hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false"
+                hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false",
+                unit2 = "",
+                unit3 = ""
             });
 
     public static Attachment BuildCreateOrderStep4ReviewCard(

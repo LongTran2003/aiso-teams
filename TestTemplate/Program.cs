@@ -7,13 +7,12 @@ class Program {
             ""body"": [
                 {
                     ""type"": ""TextBlock"",
-                    ""text"": ""Hello"",
-                    ""isVisible"": ""${hasShipToParty == 'true'}""
+                    ""text"": ""Plant: ${Plant}  Unit: ${Unit}""
                 }
             ]
         }";
         var template = new AdaptiveCardTemplate(templateJson);
-        var data = new { hasShipToParty = "false" };
+        var data = new { Plant = """", Unit = (string)null };
         Console.WriteLine(template.Expand(data));
     }
 }
