@@ -473,7 +473,7 @@ internal static class TeamsCardBuilder
                 currency,
                 purchaseOrderRef = string.IsNullOrWhiteSpace(purchaseOrderRef) ? "-" : purchaseOrderRef,
                 requestedDeliveryDate = string.IsNullOrWhiteSpace(requestedDeliveryDate) ? "-" : requestedDeliveryDate,
-                lineItems = lineItems.Select(l => new { l.Material, l.Qty }).ToList(),
+                lineItems = lineItems.Select(l => new { l.Material, l.Qty, Plant = l.Plant ?? "", Unit = l.Unit ?? "" }).ToList(),
                 lineItemsJson = System.Text.Json.JsonSerializer.Serialize(lineItems),
                 salesAreaKey,
                 salesOrg,
