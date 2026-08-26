@@ -77,6 +77,30 @@ public class UserMappingService
             ? scoped
             : all.Select(c => (c.Title, c.Value)).ToList();
     }
+    public async Task<IReadOnlyList<(string Title, string Value)>> GetManagerRecipientChoicesAsync(
+    CancellationToken cancellationToken = default,
+    string? excludeSapUserId = null)
+    {
+        var mappings = await _dbContext.UserMappings
+            .Where(u => !string.IsNullOrWhiteSpace(u.SapUserId)
+                        && (u.Role == UserRole.Manager))
+            .OrderBy(u => u.DisplayName)
+            .ThenBy(u => u.SapUserId)
+            .Select(u => new { u.DisplayName, u.SapUserId, u.SalesOrg })
+            .ToListAsync(cancellationToken);
+        IEnumerable<(string Title, string Value)> choices = mappings
+            .Select(mapping => (
+                Title: string.IsNullOrWhiteSpace(mapping.DisplayName)
+                    ? $"{mapping.SapUserId} (Manager)"
+                    : $"{mapping.DisplayName} ({mapping.SapUserId})",
+                Value: mapping.SapUserId!));
+        if (!string.IsNullOrWhiteSpace(excludeSapUserId))
+        {
+            var exclude = excludeSapUserId.Trim();
+            choices = choices.Where(c => !string.Equals(c.Value, exclude, StringComparison.OrdinalIgnoreCase));
+        }
+        return choices.ToList();
+    }
 
     /// <summary>
     /// Returns the RBAC role for a user. Unknown/unmapped users default to
