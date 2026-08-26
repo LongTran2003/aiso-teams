@@ -73,7 +73,7 @@
               "data": {
                 "msteams": {
                   "type": "messageBack",
-                  "displayText": "Thu hồi uỷ quyền cho ${delegateUser}",
+                  "displayText": "Revoke delegation for ${delegateUser}",
                   "text": "revoke delegation ${delegateUser}"
                 },
                 "action": "revoke_delegation_prompt",
@@ -94,4 +94,3 @@
     }
   ]
 }
-

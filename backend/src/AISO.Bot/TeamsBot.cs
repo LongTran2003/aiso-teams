@@ -2883,7 +2883,7 @@ public class TeamsBot : TeamsActivityHandler
                 var todayStr = DateTime.UtcNow.ToString("yyyy-MM-dd");
                 var tomorrowStr = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd");
 
-                var rawChoices = await _userMappingService.GetForwardRecipientChoicesAsync(cancellationToken);
+                var rawChoices = await _userMappingService.GetManagerRecipientChoicesAsync(cancellationToken);
 
                 var managerChoices = rawChoices.Select(c => new { title = c.Title, value = c.Value });
 
@@ -3434,20 +3434,24 @@ public class TeamsBot : TeamsActivityHandler
 
             if (result.Payload is AISO.AiOrchestration.Functions.ConfirmDelegateApprovalResponse confirmDelegate)
             {
+                var rawChoices = await _userMappingService.GetManagerRecipientChoicesAsync(cancellationToken);
+                var managerChoices = rawChoices.Select(c => new { title = c.Title, value = c.Value });
+
                 await ReplaceLoadingActivityAsync(
-                    turnContext,
-                    loadingActivityId,
-                    TeamsCardBuilder.BuildConfirmDelegateApprovalCard(
-                        confirmDelegate.DelegateUser,
-                        confirmDelegate.ValidFromRaw,
-                        confirmDelegate.ValidToRaw,
-                        confirmDelegate.ValidFrom,
-                        confirmDelegate.ValidTo,
-                        confirmDelegate.Reason,
-                        confirmDelegate.MaxAmountRaw,
-                        confirmDelegate.MaxAmount,
-                        confirmDelegate.Currency),
-                    cancellationToken);
+    turnContext,
+    loadingActivityId,
+    TeamsCardBuilder.BuildConfirmDelegateApprovalCard(
+        confirmDelegate.DelegateUser,
+        confirmDelegate.ValidFromRaw,
+        confirmDelegate.ValidToRaw,
+        confirmDelegate.ValidFrom,
+        confirmDelegate.ValidTo,
+        confirmDelegate.Reason,
+        confirmDelegate.MaxAmountRaw,
+        confirmDelegate.MaxAmount,
+        confirmDelegate.Currency,
+        managerChoices: managerChoices),
+    cancellationToken);
 
                 _logger.LogInformation(
                     "Bot replied with confirm-delegate card for user {DelegateUser}",
