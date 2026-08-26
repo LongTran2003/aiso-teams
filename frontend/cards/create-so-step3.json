@@ -201,7 +201,59 @@
           ]
         }
       ]
-    },    {
+    },
+    {
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.ChoiceSet",
+              "id": "material3",
+              "label": "Material 3 (optional)",
+              "style": "compact",
+              "value": "${material3}",
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty3",
+              "label": "Qty",
+              "min": 0,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "unit3",
+              "label": "Unit",
+              "value": "${unit3}"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "type": "Container",
       "id": "row4",
       "isVisible": false,
@@ -250,24 +302,6 @@
                   "type": "Input.Text",
                   "id": "unit4",
                   "label": "Unit"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "Container",
-          "id": "removeRow4",
-          "isVisible": false,
-          "items": [
-            {
-              "type": "ActionSet",
-              "horizontalAlignment": "right",
-              "actions": [
-                {
-                  "type": "Action.ToggleVisibility",
-                  "title": "− Remove row 4",
-                  "targetElements": ["row4", "removeRow4"]
                 }
               ]
             }
@@ -328,24 +362,6 @@
               ]
             }
           ]
-        },
-        {
-          "type": "Container",
-          "id": "removeRow5",
-          "isVisible": false,
-          "items": [
-            {
-              "type": "ActionSet",
-              "horizontalAlignment": "right",
-              "actions": [
-                {
-                  "type": "Action.ToggleVisibility",
-                  "title": "− Remove row 5",
-                  "targetElements": ["row5", "removeRow5"]
-                }
-              ]
-            }
-          ]
         }
       ]
     },
@@ -398,24 +414,6 @@
                   "type": "Input.Text",
                   "id": "unit6",
                   "label": "Unit"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "Container",
-          "id": "removeRow6",
-          "isVisible": false,
-          "items": [
-            {
-              "type": "ActionSet",
-              "horizontalAlignment": "right",
-              "actions": [
-                {
-                  "type": "Action.ToggleVisibility",
-                  "title": "− Remove row 6",
-                  "targetElements": ["row6", "removeRow6"]
                 }
               ]
             }
@@ -476,24 +474,6 @@
               ]
             }
           ]
-        },
-        {
-          "type": "Container",
-          "id": "removeRow7",
-          "isVisible": false,
-          "items": [
-            {
-              "type": "ActionSet",
-              "horizontalAlignment": "right",
-              "actions": [
-                {
-                  "type": "Action.ToggleVisibility",
-                  "title": "− Remove row 7",
-                  "targetElements": ["row7", "removeRow7"]
-                }
-              ]
-            }
-          ]
         }
       ]
     },
@@ -546,24 +526,6 @@
                   "type": "Input.Text",
                   "id": "unit8",
                   "label": "Unit"
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "type": "Container",
-          "id": "removeRow8",
-          "isVisible": false,
-          "items": [
-            {
-              "type": "ActionSet",
-              "horizontalAlignment": "right",
-              "actions": [
-                {
-                  "type": "Action.ToggleVisibility",
-                  "title": "− Remove row 8",
-                  "targetElements": ["row8", "removeRow8"]
                 }
               ]
             }
@@ -624,24 +586,6 @@
               ]
             }
           ]
-        },
-        {
-          "type": "Container",
-          "id": "removeRow9",
-          "isVisible": false,
-          "items": [
-            {
-              "type": "ActionSet",
-              "horizontalAlignment": "right",
-              "actions": [
-                {
-                  "type": "Action.ToggleVisibility",
-                  "title": "− Remove row 9",
-                  "targetElements": ["row9", "removeRow9"]
-                }
-              ]
-            }
-          ]
         }
       ]
     },
@@ -698,24 +642,6 @@
               ]
             }
           ]
-        },
-        {
-          "type": "Container",
-          "id": "removeRow10",
-          "isVisible": false,
-          "items": [
-            {
-              "type": "ActionSet",
-              "horizontalAlignment": "right",
-              "actions": [
-                {
-                  "type": "Action.ToggleVisibility",
-                  "title": "− Remove row 10",
-                  "targetElements": ["row10", "removeRow10"]
-                }
-              ]
-            }
-          ]
         }
       ]
     },
@@ -729,7 +655,7 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row4", "addRowBtn5"]
+              "targetElements": ["row4","addRowBtn5","addRowBtn4","removeBtn4"]
             }
           ]
         }
@@ -746,7 +672,7 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row5", "addRowBtn6"]
+              "targetElements": ["row5","addRowBtn6","addRowBtn5","removeBtn5"]
             }
           ]
         }
@@ -763,7 +689,7 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row6", "addRowBtn7"]
+              "targetElements": ["row6","addRowBtn7","addRowBtn6","removeBtn6"]
             }
           ]
         }
@@ -780,7 +706,7 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row7", "addRowBtn8"]
+              "targetElements": ["row7","addRowBtn8","addRowBtn7","removeBtn7"]
             }
           ]
         }
@@ -797,7 +723,7 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row8", "addRowBtn9"]
+              "targetElements": ["row8","addRowBtn9","addRowBtn8","removeBtn8"]
             }
           ]
         }
@@ -814,7 +740,7 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row9", "addRowBtn10"]
+              "targetElements": ["row9","addRowBtn10","addRowBtn9","removeBtn9"]
             }
           ]
         }
@@ -831,7 +757,126 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row10"]
+              "targetElements": ["row10","addRowBtn10","removeBtn10"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "removeBtn4",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "− Remove row",
+              "targetElements": ["row4","removeBtn4","addRowBtn4","addRowBtn5"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "removeBtn5",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "− Remove row",
+              "targetElements": ["row5","removeBtn5","addRowBtn5","addRowBtn6","removeBtn4"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "removeBtn6",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "− Remove row",
+              "targetElements": ["row6","removeBtn6","addRowBtn6","addRowBtn7","removeBtn5"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "removeBtn7",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "− Remove row",
+              "targetElements": ["row7","removeBtn7","addRowBtn7","addRowBtn8","removeBtn6"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "removeBtn8",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "− Remove row",
+              "targetElements": ["row8","removeBtn8","addRowBtn8","addRowBtn9","removeBtn7"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "removeBtn9",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "− Remove row",
+              "targetElements": ["row9","removeBtn9","addRowBtn9","addRowBtn10","removeBtn8"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "removeBtn10",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "− Remove row",
+              "targetElements": ["row10","removeBtn10","addRowBtn10","removeBtn9"]
             }
           ]
         }
