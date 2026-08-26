@@ -669,8 +669,16 @@ internal static class TeamsCardBuilder
         string reason,
         string maxAmountRaw,
         string maxAmount,
-        string currency) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+        string currency,
+        IEnumerable<object>? managerChoices = null)
+    {
+        var choices = managerChoices ?? new object[]
+        {
+            new { title = "DEV-031 (Manager)", value = "DEV-031" },
+            new { title = "DEV-025 (Manager)", value = "DEV-025" }
+        };
+
+        return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "confirm-delegate.json",
             new
             {
@@ -682,8 +690,10 @@ internal static class TeamsCardBuilder
                 reason,
                 maxAmountRaw,
                 maxAmount,
-                currency
+                currency,
+                managerChoices = choices
             });
+    }
     public static Attachment BuildConfirmForceCancelCard(
         string salesOrderNumber,
         string? reason = null) =>
