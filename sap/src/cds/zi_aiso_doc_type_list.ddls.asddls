@@ -10,3 +10,4 @@ define view entity ZI_AISO_DOC_TYPE_LIST
       _Text.bezei as DocTypeName,
       _Text
 }
+where tvak.vbtyp = 'C'

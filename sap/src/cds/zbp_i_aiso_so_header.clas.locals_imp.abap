@@ -542,26 +542,27 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
     ENDIF.
 
     " ══ Validate customer + sales area ══
-    DATA(lv_customer) = |{ ls_entity-Customer ALPHA = IN }|.
-    SELECT SINGLE kunnr FROM knvv
-      INTO @DATA(lv_cust_valid)
-      WHERE kunnr = @lv_customer
-        AND vkorg = @ls_entity-SalesOrg
-        AND vtweg = @ls_entity-DistChannel
-        AND spart = @ls_entity-Division.
+   " ══ Validate customer đã sẵn sàng đầy đủ (KNA1+KNB1+KNVV) ══
+DATA(lv_customer) = |{ ls_entity-Customer ALPHA = IN }|.
+SELECT SINGLE customer FROM zi_aiso_customer_ready
+  INTO @DATA(lv_cust_valid)
+  WHERE customer    = @lv_customer
+    AND salesorg    = @ls_entity-SalesOrg
+    AND distchannel = @ls_entity-DistChannel
+    AND division    = @ls_entity-Division.
 
-    IF sy-subrc <> 0.
-      APPEND VALUE #( %cid        = ls_entity-%cid
-                       %fail-cause = if_abap_behv=>cause-not_found )
-             TO failed-salesorder.
-      APPEND VALUE #( %cid = ls_entity-%cid
-                       %msg = new_message(
-                         id = '00' number = '001'
-                         severity = if_abap_behv_message=>severity-error
-                         v1 = |Customer { lv_customer } not valid for sales area| ) )
-             TO reported-salesorder.
-      CONTINUE.
-    ENDIF.
+IF sy-subrc <> 0.
+  APPEND VALUE #( %cid        = ls_entity-%cid
+                   %fail-cause = if_abap_behv=>cause-not_found )
+         TO failed-salesorder.
+  APPEND VALUE #( %cid = ls_entity-%cid
+                   %msg = new_message(
+                     id = '00' number = '001'
+                     severity = if_abap_behv_message=>severity-error
+                     v1 = |Customer { lv_customer } chưa đủ dữ liệu (thiếu KNA1/KNB1/Sales view)| ) )
+         TO reported-salesorder.
+  CONTINUE.
+ENDIF.
 
     " ══ Buffer header (BAPI sẽ gọi trong adjust_numbers) ══
     APPEND VALUE #(
