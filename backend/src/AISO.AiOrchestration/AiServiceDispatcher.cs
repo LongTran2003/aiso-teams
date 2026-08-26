@@ -45,6 +45,17 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
         UserRole role,
         CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(userMessage))
+        {
+            _logger.LogWarning("AiServiceDispatcher received an empty message");
+            return new DispatchResult
+            {
+                Handled = true,
+                FunctionName = "ai_text_reply",
+                Result = FunctionResult.Ok("I didn't receive any text. Please type a command or question.")
+            };
+        }
+
         // Help shortcuts / exact Admin commands must not depend on LLM tool calling.
         if (IsDeterministicShortcut(userMessage))
         {

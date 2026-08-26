@@ -2824,6 +2824,14 @@ public class TeamsBot : TeamsActivityHandler
         }
 
         var normalizedMessage = userMessage.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedMessage))
+        {
+            _logger.LogWarning("Received empty message or unhandled card action.");
+            await turnContext.SendActivityAsync(
+                "I didn't receive any text. Please type a command or question.",
+                cancellationToken: cancellationToken);
+            return;
+        }
 
         // Push activity-scoped properties into Serilog LogContext so every
         // log emitted inside this turn is tagged for end-to-end traceability.
