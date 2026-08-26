@@ -36,6 +36,7 @@ define root view entity ZI_AISO_SO_HEADER
       cast( '' as abap.char( 2 ) )        as DeliveryBlock,
       cast( '' as abap.char( 1 ) )        as BillingStatus,
       cast( '' as abap.char( 100 ) )      as RequestingTeamsUser,
+      cast( '' as abap.char( 10 ) )       as ShipToParty,
       case
         when _RejectStatus.TotalItems > 0
          and _RejectStatus.TotalItems = _RejectStatus.RejectedItems
