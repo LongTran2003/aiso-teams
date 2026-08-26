@@ -614,7 +614,7 @@ class AIOrchestrator:
                         "Successfully recovered from Groq API Bad Request (tool_use_failed)."
                     )
                     return recovered
-                
+
                 # FALLBACK: If model returned plain conversational text instead of a tool call
                 body = getattr(exc, "body", None)
                 if isinstance(body, dict):
@@ -622,12 +622,14 @@ class AIOrchestrator:
                     if err.get("code") == "tool_use_failed":
                         failed_gen = err.get("failed_generation")
                         if failed_gen and "<function=" not in failed_gen:
-                            logger.info("Falling back to raw failed_generation text for conversational reply.")
+                            logger.info(
+                                "Falling back to raw failed_generation text for conversational reply."
+                            )
                             return ChatResponse(
                                 reply=failed_gen.strip(),
                                 intent="general_query",
                                 tool_calls=[],
-                                adaptive_card_type=None
+                                adaptive_card_type=None,
                             )
                 raise
             except openai.AuthenticationError as exc:
