@@ -218,7 +218,9 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                     @"(?:qty|quantity|số lượng)\s+(\d+)|(\d+)\s+(?:pc|pcs|units?)",
                     RegexOptions.IgnoreCase);
 
-                var customerId = "10100001";
+                // Only pass customer if explicitly specified in the message.
+                // When omitted, CreateOrderFunction pre-fills with the first SAP customer.
+                string? customerId = null;
                 if (custMatch.Success)
                 {
                     customerId = (custMatch.Groups[1].Success ? custMatch.Groups[1].Value
@@ -226,18 +228,24 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                         : custMatch.Groups[3].Value).ToUpperInvariant();
                 }
 
-                var material = matMatch.Success ? matMatch.Groups[1].Value.ToUpperInvariant() : "TG11";
+                var material = matMatch.Success ? matMatch.Groups[1].Value.ToUpperInvariant() : null;
                 var qty = 1;
                 if (qtyMatch.Success)
                 {
                     qty = int.Parse(qtyMatch.Groups[1].Success ? qtyMatch.Groups[1].Value : qtyMatch.Groups[2].Value);
                 }
 
-                var paramsObj = new
-                {
-                    customer = customerId,
-                    items = new[] { new { material = material, qty = qty } }
-                };
+                // Build minimal params — omit customer/material when not specified so the
+                // CreateOrderFunction shows Step 1 with SAP-loaded dropdowns.
+                object paramsObj;
+                if (customerId is not null && material is not null)
+                    paramsObj = new { customer = customerId, items = new[] { new { material, qty } } };
+                else if (customerId is not null)
+                    paramsObj = new { customer = customerId };
+                else if (material is not null)
+                    paramsObj = new { items = new[] { new { material, qty } } };
+                else
+                    paramsObj = new { };
 
                 var paramsJson = JsonSerializer.Serialize(paramsObj);
                 using var doc = JsonDocument.Parse(paramsJson);
