@@ -406,7 +406,8 @@ internal static class TeamsCardBuilder
                 purchaseOrderRef = purchaseOrderRef ?? "",
                 requestedDeliveryDate = requestedDeliveryDate ?? "",
                 shipToParty = shipToParty ?? "",
-                hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false"
+                hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false",
+                customer = ""
             });
 
     public static Attachment BuildCreateOrderStep3Card(
@@ -428,7 +429,7 @@ internal static class TeamsCardBuilder
             new
             {
                 customerLabel,
-                customerKey,
+                customer = customerKey,
                 salesAreaLabel,
                 salesAreaKey,
                 salesOrg = salesOrg ?? "",
@@ -441,6 +442,7 @@ internal static class TeamsCardBuilder
                 requestedDeliveryDate = requestedDeliveryDate ?? "",
                 shipToParty = shipToParty ?? "",
                 hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false",
+                unit1 = "",
                 unit2 = "",
                 unit3 = ""
             });
@@ -471,7 +473,7 @@ internal static class TeamsCardBuilder
                 currency,
                 purchaseOrderRef = string.IsNullOrWhiteSpace(purchaseOrderRef) ? "-" : purchaseOrderRef,
                 requestedDeliveryDate = string.IsNullOrWhiteSpace(requestedDeliveryDate) ? "-" : requestedDeliveryDate,
-                lineItems = lineItems.Select(l => new { l.Material, l.Qty }).ToList(),
+                lineItems = lineItems.Select(l => new { l.Material, l.Qty, Plant = l.Plant ?? "", Unit = l.Unit ?? "" }).ToList(),
                 lineItemsJson = System.Text.Json.JsonSerializer.Serialize(lineItems),
                 salesAreaKey,
                 salesOrg,
