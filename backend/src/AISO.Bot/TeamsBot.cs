@@ -1674,7 +1674,7 @@ public class TeamsBot : TeamsActivityHandler
                             .Select(g => g.First())
                             .ToList();
 
-                        try 
+                        try
                         {
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep2Card(
