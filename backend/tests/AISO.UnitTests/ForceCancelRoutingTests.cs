@@ -106,16 +106,17 @@ public class ForceCancelRoutingTests
     }
 
     [Fact]
-    public void BuildConfirmCancelCard_IncludesAction()
+    public void BuildConfirmDeleteCard_IncludesAction()
     {
-        var attachment = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmCancelCard(
+        var attachment = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmDeleteCard(
             "0000005001",
+            AISO.Domain.Users.UserRole.Manager,
             "demo reason");
         var json = Newtonsoft.Json.JsonConvert.SerializeObject(attachment.Content);
 
-        Assert.Contains("Confirm cancel", json);
+        Assert.Contains("Confirm delete", json);
         Assert.Contains("0000005001", json);
-        Assert.Contains("cancel_so_confirm", json);
+        Assert.Contains("delete_so_confirm", json);
         Assert.Contains("demo reason", json);
     }
 

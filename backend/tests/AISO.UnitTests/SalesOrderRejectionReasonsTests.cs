@@ -32,9 +32,11 @@ public class SalesOrderRejectionReasonsTests
     }
 
     [Fact]
-    public void BuildConfirmRejectCard_UsesCatalogChoices()
+    public void BuildConfirmDeleteCard_UsesCatalogChoices()
     {
-        var attachment = TeamsCardBuilder.BuildConfirmRejectCard("0000000009");
+        var attachment = TeamsCardBuilder.BuildConfirmDeleteCard(
+            "0000000009",
+            AISO.Domain.Users.UserRole.Employee);
         var json = JsonConvert.SerializeObject(attachment.Content);
 
         Assert.Contains("Price too high", json);

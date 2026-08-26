@@ -214,25 +214,26 @@ internal static class TeamsCardBuilder
             "not-authorized.json",
             new { errorMessage, currentRole, requiredRole });
 
-    public static Attachment BuildConfirmRejectCard(string salesOrderNumber) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
-            "confirm-reject.json",
-            new
-            {
-                salesOrderNumber,
-                reasons = SalesOrderRejectionReasons.All
-                    .Select(r => new { title = r.Title, value = r.Code })
-                    .ToList()
-            });
-
-    public static Attachment BuildConfirmCancelCard(
+    public static Attachment BuildConfirmDeleteCard(
         string salesOrderNumber,
+        UserRole role,
         string? reason = null) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment(
-            "confirm-cancel.json",
+            "confirm-delete.json",
             new
             {
                 salesOrderNumber,
+                // Show reason code dropdown for owner rejection path, free text
+                // for manager cancellation path. When both apply (e.g. a manager
+                // also owns the order) we render both fields.
+                showReasonCode = role <= UserRole.Employee ? "true" : "false",
+                showReasonText  = role >= UserRole.Manager ? "true" : "false",
+                warningMessage = role >= UserRole.Manager
+                    ? "This cancels the sales order in SAP. Any pending release approval for this order will be cleared."
+                    : "This rejects your sales order in SAP. This action cannot be undone once confirmed.",
+                reasons = SalesOrderRejectionReasons.All
+                    .Select(r => new { title = r.Title, value = r.Code })
+                    .ToList(),
                 reason = reason ?? string.Empty
             });
 
@@ -959,14 +960,16 @@ internal static class TeamsCardBuilder
             journeySteps = journey.Select(s => new { title = s.Title, detail = s.Detail }).ToList(),
             showRequestRelease = isEmployee && canMutateWhilePending ? "true" : "false",
             showApprove = isApprover && canMutateLifecycle && showActivePending && materialOk ? "true" : "false",
-            // Manager/Admin: cancel any cancellable SO (including while pending release).
-            showCancel = isApprover && canReject && materialOk ? "true" : "false",
+            // Either Manager/Admin cancelling, or owner rejecting (their own, not pending).
+            showDelete = (isApprover || isOwner)
+                && canReject && materialOk
+                && (isApprover || (!hasPendingApproval && !releaseApproved))
+                ? "true" : "false",
             showUpdateReference = canMutateWhilePending ? "true" : "false",
             // Owner (not pending) or Manager/Admin may open full edit.
             showEditOrder = canReject && materialOk
                 && ((isOwner && !hasPendingApproval && !releaseApproved) || isApprover)
                 ? "true" : "false",
-            showReject = canRejectWhilePending ? "true" : "false",
             showForward = canMutateWhilePending ? "true" : "false",
             items = items.Select(item =>
             {

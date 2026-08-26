@@ -458,58 +458,29 @@ public class TeamsBot : TeamsActivityHandler
                         return;
                     }
 
-                    if (string.Equals(action, "reject_so", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
-                        var linkedSapForGate = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
-                        if (!await EnsureLifecycleActionAllowedAsync(
-                                turnContext,
-                                salesOrderId,
-                                "Reject",
-                                cancellationToken,
-                                blockIfPendingApproval: true,
-                                blockIfNotOwner: true,
-                                currentSapUser: linkedSapForGate))
-                        {
-                            return;
-                        }
-
-                        await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmRejectCard(salesOrderId)),
-                            cancellationToken);
-                        return;
-                    }
-
-                    if (string.Equals(action, "cancel_so", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(action, "delete_so", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken)
                             ? idToken.ToString()
                             : "UNKNOWN";
-                        var roleForCancel = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
-                        if (roleForCancel < UserRole.Manager)
-                        {
-                            await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildNotAuthorizedCard(
-                                    "Only Manager or Admin can cancel from the order detail card. Employees can type \"cancel order {id}\" for their own orders, or use Reject order.",
-                                    roleForCancel.ToString(),
-                                    UserRole.Manager.ToString())),
-                                cancellationToken);
-                            return;
-                        }
+                        var linkedSapForDelete = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
+                        var roleForDelete = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        var isApprover = roleForDelete is UserRole.Manager or UserRole.Admin;
 
                         if (!await EnsureLifecycleActionAllowedAsync(
                                 turnContext,
                                 salesOrderId,
-                                "Cancel",
+                                isApprover ? "Cancel" : "Reject",
                                 cancellationToken,
-                                blockIfPendingApproval: false,
-                                blockIfNotOwner: false))
+                                blockIfPendingApproval: !isApprover,
+                                blockIfNotOwner: !isApprover,
+                                currentSapUser: linkedSapForDelete))
                         {
                             return;
                         }
 
                         await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmCancelCard(salesOrderId)),
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildConfirmDeleteCard(salesOrderId, roleForDelete)),
                             cancellationToken);
                         return;
                     }
@@ -1398,73 +1369,16 @@ public class TeamsBot : TeamsActivityHandler
                         return;
                     }
 
-                    if (string.Equals(action, "reject_so_confirm", StringComparison.OrdinalIgnoreCase))
-                    {
-                        var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken) ? idToken.ToString() : "UNKNOWN";
-                        var reasonCode = valueObj.TryGetValue("reasonCode", StringComparison.OrdinalIgnoreCase, out var reasonToken)
-                            ? reasonToken.ToString()
-                            : "OTHER";
-
-                        var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
-                        if (string.IsNullOrWhiteSpace(linkedSapUsername))
-                        {
-                            await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
-                                    "NOT_LINKED",
-                                    "No SAP account is linked to your Teams identity yet.")),
-                                cancellationToken);
-                            return;
-                        }
-
-                        var sapReasonCode = SalesOrderRejectionReasons.ToSapAbgru(reasonCode);
-
-                        try
-                        {
-                            if (!await EnsureLifecycleActionAllowedAsync(
-                                    turnContext,
-                                    salesOrderId,
-                                    "Reject",
-                                    cancellationToken,
-                                    blockIfPendingApproval: true,
-                                    blockIfNotOwner: true,
-                                    currentSapUser: linkedSapUsername))
-                            {
-                                return;
-                            }
-
-                            var updatedOrder = await _sap.RejectOrderAsync(salesOrderId, sapReasonCode, linkedSapUsername, cancellationToken);
-                            var displayedSo = string.IsNullOrWhiteSpace(updatedOrder.SoNumber)
-                                              || updatedOrder.SoNumber == "UNKNOWN"
-                                ? salesOrderId
-                                : updatedOrder.SoNumber;
-                            await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(displayedSo, "Rejected")),
-                                cancellationToken);
-                        }
-                        catch (SapODataException sapEx)
-                        {
-                            _logger.LogError(sapEx, "SAP error rejecting order {OrderId}", salesOrderId);
-                            await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
-                                cancellationToken: cancellationToken);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex, "Unexpected error rejecting order {OrderId}", salesOrderId);
-                            await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
-                                cancellationToken: cancellationToken);
-                        }
-                        return;
-                    }
-
-                    if (string.Equals(action, "cancel_so_confirm", StringComparison.OrdinalIgnoreCase))
+                    if (string.Equals(action, "delete_so_confirm", StringComparison.OrdinalIgnoreCase))
                     {
                         var salesOrderId = valueObj.TryGetValue("salesOrderId", StringComparison.OrdinalIgnoreCase, out var idToken)
                             ? idToken.ToString()
                             : "UNKNOWN";
-                        var reason = valueObj.TryGetValue("reason", StringComparison.OrdinalIgnoreCase, out var reasonToken)
+                        var reasonText = valueObj.TryGetValue("reason", StringComparison.OrdinalIgnoreCase, out var reasonToken)
                             ? reasonToken.ToString()?.Trim()
+                            : null;
+                        var reasonCode = valueObj.TryGetValue("reasonCode", StringComparison.OrdinalIgnoreCase, out var codeToken)
+                            ? codeToken.ToString()
                             : null;
 
                         var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
@@ -1479,21 +1393,23 @@ public class TeamsBot : TeamsActivityHandler
                         }
 
                         var role = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
+                        var isApprover = role is UserRole.Manager or UserRole.Admin;
+
                         try
                         {
                             if (!await EnsureLifecycleActionAllowedAsync(
                                     turnContext,
                                     salesOrderId,
-                                    "Cancel",
+                                    isApprover ? "Cancel" : "Reject",
                                     cancellationToken,
-                                    blockIfPendingApproval: false,
-                                    blockIfNotOwner: role < UserRole.Manager,
+                                    blockIfPendingApproval: !isApprover,
+                                    blockIfNotOwner: !isApprover,
                                     currentSapUser: linkedSapUsername))
                             {
                                 return;
                             }
 
-                            // Manager SalesOrg scope (same as approve)
+                            // Manager SalesOrg scope check (same as approve).
                             if (role == UserRole.Manager)
                             {
                                 var order = await _sap.GetSalesOrderByIdAsync(salesOrderId, cancellationToken);
@@ -1512,36 +1428,45 @@ public class TeamsBot : TeamsActivityHandler
                                 }
                             }
 
-                            var updatedOrder = await _sap.CancelOrderAsync(
-                                salesOrderId,
-                                linkedSapUsername,
-                                reason,
-                                cancellationToken);
+                            var updatedOrder = isApprover
+                                ? await _sap.CancelOrderAsync(
+                                    salesOrderId,
+                                    linkedSapUsername,
+                                    reasonText,
+                                    cancellationToken)
+                                : await _sap.RejectOrderAsync(
+                                    salesOrderId,
+                                    SalesOrderRejectionReasons.ToSapAbgru(reasonCode),
+                                    linkedSapUsername,
+                                    cancellationToken);
 
-                            // Clear pending release request if any
-                            var pending = await _approvals.GetPendingBySoNumberAsync(updatedOrder.SoNumber, cancellationToken)
-                                ?? await _approvals.GetPendingBySoNumberAsync(salesOrderId, cancellationToken);
-                            if (pending is not null)
+                            // Cancel also clears any pending release approval.
+                            if (isApprover)
                             {
-                                try
+                                var pending = await _approvals.GetPendingBySoNumberAsync(updatedOrder.SoNumber, cancellationToken)
+                                    ?? await _approvals.GetPendingBySoNumberAsync(salesOrderId, cancellationToken);
+                                if (pending is not null)
                                 {
-                                    var managerSalesOrg = await _userMappingService.GetSalesOrgAsync(teamsUserId, cancellationToken);
-                                    await _approvals.RejectAsync(
-                                        pending.SoNumber,
-                                        linkedSapUsername,
-                                        managerSalesOrg,
-                                        isAdmin: role >= UserRole.Admin,
-                                        comment: string.IsNullOrWhiteSpace(reason)
-                                            ? "Order cancelled"
-                                            : $"Order cancelled: {reason}",
-                                        cancellationToken);
-                                }
-                                catch (Exception clearEx)
-                                {
-                                    _logger.LogWarning(
-                                        clearEx,
-                                        "Cancelled SO {SoNumber} but failed to clear pending approval",
-                                        pending.SoNumber);
+                                    try
+                                    {
+                                        var managerSalesOrg = await _userMappingService.GetSalesOrgAsync(teamsUserId, cancellationToken);
+                                        await _approvals.RejectAsync(
+                                            pending.SoNumber,
+                                            linkedSapUsername,
+                                            managerSalesOrg,
+                                            isAdmin: role >= UserRole.Admin,
+                                            comment: string.IsNullOrWhiteSpace(reasonText)
+                                                ? "Order cancelled"
+                                                : $"Order cancelled: {reasonText}",
+                                            cancellationToken);
+                                    }
+                                    catch (Exception clearEx)
+                                    {
+                                        _logger.LogWarning(
+                                            clearEx,
+                                            "Cancelled SO {SoNumber} but failed to clear pending approval",
+                                            pending.SoNumber);
+                                    }
                                 }
                             }
 
@@ -1549,11 +1474,12 @@ public class TeamsBot : TeamsActivityHandler
                             {
                                 TeamsUserId = teamsUserId,
                                 ConversationId = conversationId,
-                                Action = "CancelOrder",
+                                Action = isApprover ? "CancelOrder" : "RejectOrder",
                                 ParametersJson = JsonConvert.SerializeObject(new
                                 {
                                     order_id = updatedOrder.SoNumber,
-                                    reason
+                                    reason_text = reasonText,
+                                    reason_code = reasonCode
                                 }),
                                 ResultStatus = "Success"
                             }, cancellationToken);
@@ -1565,20 +1491,24 @@ public class TeamsBot : TeamsActivityHandler
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(
                                     displayedSo,
-                                    "Cancelled",
-                                    reason)),
+                                    isApprover ? "Cancelled" : "Rejected",
+                                    isApprover
+                                        ? reasonText
+                                        : SalesOrderRejectionReasons.TryGet(reasonCode, out var r)
+                                            ? r.Title
+                                            : reasonCode)),
                                 cancellationToken);
                         }
                         catch (SapODataException sapEx)
                         {
-                            _logger.LogError(sapEx, "SAP error cancelling order {OrderId}", salesOrderId);
+                            _logger.LogError(sapEx, "SAP error deleting order {OrderId}", salesOrderId);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
                                 cancellationToken);
                         }
                         catch (Exception ex)
                         {
-                            _logger.LogError(ex, "Unexpected error cancelling order {OrderId}", salesOrderId);
+                            _logger.LogError(ex, "Unexpected error deleting order {OrderId}", salesOrderId);
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("ACTION_FAILED", ex.Message)),
                                 cancellationToken);
@@ -3494,16 +3424,18 @@ public class TeamsBot : TeamsActivityHandler
 
             if (result.Payload is AISO.AiOrchestration.Functions.ConfirmCancelOrderResponse confirmCancel)
             {
+                var roleForDelete = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
                 await ReplaceLoadingActivityAsync(
                     turnContext,
                     loadingActivityId,
-                    TeamsCardBuilder.BuildConfirmCancelCard(
+                    TeamsCardBuilder.BuildConfirmDeleteCard(
                         confirmCancel.SoNumber,
+                        roleForDelete,
                         confirmCancel.Reason),
                     cancellationToken);
 
                 _logger.LogInformation(
-                    "Bot replied with confirm-cancel card for SO {SoNumber}",
+                    "Bot replied with confirm-delete card for SO {SoNumber}",
                     confirmCancel.SoNumber);
                 return;
             }

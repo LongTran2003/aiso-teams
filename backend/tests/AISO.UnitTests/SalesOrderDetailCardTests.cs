@@ -17,7 +17,7 @@ public class SalesOrderDetailCardTests
         Assert.Contains("Request release", json);
         Assert.Contains("\"action\":\"release_so\"", json);
         Assert.DoesNotContain("\"action\":\"approve_so\"", json);
-        Assert.Contains("Reject order", json);
+        Assert.Contains("Xoá đơn", json);
         Assert.Contains("Forward", json);
         Assert.Contains("No line items available yet.", json);
         Assert.DoesNotContain("Waiting for manager approval", json);
@@ -32,7 +32,7 @@ public class SalesOrderDetailCardTests
 
         Assert.DoesNotContain("\"action\":\"approve_so\"", json);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
-        Assert.Contains("\"action\":\"reject_so\"", json);
+        Assert.Contains("\"action\":\"delete_so\"", json);
         Assert.Contains("MAT-001", json);
         Assert.Contains("Widget", json);
         Assert.Contains("10 · MAT-001", json);
@@ -58,7 +58,7 @@ public class SalesOrderDetailCardTests
         Assert.DoesNotContain("Waiting for manager approval", json);
         Assert.DoesNotContain("Reject / Forward", json);
         Assert.Contains("\"action\":\"approve_so\"", json);
-        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.Contains("\"action\":\"delete_so\"", json); // manager can cancel a pending order
         Assert.DoesNotContain("\"action\":\"forward_so\"", json);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
     }
@@ -94,7 +94,7 @@ public class SalesOrderDetailCardTests
         Assert.DoesNotContain("Reject / Forward", json);
         Assert.DoesNotContain("Release request pending", json);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
-        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"delete_so\"", json);
         Assert.DoesNotContain("\"action\":\"forward_so\"", json);
         Assert.DoesNotContain("\"action\":\"approve_so\"", json);
     }
@@ -134,7 +134,7 @@ public class SalesOrderDetailCardTests
 
         Assert.DoesNotContain("\"action\":\"approve_so\"", json);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
-        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"delete_so\"", json);
         Assert.DoesNotContain("\"action\":\"forward_so\"", json);
     }
 
@@ -151,7 +151,7 @@ public class SalesOrderDetailCardTests
             currentSapUser: "DEV-249");
         var json = JsonConvert.SerializeObject(attachment.Content);
 
-        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"delete_so\"", json);
         Assert.DoesNotContain("\"action\":\"forward_so\"", json);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
     }
@@ -191,7 +191,7 @@ public class SalesOrderDetailCardTests
         Assert.Contains("Owned by DEV-200", json);
         Assert.Contains("limited to the owner", json);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
-        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"delete_so\"", json);
         Assert.DoesNotContain("\"action\":\"forward_so\"", json);
     }
 
@@ -223,7 +223,7 @@ public class SalesOrderDetailCardTests
         var json = JsonConvert.SerializeObject(attachment.Content);
 
         Assert.Contains("Invalid material master data", json);
-        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"delete_so\"", json);
         Assert.DoesNotContain("\"action\":\"forward_so\"", json);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
     }
@@ -294,7 +294,7 @@ public class SalesOrderDetailCardTests
         Assert.DoesNotContain("delivery block was cleared", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("not that the order is stuck", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
-        Assert.DoesNotContain("\"action\":\"reject_so\"", json);
+        Assert.DoesNotContain("\"action\":\"delete_so\"", json);
         Assert.DoesNotContain("\"action\":\"forward_so\"", json);
     }
 

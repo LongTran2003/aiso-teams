@@ -431,20 +431,6 @@
     },
     {
       "type": "Action.Submit",
-      "title": "Update reference",
-      "$when": "${showUpdateReference == 'true'}",
-      "data": {
-        "msteams": {
-          "type": "messageBack",
-          "displayText": "Update reference ${salesOrderNumber}",
-          "text": "update reference ${salesOrderNumber}"
-        },
-        "action": "update_ref",
-        "salesOrderId": "${salesOrderNumber}"
-      }
-    },
-    {
-      "type": "Action.Submit",
       "title": "Edit order",
       "$when": "${showEditOrder == 'true'}",
       "data": {
@@ -474,31 +460,16 @@
     },
     {
       "type": "Action.Submit",
-      "title": "Cancel order",
+      "title": "Xo\u00e1 \u0111\u01a1n",
       "style": "destructive",
-      "$when": "${showCancel == 'true'}",
+      "$when": "${showDelete == 'true'}",
       "data": {
         "msteams": {
           "type": "messageBack",
-          "displayText": "Cancel order ${salesOrderNumber}",
-          "text": "cancel order ${salesOrderNumber}"
+          "displayText": "Delete order ${salesOrderNumber}",
+          "text": "delete order ${salesOrderNumber}"
         },
-        "action": "cancel_so",
-        "salesOrderId": "${salesOrderNumber}"
-      }
-    },
-    {
-      "type": "Action.Submit",
-      "title": "Reject order",
-      "style": "destructive",
-      "$when": "${showReject == 'true'}",
-      "data": {
-        "msteams": {
-          "type": "messageBack",
-          "displayText": "Reject order ${salesOrderNumber}",
-          "text": "reject order ${salesOrderNumber}"
-        },
-        "action": "reject_so",
+        "action": "delete_so",
         "salesOrderId": "${salesOrderNumber}"
       }
     },

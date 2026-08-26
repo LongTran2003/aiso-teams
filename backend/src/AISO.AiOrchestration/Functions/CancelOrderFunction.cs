@@ -8,8 +8,9 @@ namespace AISO.AiOrchestration.Functions;
 
 /// <summary>
 /// Prepare cancel for a sales order (SAP <c>cancelOrder</c>).
-/// Shows a confirmation card — SAP call runs on Adaptive Card <c>cancel_so_confirm</c>.
-/// Employee: own SO only. Manager/Admin: any SO (Manager scoped by SalesOrg when set).
+/// Shows the shared <c>confirm-delete.json</c> card — SAP call runs on
+/// Adaptive Card <c>delete_so_confirm</c>. Employee: own SO only.
+/// Manager/Admin: any SO (Manager scoped by SalesOrg when set).
 /// </summary>
 public sealed class CancelOrderFunction : IFunction
 {
@@ -141,5 +142,5 @@ public sealed class CancelOrderFunction : IFunction
     }
 }
 
-/// <summary>Payload telling the bot to show <c>confirm-cancel.json</c>.</summary>
+/// <summary>Payload telling the bot to show <c>confirm-delete.json</c>.</summary>
 public sealed record ConfirmCancelOrderResponse(string SoNumber, string? Reason = null);

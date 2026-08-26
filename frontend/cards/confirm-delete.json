@@ -1,0 +1,89 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Attention",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Confirm delete",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Attention",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Sales order ${salesOrderNumber}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "${warningMessage}",
+      "wrap": true,
+      "spacing": "Medium"
+    },
+    {
+      "type": "Input.ChoiceSet",
+      "id": "reasonCode",
+      "label": "Reason (short)",
+      "placeholder": "Select a reason",
+      "isRequired": false,
+      "errorMessage": "Please select a reason",
+      "$when": "${showReasonCode == 'true'}",
+      "choices": [
+        {
+          "$data": "${reasons}",
+          "title": "${title}",
+          "value": "${value}"
+        }
+      ]
+    },
+    {
+      "type": "Input.Text",
+      "id": "reason",
+      "label": "Reason (optional, free text)",
+      "isRequired": false,
+      "isMultiline": true,
+      "placeholder": "Why are you deleting this order?",
+      "value": "${reason}",
+      "$when": "${showReasonText == 'true'}"
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Confirm delete",
+      "style": "destructive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Confirm delete order ${salesOrderNumber}",
+          "text": "delete order ${salesOrderNumber}"
+        },
+        "action": "delete_so_confirm",
+        "salesOrderId": "${salesOrderNumber}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Back",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}
