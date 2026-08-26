@@ -1654,13 +1654,13 @@ public class TeamsBot : TeamsActivityHandler
                         IReadOnlyList<SapDocType> docTypes;
                         try
                         {
-                            var custTask = _sap.GetValidCustomersAsync(salesOrg, distChannel, division, top: 500, ct: cancellationToken);
+                            var custTask = _sap.GetValidCustomersAsync(salesOrg, distChannel, division, top: 75, ct: cancellationToken);
                             var doctypeTask = _sap.GetDocTypeListAsync(cancellationToken);
                             await Task.WhenAll(custTask, doctypeTask);
                             customers = custTask.Result;
                             docTypes = doctypeTask.Result;
                             if (customers.Count == 0)
-                                customers = await _sap.GetValidCustomersAsync(top: 500, ct: cancellationToken);
+                                customers = await _sap.GetValidCustomersAsync(top: 75, ct: cancellationToken);
                         }
                         catch
                         {
@@ -1694,7 +1694,7 @@ public class TeamsBot : TeamsActivityHandler
                                 salesAreaLabel, salesAreaKey, salesOrg, distChannel, division, customerChoices, docTypes);
                             var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(debugCard.Content);
                             _logger.LogError(ex, "Failed to send Step 2 card. JSON: {Json}", jsonStr);
-                            await turnContext.SendActivityAsync($"DEV ERROR CARD JSON: {jsonStr}", cancellationToken: cancellationToken);
+                            // payload too large
                             throw;
                         }
                     }
@@ -1786,7 +1786,7 @@ public class TeamsBot : TeamsActivityHandler
                         string customerLabel;
                         try
                         {
-                            var custRows = await _sap.GetValidCustomersAsync(salesOrg, distChannel, division, top: 500, ct: cancellationToken);
+                            var custRows = await _sap.GetValidCustomersAsync(salesOrg, distChannel, division, top: 75, ct: cancellationToken);
                             var found = custRows.FirstOrDefault(c =>
                                 string.Equals(c.Customer.TrimStart('0'), validatedCustomerKey.TrimStart('0'), StringComparison.OrdinalIgnoreCase)
                                 || string.Equals(c.Customer, validatedCustomerKey, StringComparison.OrdinalIgnoreCase));
@@ -1801,9 +1801,9 @@ public class TeamsBot : TeamsActivityHandler
                         IReadOnlyList<SapValidMaterialSales> materials;
                         try
                         {
-                            materials = await _sap.GetValidMaterialSalesAsync(salesOrg, distChannel, top: 200, ct: cancellationToken);
+                            materials = await _sap.GetValidMaterialSalesAsync(salesOrg, distChannel, top: 75, ct: cancellationToken);
                             if (materials.Count == 0)
-                                materials = await _sap.GetValidMaterialSalesAsync(top: 200, ct: cancellationToken);
+                                materials = await _sap.GetValidMaterialSalesAsync(top: 75, ct: cancellationToken);
                         }
                         catch
                         {
