@@ -845,7 +845,11 @@ class AIOrchestrator:
                         intent="general_query",
                         tool_calls=[],
                     )
-                elif fn_name == "DelegateApproval" and field in ["delegateUser", "validFrom", "validTo"]:
+                elif fn_name == "DelegateApproval" and field in [
+                    "delegateUser",
+                    "validFrom",
+                    "validTo",
+                ]:
                     return ChatResponse(
                         reply=(
                             "Please provide the SAP User ID of the employee you'd like to "
