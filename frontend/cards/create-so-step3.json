@@ -252,14 +252,19 @@
           ]
         }
       ]
-    },
-    {
-      "type": "ActionSet",
-      "actions": [
+    },    {
+      "type": "Container",
+      "id": "addRowBtn4",
+      "items": [
         {
-          "type": "Action.ToggleVisibility",
-          "title": "+ Add row 4",
-          "targetElements": ["row4"]
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "+ Add another row",
+              "targetElements": ["row4", "addRowBtn5"]
+            }
+          ]
         }
       ]
     },
@@ -281,7 +286,6 @@
                   "id": "material4",
                   "label": "Material 4 (optional)",
                   "style": "compact",
-                  "value": "${material4}",
                   "choices": [
                     {
                       "$data": "${materialChoices}",
@@ -312,8 +316,7 @@
                 {
                   "type": "Input.Text",
                   "id": "unit4",
-                  "label": "Unit",
-                  "value": "${unit4}"
+                  "label": "Unit"
                 }
               ]
             }
@@ -322,12 +325,19 @@
       ]
     },
     {
-      "type": "ActionSet",
-      "actions": [
+      "type": "Container",
+      "id": "addRowBtn5",
+      "isVisible": false,
+      "items": [
         {
-          "type": "Action.ToggleVisibility",
-          "title": "+ Add row 5",
-          "targetElements": ["row5"]
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "+ Add another row",
+              "targetElements": ["row5", "addRowBtn6"]
+            }
+          ]
         }
       ]
     },
@@ -349,7 +359,6 @@
                   "id": "material5",
                   "label": "Material 5 (optional)",
                   "style": "compact",
-                  "value": "${material5}",
                   "choices": [
                     {
                       "$data": "${materialChoices}",
@@ -380,8 +389,7 @@
                 {
                   "type": "Input.Text",
                   "id": "unit5",
-                  "label": "Unit",
-                  "value": "${unit5}"
+                  "label": "Unit"
                 }
               ]
             }
@@ -390,12 +398,19 @@
       ]
     },
     {
-      "type": "ActionSet",
-      "actions": [
+      "type": "Container",
+      "id": "addRowBtn6",
+      "isVisible": false,
+      "items": [
         {
-          "type": "Action.ToggleVisibility",
-          "title": "+ Add row 6",
-          "targetElements": ["row6"]
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "+ Add another row",
+              "targetElements": ["row6", "addRowBtn7"]
+            }
+          ]
         }
       ]
     },
@@ -417,7 +432,6 @@
                   "id": "material6",
                   "label": "Material 6 (optional)",
                   "style": "compact",
-                  "value": "${material6}",
                   "choices": [
                     {
                       "$data": "${materialChoices}",
@@ -448,8 +462,7 @@
                 {
                   "type": "Input.Text",
                   "id": "unit6",
-                  "label": "Unit",
-                  "value": "${unit6}"
+                  "label": "Unit"
                 }
               ]
             }
@@ -458,12 +471,19 @@
       ]
     },
     {
-      "type": "ActionSet",
-      "actions": [
+      "type": "Container",
+      "id": "addRowBtn7",
+      "isVisible": false,
+      "items": [
         {
-          "type": "Action.ToggleVisibility",
-          "title": "+ Add row 7",
-          "targetElements": ["row7"]
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "+ Add another row",
+              "targetElements": ["row7", "addRowBtn8"]
+            }
+          ]
         }
       ]
     },
@@ -485,7 +505,6 @@
                   "id": "material7",
                   "label": "Material 7 (optional)",
                   "style": "compact",
-                  "value": "${material7}",
                   "choices": [
                     {
                       "$data": "${materialChoices}",
@@ -516,8 +535,7 @@
                 {
                   "type": "Input.Text",
                   "id": "unit7",
-                  "label": "Unit",
-                  "value": "${unit7}"
+                  "label": "Unit"
                 }
               ]
             }
@@ -526,12 +544,19 @@
       ]
     },
     {
-      "type": "ActionSet",
-      "actions": [
+      "type": "Container",
+      "id": "addRowBtn8",
+      "isVisible": false,
+      "items": [
         {
-          "type": "Action.ToggleVisibility",
-          "title": "+ Add row 8",
-          "targetElements": ["row8"]
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "+ Add another row",
+              "targetElements": ["row8", "addRowBtn9"]
+            }
+          ]
         }
       ]
     },
@@ -553,7 +578,6 @@
                   "id": "material8",
                   "label": "Material 8 (optional)",
                   "style": "compact",
-                  "value": "${material8}",
                   "choices": [
                     {
                       "$data": "${materialChoices}",
@@ -584,8 +608,7 @@
                 {
                   "type": "Input.Text",
                   "id": "unit8",
-                  "label": "Unit",
-                  "value": "${unit8}"
+                  "label": "Unit"
                 }
               ]
             }
@@ -594,12 +617,19 @@
       ]
     },
     {
-      "type": "ActionSet",
-      "actions": [
+      "type": "Container",
+      "id": "addRowBtn9",
+      "isVisible": false,
+      "items": [
         {
-          "type": "Action.ToggleVisibility",
-          "title": "+ Add row 9",
-          "targetElements": ["row9"]
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "+ Add another row",
+              "targetElements": ["row9", "addRowBtn10"]
+            }
+          ]
         }
       ]
     },
@@ -621,7 +651,6 @@
                   "id": "material9",
                   "label": "Material 9 (optional)",
                   "style": "compact",
-                  "value": "${material9}",
                   "choices": [
                     {
                       "$data": "${materialChoices}",
@@ -652,8 +681,7 @@
                 {
                   "type": "Input.Text",
                   "id": "unit9",
-                  "label": "Unit",
-                  "value": "${unit9}"
+                  "label": "Unit"
                 }
               ]
             }
@@ -662,12 +690,19 @@
       ]
     },
     {
-      "type": "ActionSet",
-      "actions": [
+      "type": "Container",
+      "id": "addRowBtn10",
+      "isVisible": false,
+      "items": [
         {
-          "type": "Action.ToggleVisibility",
-          "title": "+ Add row 10",
-          "targetElements": ["row10"]
+          "type": "ActionSet",
+          "actions": [
+            {
+              "type": "Action.ToggleVisibility",
+              "title": "+ Add another row",
+              "targetElements": ["row10"]
+            }
+          ]
         }
       ]
     },
@@ -689,7 +724,6 @@
                   "id": "material10",
                   "label": "Material 10 (optional)",
                   "style": "compact",
-                  "value": "${material10}",
                   "choices": [
                     {
                       "$data": "${materialChoices}",
@@ -720,8 +754,7 @@
                 {
                   "type": "Input.Text",
                   "id": "unit10",
-                  "label": "Unit",
-                  "value": "${unit10}"
+                  "label": "Unit"
                 }
               ]
             }
