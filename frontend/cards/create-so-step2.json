@@ -31,6 +31,14 @@
       "spacing": "Medium",
       "items": [
         {
+          "type": "TextBlock",
+          "text": "No customers were returned from SAP for Sales Area **${salesAreaLabel}**. Either the KALKS check filtered everyone out, or ZC_AISO_CUSTOMER_READY is unreachable. You can still type a customer number in the manual field below \u2014 we'll verify it against SAP on submit.",
+          "size": "Small",
+          "color": "Warning",
+          "wrap": true,
+          "$when": "${count(customerChoices) == 0}"
+        },
+        {
           "type": "Input.ChoiceSet",
           "id": "customer",
           "label": "Customer",

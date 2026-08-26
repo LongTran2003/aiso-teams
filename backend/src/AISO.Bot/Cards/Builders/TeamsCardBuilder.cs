@@ -314,12 +314,20 @@ internal static class TeamsCardBuilder
         }
         else
         {
+            // The user has already picked a SalesOrg, so empty result here means SAP
+            // returned no distribution channels for that Org. Show a real error
+            // instead of a generic "(select ... to load)" hint, otherwise the user
+            // is stuck — the Channel dropdown never appears and submit just loops.
+            var msg = !string.IsNullOrWhiteSpace(selectedSalesOrg)
+                ? $"No distribution channels available for Sales Organization **{selectedSalesOrg}** in SAP. Please pick another Sales Organization."
+                : "(select Sales Organization to load)";
             body.Add(new Dictionary<string, object>
             {
                 ["type"] = "TextBlock",
-                ["text"] = "(select Sales Organization to load)",
+                ["text"] = msg,
                 ["size"] = "Small",
-                ["isSubtle"] = true,
+                ["color"] = !string.IsNullOrWhiteSpace(selectedSalesOrg) ? "Warning" : "Default",
+                ["isSubtle"] = string.IsNullOrWhiteSpace(selectedSalesOrg),
                 ["wrap"] = true
             });
         }
@@ -342,12 +350,19 @@ internal static class TeamsCardBuilder
         }
         else
         {
+            // Same defensive fix as the Channel branch: if the user has already
+            // picked Org + Channel but SAP returned no divisions, surface that
+            // explicitly so they can try a different Channel instead of looping.
+            var msg = !string.IsNullOrWhiteSpace(selectedDistChannel)
+                ? $"No divisions available for Sales Organization **{selectedSalesOrg}** / Distribution Channel **{selectedDistChannel}** in SAP. Please pick another Distribution Channel."
+                : "(select Distribution Channel to load)";
             body.Add(new Dictionary<string, object>
             {
                 ["type"] = "TextBlock",
-                ["text"] = "(select Distribution Channel to load)",
+                ["text"] = msg,
                 ["size"] = "Small",
-                ["isSubtle"] = true,
+                ["color"] = !string.IsNullOrWhiteSpace(selectedDistChannel) ? "Warning" : "Default",
+                ["isSubtle"] = string.IsNullOrWhiteSpace(selectedDistChannel),
                 ["wrap"] = true
             });
         }

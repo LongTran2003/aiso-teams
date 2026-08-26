@@ -1551,6 +1551,17 @@ public class TeamsBot : TeamsActivityHandler
                         try { distChannels = await _sap.GetDistChannelListAsync(salesOrg, cancellationToken); }
                         catch { distChannels = Array.Empty<SapDistChannel>(); }
 
+                        // Diagnostic: surface the upstream result so we can tell the difference
+                        // between "Org has no channels in SAP" and "OData call failed" without
+                        // scraping Application Insights manually.
+                        if (distChannels.Count == 0)
+                        {
+                            _logger.LogWarning(
+                                "create_so_step1: SAP DistChannelList returned 0 rows for SalesOrg={SalesOrg}. " +
+                                "User will see a warning and must pick another Org.",
+                                salesOrg);
+                        }
+
                         if (string.IsNullOrWhiteSpace(rawDistChannel))
                         {
                             await turnContext.SendActivityAsync(
@@ -1566,6 +1577,14 @@ public class TeamsBot : TeamsActivityHandler
                         IReadOnlyList<SapDivision> divisions;
                         try { divisions = await _sap.GetDivisionListAsync(salesOrg, distChannel, cancellationToken); }
                         catch { divisions = Array.Empty<SapDivision>(); }
+
+                        if (divisions.Count == 0)
+                        {
+                            _logger.LogWarning(
+                                "create_so_step1: SAP DivisionList returned 0 rows for SalesOrg={SalesOrg}, DistChannel={DistChannel}. " +
+                                "User will see a warning and must pick another Channel.",
+                                salesOrg, distChannel);
+                        }
 
                         if (string.IsNullOrWhiteSpace(rawDivision))
                         {

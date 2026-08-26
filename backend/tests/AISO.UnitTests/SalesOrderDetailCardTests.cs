@@ -1,6 +1,7 @@
 using AISO.Bot.Cards.Builders;
 using AISO.Domain.SalesOrders;
 using AISO.Domain.Users;
+using AISO.SapIntegration;
 using Newtonsoft.Json;
 using Xunit;
 
@@ -414,4 +415,57 @@ public class SalesOrderDetailCardTests
                 }
                 : Array.Empty<SalesOrderItem>()
         };
+}
+
+public class CreateOrderStep1CardTests
+{
+    private static IReadOnlyList<SapSalesOrg> SampleSalesOrgs() =>
+    [
+        new("TV01", "TV Org"),
+        new("FU24", "FU Org"),
+    ];
+
+    [Fact]
+    public void OrgOnly_NoChannels_RendersChannelDropdownNotPlaceholder()
+    {
+        // Before a SalesOrg is picked the placeholder TextBlock is fine.
+        var attachment = TeamsCardBuilder.BuildCreateOrderStep1Card(SampleSalesOrgs());
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("select Sales Organization to load", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("No distribution channels available", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void OrgSelected_ChannelsEmpty_RendersWarningText()
+    {
+        // After the user has actually picked an Org, an empty Channel list from SAP
+        // must surface as a Warning so the user knows to pick another Org instead
+        // of being stuck on a placeholder dropdown.
+        var attachment = TeamsCardBuilder.BuildCreateOrderStep1Card(
+            SampleSalesOrgs(),
+            selectedSalesOrg: "TV01",
+            distChannels: Array.Empty<SapDistChannel>(),
+            selectedDistChannel: null);
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("No distribution channels available for Sales Organization **TV01**", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("select Sales Organization to load", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void OrgAndChannelSelected_DivisionsEmpty_RendersWarningText()
+    {
+        var attachment = TeamsCardBuilder.BuildCreateOrderStep1Card(
+            SampleSalesOrgs(),
+            selectedSalesOrg: "TV01",
+            distChannels: new[] { new SapDistChannel("TV01", "10") },
+            selectedDistChannel: "10",
+            divisions: Array.Empty<SapDivision>(),
+            selectedDivision: null);
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        Assert.Contains("No divisions available for Sales Organization **TV01** / Distribution Channel **10**", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("select Distribution Channel to load", json, StringComparison.OrdinalIgnoreCase);
+    }
 }
