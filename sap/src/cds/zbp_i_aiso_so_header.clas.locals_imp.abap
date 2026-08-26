@@ -559,7 +559,7 @@ IF sy-subrc <> 0.
                    %msg = new_message(
                      id = '00' number = '001'
                      severity = if_abap_behv_message=>severity-error
-                     v1 = |Customer { lv_customer } chưa đủ dữ liệu (thiếu KNA1/KNB1/Sales view)| ) )
+                     v1 = |Customer { lv_customer } chưa đủ điều kiện tạo SO (thiếu master data hoặc pricing procedure)| ) )
          TO reported-salesorder.
   CONTINUE.
 ENDIF.
