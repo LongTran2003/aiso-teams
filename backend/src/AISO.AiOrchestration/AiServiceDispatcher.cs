@@ -316,7 +316,32 @@ public sealed class AiServiceDispatcher : IFunctionDispatcher
                || text.Contains("quá hạn")
                || text.Contains("qua han")
                || text.Contains("giao trễ")
-               || text.Contains("giao tre");
+               || text.Contains("giao tre")
+               || text.Contains("create order")
+               || text.Contains("create so")
+               || text.Contains("create sales order")
+               || text.Contains("new sales order")
+               || text.Contains("new order")
+               || text.Contains("place order")
+               || text.Contains("make order")
+               || (text.Contains("tạo") && text.Contains("đơn"))
+               || (text.Contains("tao") && text.Contains("don"))
+               || text.Contains("tạo đơn hàng")
+               || text.Contains("tao don hang")
+               || text.Contains("tạo đơn bán hàng")
+               || text.Contains("tao don ban hang")
+               || text.Contains("tạo sales order")
+               || text.Contains("tao sales order")
+               || text.Contains("tạo so")
+               || text.Contains("tao so")
+               || text.Contains("lập đơn")
+               || text.Contains("lap don")
+               || text.Contains("lập đơn hàng")
+               || text.Contains("lap don hang")
+               || text.Contains("lập đơn bán hàng")
+               || text.Contains("lap don ban hang")
+               || text.Contains("tạo đơn mới")
+               || text.Contains("tao don moi");
     }
 
     /// <summary>Common LLM / API misnomers for registered BE functions.</summary>
