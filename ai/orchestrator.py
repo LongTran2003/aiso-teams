@@ -579,7 +579,6 @@ class AIOrchestrator:
         subset_tools = self._get_subset_tools(user_message)
         if subset_tools:
             kwargs["tools"] = subset_tools
-            kwargs["tool_choice"] = "auto"
 
         max_retries = 6
         initial_backoff = 3
@@ -621,12 +620,18 @@ class AIOrchestrator:
                     err = body.get("error", {})
                     if err.get("code") == "tool_use_failed":
                         failed_gen = err.get("failed_generation")
-                        if failed_gen and "<function=" not in failed_gen:
+                        if failed_gen is not None:
+                            reply_text = failed_gen.strip()
+                            if not reply_text or "<function=" in reply_text:
+                                reply_text = (
+                                    "Xin lỗi, tôi cần thêm thông tin để thực hiện yêu cầu "
+                                    "hoặc yêu cầu chưa rõ ràng. Bạn vui lòng cung cấp thêm chi tiết nhé."
+                                )
                             logger.info(
                                 "Falling back to raw failed_generation text for conversational reply."
                             )
                             return ChatResponse(
-                                reply=failed_gen.strip(),
+                                reply=reply_text,
                                 intent="general_query",
                                 tool_calls=[],
                                 adaptive_card_type=None,
@@ -765,6 +770,18 @@ class AIOrchestrator:
                             "Bạn vui lòng cho biết lý do hủy đơn là gì "
                             "(do sai giá, hết hàng, hay lý do khác) để tôi cập nhật "
                             "chính xác lên hệ thống SAP nhé?"
+                        ),
+                        intent="general_query",
+                        tool_calls=[],
+                    )
+                elif fn_name == "DelegateApproval" and field in ["delegateUser", "validFrom", "validTo"]:
+                    return ChatResponse(
+                        reply=(
+                            "Please provide the SAP User ID of the employee you'd like to "
+                            "delegate approval to, as well as the start date (validFrom) and "
+                            "end date (validTo) for the delegation (in YYYY-MM-DD format). If "
+                            "you'd like to set a maximum order amount limit or include a reason, "
+                            "you can share those as well."
                         ),
                         intent="general_query",
                         tool_calls=[],
