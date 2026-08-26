@@ -164,7 +164,7 @@
           "type": "Input.Toggle",
           "id": "showShipToParty",
           "title": "Specify a different ship-to address",
-          "value": "${showShipToParty}"
+          "value": "${hasShipToParty}"
         },
         {
           "type": "Input.Text",
@@ -172,7 +172,7 @@
           "label": "Ship-to Party Customer Number",
           "placeholder": "Optional \u2014 leave empty to use customer default",
           "value": "${shipToParty}",
-          "isVisible": "${showShipToParty} == true"
+          "isVisible": "${hasShipToParty} == true"
         }
       ]
     }
