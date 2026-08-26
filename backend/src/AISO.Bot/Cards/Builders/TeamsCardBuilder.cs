@@ -514,7 +514,7 @@ internal static class TeamsCardBuilder
         var distChannel = string.IsNullOrWhiteSpace(draft.DistChannel) ? "10" : draft.DistChannel.Trim();
         var division = string.IsNullOrWhiteSpace(draft.Division) ? "00" : draft.Division.Trim();
         var salesAreaKey = $"{salesOrg}|{distChannel}|{division}";
-        var customer = string.IsNullOrWhiteSpace(draft.Customer) ? "10100001" : draft.Customer.Trim();
+        var customer = string.IsNullOrWhiteSpace(draft.Customer) ? "" : draft.Customer.Trim();
 
         var salesAreaChoices = (draft.SalesAreaChoices ?? Array.Empty<ConfirmCreateChoice>())
             .Select(c => new { title = c.Title, value = c.Value })

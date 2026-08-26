@@ -13,7 +13,7 @@ Reference: **{{CURRENT_DATE}}** ({{CURRENT_DAY_OF_WEEK}}). Convert relative term
 ---
 
 ### VALIDATION RULES & NO-HALLUCINATION GUARDRAILS
-- **CRITICAL: NEVER hallucinate, guess, or auto-fill any missing required parameters** (such as `order_id`, `customer`, `items`, `reason_code`, `new_reference`) with default or sample values (such as "CUST-1001", "10100001", "PO-2026-0042", "MAT-1001", etc.).
+- **CRITICAL: NEVER hallucinate, guess, or auto-fill any missing required parameters** (such as `order_id`, `customer`, `items`, `reason_code`, `new_reference`) with default or sample values.
 - **If any required parameter for a function is missing from the query, DO NOT call that function (return no tool calls).**
 
 **order_id required** for: CheckOrderStatus, GetOrderDetail, RequestRelease, ReleaseOrder, ApproveOrder, RejectOrder, ForwardOrder.
