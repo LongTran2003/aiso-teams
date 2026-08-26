@@ -221,21 +221,21 @@ public class SapClient : ISapClient
         // those BAPIs support `purch_no_c` / `req_date_h` natively.
         var payload = new Dictionary<string, object?>
         {
-            ["DOC_TYPE"] = dto.DocType,
-            ["SALES_ORG"] = dto.SalesOrg,
-            ["DIST_CHANNEL"] = dto.DistChannel,
-            ["DIVISION"] = dto.Division,
-            ["CUSTOMER"] = FormatCustomerNumber(dto.Customer),
-            ["CURRENCY"] = dto.Currency,
-            ["REQUESTING_TEAMS_USER"] = dto.RequestingSapUser.Trim(),
-            ["ITEMS"] = dto.Items.Select(i =>
+            ["DocType"] = dto.DocType,
+            ["SalesOrg"] = dto.SalesOrg,
+            ["DistChannel"] = dto.DistChannel,
+            ["Division"] = dto.Division,
+            ["Customer"] = FormatCustomerNumber(dto.Customer),
+            ["Currency"] = dto.Currency,
+            ["RequestingTeamsUser"] = dto.RequestingSapUser.Trim(),
+            ["_Items"] = dto.Items.Select(i =>
             {
                 var item = new Dictionary<string, object?>
                 {
-                    ["MATERIAL"] = FormatMaterialNumber(i.Material),
-                    ["PLANT"] = i.Plant,
-                    ["ORDER_QTY"] = Math.Round(i.OrderQty, 3),
-                    ["UNIT"] = i.Unit
+                    ["Material"] = FormatMaterialNumber(i.Material),
+                    ["Plant"] = i.Plant,
+                    ["OrderQty"] = Math.Round(i.OrderQty, 3),
+                    ["Unit"] = i.Unit
                 };
                 return item;
             }).ToList()
