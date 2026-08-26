@@ -814,14 +814,23 @@ public class TeamsBot : TeamsActivityHandler
                     {
                         var delegateUser = valueObj.TryGetValue("delegateUser", StringComparison.OrdinalIgnoreCase, out var uToken) ? uToken.ToString() : null;
                         var validFromStr = valueObj.TryGetValue("validFromRaw", StringComparison.OrdinalIgnoreCase, out var vfToken) ? vfToken.ToString() : null;
-                    if (string.IsNullOrWhiteSpace(validFromStr))
-                        validFromStr = valueObj.TryGetValue("validFrom", StringComparison.OrdinalIgnoreCase, out var vfToken2) ? vfToken2.ToString() : null;
+                        if (string.IsNullOrWhiteSpace(validFromStr))
+                        {
+                            validFromStr = valueObj.TryGetValue("validFrom", StringComparison.OrdinalIgnoreCase, out var vfToken2) ? vfToken2.ToString() : null;
+                        }
+
                         var validToStr = valueObj.TryGetValue("validToRaw", StringComparison.OrdinalIgnoreCase, out var vtToken) ? vtToken.ToString() : null;
-                    if (string.IsNullOrWhiteSpace(validToStr))
-                        validToStr = valueObj.TryGetValue("validTo", StringComparison.OrdinalIgnoreCase, out var vtToken2) ? vtToken2.ToString() : null;
+                        if (string.IsNullOrWhiteSpace(validToStr))
+                        {
+                            validToStr = valueObj.TryGetValue("validTo", StringComparison.OrdinalIgnoreCase, out var vtToken2) ? vtToken2.ToString() : null;
+                        }
+
                         var maxAmountStr = valueObj.TryGetValue("maxAmountRaw", StringComparison.OrdinalIgnoreCase, out var maToken) ? maToken.ToString() : null;
-                    if (string.IsNullOrWhiteSpace(maxAmountStr))
-                        maxAmountStr = valueObj.TryGetValue("maxAmount", StringComparison.OrdinalIgnoreCase, out var maToken2) ? maToken2.ToString() : null;
+                        if (string.IsNullOrWhiteSpace(maxAmountStr))
+                        {
+                            maxAmountStr = valueObj.TryGetValue("maxAmount", StringComparison.OrdinalIgnoreCase, out var maToken2) ? maToken2.ToString() : null;
+                        }
+
                         var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var currToken) ? currToken.ToString() : "VND";
                         var reason = valueObj.TryGetValue("reason", StringComparison.OrdinalIgnoreCase, out var rToken) ? rToken.ToString() : null;
 
