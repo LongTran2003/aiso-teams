@@ -406,7 +406,8 @@ internal static class TeamsCardBuilder
                 purchaseOrderRef = purchaseOrderRef ?? "",
                 requestedDeliveryDate = requestedDeliveryDate ?? "",
                 shipToParty = shipToParty ?? "",
-                hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false"
+                hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false",
+                customer = ""
             });
 
     public static Attachment BuildCreateOrderStep3Card(
@@ -428,8 +429,8 @@ internal static class TeamsCardBuilder
             new
             {
                 customerLabel,
-                customerKey,
-                salesAreaLabel,
+                    customer = customerKey,
+                    salesAreaLabel,
                 salesAreaKey,
                 salesOrg = salesOrg ?? "",
                 distChannel = distChannel ?? "",
@@ -441,6 +442,7 @@ internal static class TeamsCardBuilder
                 requestedDeliveryDate = requestedDeliveryDate ?? "",
                 shipToParty = shipToParty ?? "",
                 hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false",
+                unit1 = "",
                 unit2 = "",
                 unit3 = ""
             });
