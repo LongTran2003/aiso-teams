@@ -252,6 +252,482 @@
           ]
         }
       ]
+    },
+    {
+      "type": "ActionSet",
+      "actions": [
+        {
+          "type": "Action.ToggleVisibility",
+          "title": "+ Add row 4",
+          "targetElements": ["row4"]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "row4",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ColumnSet",
+          "spacing": "Small",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "Input.ChoiceSet",
+                  "id": "material4",
+                  "label": "Material 4 (optional)",
+                  "style": "compact",
+                  "value": "${material4}",
+                  "choices": [
+                    {
+                      "$data": "${materialChoices}",
+                      "title": "${title}",
+                      "value": "${value}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Number",
+                  "id": "qty4",
+                  "label": "Qty",
+                  "min": 0,
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Text",
+                  "id": "unit4",
+                  "label": "Unit",
+                  "value": "${unit4}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ActionSet",
+      "actions": [
+        {
+          "type": "Action.ToggleVisibility",
+          "title": "+ Add row 5",
+          "targetElements": ["row5"]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "row5",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ColumnSet",
+          "spacing": "Small",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "Input.ChoiceSet",
+                  "id": "material5",
+                  "label": "Material 5 (optional)",
+                  "style": "compact",
+                  "value": "${material5}",
+                  "choices": [
+                    {
+                      "$data": "${materialChoices}",
+                      "title": "${title}",
+                      "value": "${value}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Number",
+                  "id": "qty5",
+                  "label": "Qty",
+                  "min": 0,
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Text",
+                  "id": "unit5",
+                  "label": "Unit",
+                  "value": "${unit5}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ActionSet",
+      "actions": [
+        {
+          "type": "Action.ToggleVisibility",
+          "title": "+ Add row 6",
+          "targetElements": ["row6"]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "row6",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ColumnSet",
+          "spacing": "Small",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "Input.ChoiceSet",
+                  "id": "material6",
+                  "label": "Material 6 (optional)",
+                  "style": "compact",
+                  "value": "${material6}",
+                  "choices": [
+                    {
+                      "$data": "${materialChoices}",
+                      "title": "${title}",
+                      "value": "${value}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Number",
+                  "id": "qty6",
+                  "label": "Qty",
+                  "min": 0,
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Text",
+                  "id": "unit6",
+                  "label": "Unit",
+                  "value": "${unit6}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ActionSet",
+      "actions": [
+        {
+          "type": "Action.ToggleVisibility",
+          "title": "+ Add row 7",
+          "targetElements": ["row7"]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "row7",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ColumnSet",
+          "spacing": "Small",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "Input.ChoiceSet",
+                  "id": "material7",
+                  "label": "Material 7 (optional)",
+                  "style": "compact",
+                  "value": "${material7}",
+                  "choices": [
+                    {
+                      "$data": "${materialChoices}",
+                      "title": "${title}",
+                      "value": "${value}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Number",
+                  "id": "qty7",
+                  "label": "Qty",
+                  "min": 0,
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Text",
+                  "id": "unit7",
+                  "label": "Unit",
+                  "value": "${unit7}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ActionSet",
+      "actions": [
+        {
+          "type": "Action.ToggleVisibility",
+          "title": "+ Add row 8",
+          "targetElements": ["row8"]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "row8",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ColumnSet",
+          "spacing": "Small",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "Input.ChoiceSet",
+                  "id": "material8",
+                  "label": "Material 8 (optional)",
+                  "style": "compact",
+                  "value": "${material8}",
+                  "choices": [
+                    {
+                      "$data": "${materialChoices}",
+                      "title": "${title}",
+                      "value": "${value}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Number",
+                  "id": "qty8",
+                  "label": "Qty",
+                  "min": 0,
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Text",
+                  "id": "unit8",
+                  "label": "Unit",
+                  "value": "${unit8}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ActionSet",
+      "actions": [
+        {
+          "type": "Action.ToggleVisibility",
+          "title": "+ Add row 9",
+          "targetElements": ["row9"]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "row9",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ColumnSet",
+          "spacing": "Small",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "Input.ChoiceSet",
+                  "id": "material9",
+                  "label": "Material 9 (optional)",
+                  "style": "compact",
+                  "value": "${material9}",
+                  "choices": [
+                    {
+                      "$data": "${materialChoices}",
+                      "title": "${title}",
+                      "value": "${value}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Number",
+                  "id": "qty9",
+                  "label": "Qty",
+                  "min": 0,
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Text",
+                  "id": "unit9",
+                  "label": "Unit",
+                  "value": "${unit9}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ActionSet",
+      "actions": [
+        {
+          "type": "Action.ToggleVisibility",
+          "title": "+ Add row 10",
+          "targetElements": ["row10"]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "id": "row10",
+      "isVisible": false,
+      "items": [
+        {
+          "type": "ColumnSet",
+          "spacing": "Small",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "Input.ChoiceSet",
+                  "id": "material10",
+                  "label": "Material 10 (optional)",
+                  "style": "compact",
+                  "value": "${material10}",
+                  "choices": [
+                    {
+                      "$data": "${materialChoices}",
+                      "title": "${title}",
+                      "value": "${value}"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Number",
+                  "id": "qty10",
+                  "label": "Qty",
+                  "min": 0,
+                  "value": 0
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "80px",
+              "items": [
+                {
+                  "type": "Input.Text",
+                  "id": "unit10",
+                  "label": "Unit",
+                  "value": "${unit10}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ],
   "actions": [
