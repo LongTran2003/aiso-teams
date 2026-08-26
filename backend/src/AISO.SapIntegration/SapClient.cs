@@ -1507,11 +1507,17 @@ public class SapClient : ISapClient
         CancellationToken ct)
     {
         // Cap raised from 200 → 500 to keep 135001 inside the dropdown
-        // even if ZI_AISO_VALID_CUSTOMER returns more rows for the
+        // even if ZC_AISO_CUSTOMER_READY returns more rows for the
         // UE00/WH/AS combo. The OData service is still capped server-side
         // so the UI also offers a direct customer lookup fallback.
+        //
+        // Switched from ZI_AISO_VALID_CUSTOMER (any KNVV row) to
+        // ZC_AISO_CUSTOMER_READY (filter: knvv.kalks is not initial).
+        // The new view guarantees the customer has a pricing condition
+        // record, which is required by the sales-order create flow —
+        // otherwise Step 4 fails when SAP tries to resolve pricing.
         var take = Math.Clamp(top, 1, 500);
-        var builder = new ODataQueryBuilder("ValidCustomer")
+        var builder = new ODataQueryBuilder("CustomerReady")
             .AddCustomParam("sap-client", "324")
             .Top(take);
 
@@ -1536,13 +1542,13 @@ public class SapClient : ISapClient
             if (response.StatusCode is System.Net.HttpStatusCode.NotFound
                 or System.Net.HttpStatusCode.BadRequest)
             {
-                _logger.LogWarning("ValidCustomer entity unavailable: {StatusCode}", (int)response.StatusCode);
+                _logger.LogWarning("CustomerReady entity unavailable: {StatusCode}", (int)response.StatusCode);
                 return Array.Empty<SapValidCustomer>();
             }
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("ValidCustomer GET failed: {StatusCode}", (int)response.StatusCode);
+                _logger.LogWarning("CustomerReady GET failed: {StatusCode}", (int)response.StatusCode);
                 return Array.Empty<SapValidCustomer>();
             }
 
@@ -1564,7 +1570,7 @@ public class SapClient : ISapClient
         }
         catch (Exception ex) when (ex is not SapODataException)
         {
-            _logger.LogWarning(ex, "ValidCustomer lookup failed");
+            _logger.LogWarning(ex, "CustomerReady lookup failed");
             return Array.Empty<SapValidCustomer>();
         }
     }
@@ -1752,7 +1758,7 @@ public class SapClient : ISapClient
                 return true;
         }
 
-        // Entity down vs real miss: probe any ValidCustomer row.
+        // Entity down vs real miss: probe any CustomerReady row.
         var any = await GetValidCustomersAsync(top: 1, ct: ct);
         if (any.Count == 0)
             return null;

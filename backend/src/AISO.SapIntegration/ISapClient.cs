@@ -164,7 +164,12 @@ public interface ISapClient
         int top = 30,
         CancellationToken ct = default);
 
-    /// <summary>Customers valid per sales area from <c>ValidCustomer</c> (KNVV).</summary>
+    /// <summary>
+    /// Customers ready for sales order creation from
+    /// <c>CustomerReady</c> (ZC_AISO_CUSTOMER_READY). Filtered server-side
+    /// to customers with a KALKS (pricing condition) record, which is
+    /// required by the sales-order create flow.
+    /// </summary>
     Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
         string? salesOrg = null,
         string? distChannel = null,
