@@ -1764,8 +1764,9 @@ public class TeamsBot : TeamsActivityHandler
                                     MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
                                         "VALIDATION",
                                         manualOk == null
-                                            ? "SAP is unavailable; cannot verify that customer."
-                                            : $"Customer '{manualCustomerRaw}' is not assigned to {salesOrg} / {distChannel} / {division}.")),
+                                            ? SalesOrderWorkflow.BuildManualCustomerLookupUnavailableMessage()
+                                            : SalesOrderWorkflow.BuildManualCustomerNotFoundMessage(
+                                                manualCustomerRaw, salesOrg, distChannel, division))),
                                     cancellationToken);
                                 return;
                             }

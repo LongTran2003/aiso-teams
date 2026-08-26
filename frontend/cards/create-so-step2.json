@@ -50,14 +50,14 @@
           "type": "Input.Text",
           "id": "manualCustomer",
           "label": "Customer not in list? Type customer number",
-          "placeholder": "e.g. 135001 or 0000135001",
+          "placeholder": "e.g. 135001 or 0000135001 \u2014 verified against SAP on submit",
           "isRequired": false,
           "regex": "^0*[0-9]{1,10}$",
-          "errorMessage": "Must be 1-10 digits"
+          "errorMessage": "Must be 1-10 digits. If valid, SAP will confirm it on submit; otherwise you'll see an inline error."
         },
         {
           "type": "TextBlock",
-          "text": "Either pick from dropdown above OR type below. Typed value takes priority.",
+          "text": "Pick from the dropdown above. Only type a number if your customer is missing from the list.",
           "size": "Small",
           "isSubtle": true,
           "wrap": true

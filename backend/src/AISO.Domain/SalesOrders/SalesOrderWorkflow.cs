@@ -75,6 +75,24 @@ public static class SalesOrderWorkflow
         $"{actionLabel} is not allowed: this sales order has invalid material master data.";
 
     /// <summary>
+    /// Manual customer number entered in Step 2 was rejected by SAP
+    /// (<c>IsCustomerValidForSalesAreaAsync</c> returned <c>false</c>).
+    /// </summary>
+    public static string BuildManualCustomerNotFoundMessage(
+        string manualCustomerRaw,
+        string salesOrg,
+        string distChannel,
+        string division) =>
+        $"No customer '{manualCustomerRaw.Trim()}' exists for SalesArea {salesOrg} / {distChannel} / {division}. "
+        + "Pick from the dropdown above or correct the number.";
+
+    /// <summary>
+    /// SAP lookup timed out or returned an unknown status — we cannot confirm the customer.
+    /// </summary>
+    public static string BuildManualCustomerLookupUnavailableMessage() =>
+        "SAP is unavailable right now; cannot verify the customer number. Try again in a moment.";
+
+    /// <summary>
     /// Pending release UI only makes sense while the order can still be released.
     /// Stale Postgres pending on Delivered/Cancelled/etc. should not show "Waiting for approval".
     /// </summary>
