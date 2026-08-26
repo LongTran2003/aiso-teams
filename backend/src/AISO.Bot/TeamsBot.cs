@@ -1519,48 +1519,64 @@ public class TeamsBot : TeamsActivityHandler
 
                     if (string.Equals(action, "create_so_step1_submit", StringComparison.OrdinalIgnoreCase))
                     {
-                        // Step 1 card has a single `salesArea` Input.ChoiceSet whose value is
-                        // a composite key (Org|Channel|Division). Older revisions used three
-                        // separate fields; accept both so prior drafts still resolve.
-                        string? salesOrg = null;
-                        string? distChannel = null;
-                        string? division = null;
+                        // ── Cascade: Org → Channel → Division, all three dropdowns in one card. ──
+                        // The card renders all three Input.ChoiceSets; Channel/Division choices
+                        // are populated server-side based on what the user has already picked.
+                        // Submitting the form posts the latest selections for each.
+                        var rawSalesOrg = valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var soTok)
+                            ? soTok?.ToString()?.Trim() : null;
+                        var rawDistChannel = valueObj.TryGetValue("distChannel", StringComparison.OrdinalIgnoreCase, out var dcTok)
+                            ? dcTok?.ToString()?.Trim() : null;
+                        var rawDivision = valueObj.TryGetValue("division", StringComparison.OrdinalIgnoreCase, out var dvTok)
+                            ? dvTok?.ToString()?.Trim() : null;
 
-                        valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaTok);
-                        var areaKey = areaTok?.ToString()?.Trim();
-                        if (!string.IsNullOrWhiteSpace(areaKey) &&
-                            SapSalesArea.TryParseKey(areaKey, out var aOrg, out var aChan, out var aDiv))
+                        // Always need the full SalesOrg list for the first dropdown.
+                        IReadOnlyList<SapSalesOrg> salesOrgs;
+                        try { salesOrgs = await _sap.GetSalesOrgListAsync(cancellationToken); }
+                        catch { salesOrgs = Array.Empty<SapSalesOrg>(); }
+
+                        // Org missing/empty → show Org dropdown only, no next-step possible.
+                        if (string.IsNullOrWhiteSpace(rawSalesOrg))
                         {
-                            salesOrg = aOrg;
-                            distChannel = aChan;
-                            division = aDiv;
-                        }
-
-                        if (string.IsNullOrWhiteSpace(salesOrg))
-                        {
-                            if (valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var soTok))
-                                salesOrg = soTok?.ToString()?.Trim()?.ToUpperInvariant();
-                            if (valueObj.TryGetValue("distChannel", StringComparison.OrdinalIgnoreCase, out var dcTok))
-                                distChannel = dcTok?.ToString()?.Trim()?.ToUpperInvariant();
-                            if (valueObj.TryGetValue("division", StringComparison.OrdinalIgnoreCase, out var dvTok))
-                                division = dvTok?.ToString()?.Trim()?.ToUpperInvariant();
-                        }
-
-                        // No sales area at all → show the (just Org) card so the user starts over.
-                        if (string.IsNullOrWhiteSpace(salesOrg)
-                            || string.IsNullOrWhiteSpace(distChannel)
-                            || string.IsNullOrWhiteSpace(division))
-                        {
-                            IReadOnlyList<SapSalesOrg> salesOrgsOnly;
-                            try { salesOrgsOnly = await _sap.GetSalesOrgListAsync(cancellationToken); }
-                            catch { salesOrgsOnly = Array.Empty<SapSalesOrg>(); }
-
                             await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep1Card(salesOrgsOnly)),
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep1Card(salesOrgs)),
                                 cancellationToken);
                             return;
                         }
 
+                        var salesOrg = rawSalesOrg.ToUpperInvariant();
+
+                        // Org picked, Channel missing/empty → show Org + Channel dropdown.
+                        IReadOnlyList<SapDistChannel> distChannels;
+                        try { distChannels = await _sap.GetDistChannelListAsync(salesOrg, cancellationToken); }
+                        catch { distChannels = Array.Empty<SapDistChannel>(); }
+
+                        if (string.IsNullOrWhiteSpace(rawDistChannel))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep1Card(
+                                    salesOrgs, salesOrg, distChannels, null)),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var distChannel = rawDistChannel.ToUpperInvariant();
+
+                        // Org + Channel picked, Division missing/empty → show all three dropdowns.
+                        IReadOnlyList<SapDivision> divisions;
+                        try { divisions = await _sap.GetDivisionListAsync(salesOrg, distChannel, cancellationToken); }
+                        catch { divisions = Array.Empty<SapDivision>(); }
+
+                        if (string.IsNullOrWhiteSpace(rawDivision))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep1Card(
+                                    salesOrgs, salesOrg, distChannels, distChannel, divisions, null)),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var division = rawDivision.ToUpperInvariant();
                         var salesAreaKey = $"{salesOrg}|{distChannel}|{division}";
                         var salesAreaLabel = $"{salesOrg} / {distChannel} / {division}";
 
