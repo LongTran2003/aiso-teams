@@ -23,7 +23,8 @@ define root view entity ZC_AISO_SO_WITH_ITEMS
       OverallStatus,
       IsCancelled,
       HasInvalidMaterial,
+      RequestingTeamsUser,
       OwnerSapUser,
+      _Items : redirected to composition child ZC_AISO_SO_ITEM
       
-      _Items
 }

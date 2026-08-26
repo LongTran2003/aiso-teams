@@ -1,12 +1,12 @@
 """
 Groq API Orchestrator (OpenAI-compatible SDK).
-Kiến trúc:
-  - Nạp system prompt từ prompts/system_prompt.txt
-  - Load dynamic function schemas từ functions/*.json (hỗ trợ hot-reload)
-  - Gọi Groq với Function Calling
-  - Validate tham số dựa trên JSON schema (generic, không hardcode tên hàm)
-  - Map function name → adaptive_card_type cho frontend Adaptive Card
-  - Trả về ChatResponse đúng contract mà Backend (.NET) kỳ vọng
+Kiáº¿n trÃºc:
+  - Náº¡p system prompt tá»« prompts/system_prompt.txt
+  - Load dynamic function schemas tá»« functions/*.json (há»— trá»£ hot-reload)
+  - Gá»i Groq vá»›i Function Calling
+  - Validate tham sá»‘ dá»±a trÃªn JSON schema (generic, khÃ´ng hardcode tÃªn hÃ m)
+  - Map function name â†’ adaptive_card_type cho frontend Adaptive Card
+  - Tráº£ vá» ChatResponse Ä‘Ãºng contract mÃ  Backend (.NET) ká»³ vá»ng
 """
 
 from __future__ import annotations
@@ -42,12 +42,12 @@ _GROQ_MODEL: str = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 
 
 # ---------------------------------------------------------------------------
-# Helpers – file loading
+# Helpers â€“ file loading
 # ---------------------------------------------------------------------------
 
 
 def _load_system_prompt() -> str:
-    """Đọc system prompt từ disk; fallback về chuỗi mặc định nếu không tìm thấy."""
+    """Äá»c system prompt tá»« disk; fallback vá» chuá»—i máº·c Ä‘á»‹nh náº¿u khÃ´ng tÃ¬m tháº¥y."""
     try:
         base_prompt = _SYSTEM_PROMPT_PATH.read_text(encoding="utf-8").strip()
         from datetime import UTC, datetime
@@ -58,28 +58,28 @@ def _load_system_prompt() -> str:
             "{{CURRENT_DATE}}", today.strftime("%Y-%m-%d")
         ).replace("{{CURRENT_DAY_OF_WEEK}}", day_of_week)
     except FileNotFoundError:
-        logger.warning("system_prompt.txt not found – using built-in default.")
+        logger.warning("system_prompt.txt not found â€“ using built-in default.")
         return "You are a helpful AI assistant."
 
 
 def _load_groq_tools() -> list[dict[str, Any]] | None:
     """
-    Quét thư mục /functions, load từng *.json, chuyển hóa sang
-    OpenAI tool format. Trả về None nếu không có file nào.
+    QuÃ©t thÆ° má»¥c /functions, load tá»«ng *.json, chuyá»ƒn hÃ³a sang
+    OpenAI tool format. Tráº£ vá» None náº¿u khÃ´ng cÃ³ file nÃ o.
     """
     if not _FUNCTIONS_DIR.exists():
-        logger.warning("functions/ directory not found – no tools loaded.")
+        logger.warning("functions/ directory not found â€“ no tools loaded.")
         return None
 
     tools: list[dict[str, Any]] = []
     for path in sorted(_FUNCTIONS_DIR.glob("*.json")):
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
-            # Chuẩn hóa về format OpenAI tool: {"type": "function", "function": {...}}
+            # Chuáº©n hÃ³a vá» format OpenAI tool: {"type": "function", "function": {...}}
             if "type" in raw and raw["type"] == "function":
                 tool = raw
             else:
-                # Nếu là flat format trong file json
+                # Náº¿u lÃ  flat format trong file json
                 tool = {
                     "type": "function",
                     "function": {
@@ -97,10 +97,10 @@ def _load_groq_tools() -> list[dict[str, Any]] | None:
 
 
 # ---------------------------------------------------------------------------
-# Helpers – misc
+# Helpers â€“ misc
 # ---------------------------------------------------------------------------
 
-# Map function name → Adaptive Card type cho frontend
+# Map function name â†’ Adaptive Card type cho frontend
 _FUNCTION_CARD_TYPE: dict[str, str] = {
     "CheckOrderStatus": "order_detail",
     "GetOrderDetail": "order_detail",
@@ -109,6 +109,7 @@ _FUNCTION_CARD_TYPE: dict[str, str] = {
     "ViewAuditLog": "audit_log",
     "ListBotUsers": "bot_users",
     "ManageBotUser": "manage_bot_user",
+    "ListDelegations": "list_delegations",
     "GetOverdueOrders": "overdue_orders",
     "RequestRelease": "order_detail",
     "ApproveOrder": "order_detail",
@@ -125,23 +126,23 @@ _FUNCTION_CARD_TYPE: dict[str, str] = {
 
 
 def _is_real_key_configured() -> bool:
-    """True khi GROQ_API_KEY trông như key thật (không phải placeholder)."""
+    """True khi GROQ_API_KEY trÃ´ng nhÆ° key tháº­t (khÃ´ng pháº£i placeholder)."""
     return bool(_GROQ_API_KEY) and "your-" not in _GROQ_API_KEY
 
 
 def _function_name_to_intent(name: str) -> str:
-    """CamelCase → snake_case, ví dụ: CheckOrderStatus → check_order_status."""
+    """CamelCase â†’ snake_case, vÃ­ dá»¥: CheckOrderStatus â†’ check_order_status."""
     s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", name)
     return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 def _get_adaptive_card_type(fn_name: str) -> str | None:
-    """Trả về adaptive_card_type cho frontend dựa trên tên hàm."""
+    """Tráº£ vá» adaptive_card_type cho frontend dá»±a trÃªn tÃªn hÃ m."""
     return _FUNCTION_CARD_TYPE.get(fn_name)
 
 
 # ---------------------------------------------------------------------------
-# Mock fallback (không cần key thật)
+# Mock fallback (khÃ´ng cáº§n key tháº­t)
 # ---------------------------------------------------------------------------
 
 
@@ -267,10 +268,40 @@ def _mock_response(user_message: str) -> ChatResponse:
             reply = "[MOCK] Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện."
 
     elif any(
-        kw in lower for kw in ("đơn hàng", "order", "ord-", "trạng thái", "status")
+        kw in lower
+        for kw in (
+            "my order",
+            "my orders",
+            "my sale",
+            "của tôi",
+            "cua toi",
+            "đơn của tôi",
+            "đơn hàng của tôi",
+            "đơn hàng",
+            "đơn",
+            "order",
+            "ord-",
+            "trạng thái",
+            "status",
+        )
     ):
         match = re.search(r"(ord-\w+)", lower)
         order_id = match.group(1).upper() if match else ""
+
+        # Check for "my" keywords to set ownedByMe
+        has_my = any(
+            kw in lower
+            for kw in (
+                "my order",
+                "my orders",
+                "my sale",
+                "của tôi",
+                "cua toi",
+                "đơn của tôi",
+                "đơn hàng của tôi",
+            )
+        )
+
         if order_id:
             intent = "check_order_status"
             tool_calls.append(
@@ -283,15 +314,19 @@ def _mock_response(user_message: str) -> ChatResponse:
             card_type = _get_adaptive_card_type("CheckOrderStatus")
             reply = f"[MOCK] Đang kiểm tra trạng thái đơn hàng {order_id}..."
         else:
-            # Danh sách đơn hàng
+            # Danh sách đơn hàng - set ownedByMe=true nếu có "my"
             intent = "get_sales_orders"
+            args = {"ownedByMe": True} if has_my else {}
             tool_calls.append(
                 ToolCall(
-                    id="mock_list_001", function_name="GetSalesOrders", arguments={}
+                    id="mock_list_001", function_name="GetSalesOrders", arguments=args
                 )
             )
             card_type = _get_adaptive_card_type("GetSalesOrders")
-            reply = "[MOCK] Đang lấy danh sách đơn hàng từ SAP..."
+            if has_my:
+                reply = "[MOCK] Đang lấy danh sách đơn hàng của bạn từ SAP..."
+            else:
+                reply = "[MOCK] Đang lấy danh sách đơn hàng từ SAP..."
 
     return ChatResponse(
         reply=reply, intent=intent, tool_calls=tool_calls, adaptive_card_type=card_type
@@ -299,32 +334,32 @@ def _mock_response(user_message: str) -> ChatResponse:
 
 
 def _is_order_id_in_message(order_id: Any, user_message: str) -> bool:
-    """Kiểm tra xem order_id (hoặc dạng rút gọn/số của nó) có trong tin nhắn của user không."""
+    """Kiá»ƒm tra xem order_id (hoáº·c dáº¡ng rÃºt gá»n/sá»‘ cá»§a nÃ³) cÃ³ trong tin nháº¯n cá»§a user khÃ´ng."""
     oid_str = str(order_id).lower().strip()
     msg_lower = user_message.lower()
 
-    # Khớp chuỗi trực tiếp
+    # Khá»›p chuá»—i trá»±c tiáº¿p
     if oid_str in msg_lower:
         return True
 
-    # Trích xuất các cụm số liên tiếp
+    # TrÃ­ch xuáº¥t cÃ¡c cá»¥m sá»‘ liÃªn tiáº¿p
     oid_digits = re.findall(r"\d+", oid_str)
     if not oid_digits:
         return False
 
-    # Trích xuất các cụm số trong tin nhắn gốc
+    # TrÃ­ch xuáº¥t cÃ¡c cá»¥m sá»‘ trong tin nháº¯n gá»‘c
     msg_digits = re.findall(r"\d+", msg_lower)
 
-    # Loại bỏ số 0 ở đầu để so khớp dạng rút gọn (ví dụ: 0000000009 -> 9)
+    # Loáº¡i bá» sá»‘ 0 á»Ÿ Ä‘áº§u Ä‘á»ƒ so khá»›p dáº¡ng rÃºt gá»n (vÃ­ dá»¥: 0000000009 -> 9)
     oid_digits_stripped = [d.lstrip("0") for d in oid_digits]
     msg_digits_stripped = [d.lstrip("0") for d in msg_digits]
 
-    # Kiểm tra xem các cụm số đã rút gọn của order_id có nằm trong cụm số rút gọn của tin nhắn không
+    # Kiá»ƒm tra xem cÃ¡c cá»¥m sá»‘ Ä‘Ã£ rÃºt gá»n cá»§a order_id cÃ³ náº±m trong cá»¥m sá»‘ rÃºt gá»n cá»§a tin nháº¯n khÃ´ng
     for d in oid_digits_stripped:
         if d and d in msg_digits_stripped:
             return True
 
-    # Fallback: Kiểm tra xem cụm số rút gọn có xuất hiện dưới dạng chuỗi con trong tin nhắn không
+    # Fallback: Kiá»ƒm tra xem cá»¥m sá»‘ rÃºt gá»n cÃ³ xuáº¥t hiá»‡n dÆ°á»›i dáº¡ng chuá»—i con trong tin nháº¯n khÃ´ng
     for d in oid_digits_stripped:
         if d and d in msg_lower:
             return True
@@ -333,17 +368,17 @@ def _is_order_id_in_message(order_id: Any, user_message: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# AIOrchestrator class – Groq (OpenAI Client)
+# AIOrchestrator class â€“ Groq (OpenAI Client)
 # ---------------------------------------------------------------------------
 
 
 class AIOrchestrator:
     """
-    Quản lý toàn bộ lifecycle của một lần gọi Groq:
-      1. Khởi tạo openai.OpenAI Client trỏ tới Groq endpoint
-      2. Nạp system prompt + dynamic function tools
-      3. Gửi message và parse tool_calls từ response
-      4. Trả về ChatResponse đúng contract với Backend .NET
+    Quáº£n lÃ½ toÃ n bá»™ lifecycle cá»§a má»™t láº§n gá»i Groq:
+      1. Khá»Ÿi táº¡o openai.OpenAI Client trá» tá»›i Groq endpoint
+      2. Náº¡p system prompt + dynamic function tools
+      3. Gá»­i message vÃ  parse tool_calls tá»« response
+      4. Tráº£ vá» ChatResponse Ä‘Ãºng contract vá»›i Backend .NET
     """
 
     def __init__(self) -> None:
@@ -353,7 +388,7 @@ class AIOrchestrator:
         )
         self._system_prompt = _load_system_prompt()
         self._tools = _load_groq_tools()
-        # Cache schema objects (dict name→schema) để generic validation đọc required fields
+        # Cache schema objects (dict nameâ†’schema) Ä‘á»ƒ generic validation Ä‘á»c required fields
         self._schema_cache: dict[str, dict[str, Any]] = self._build_schema_cache()
         logger.info(
             "AIOrchestrator initialized | model=%s | tools_loaded=%d",
@@ -362,7 +397,7 @@ class AIOrchestrator:
         )
 
     def _build_schema_cache(self) -> dict[str, dict[str, Any]]:
-        """Xây dựng dict {function_name: parameters_schema} từ danh sách tools đã load."""
+        """XÃ¢y dá»±ng dict {function_name: parameters_schema} tá»« danh sÃ¡ch tools Ä‘Ã£ load."""
         cache: dict[str, dict[str, Any]] = {}
         if not self._tools:
             return cache
@@ -376,8 +411,8 @@ class AIOrchestrator:
 
     def reload_tools(self) -> None:
         """
-        Hot-reload function schemas từ disk mà không cần restart server.
-        Gọi method này khi file JSON trong functions/ được thêm/sửa/xóa.
+        Hot-reload function schemas tá»« disk mÃ  khÃ´ng cáº§n restart server.
+        Gá»i method nÃ y khi file JSON trong functions/ Ä‘Æ°á»£c thÃªm/sá»­a/xÃ³a.
         """
         self._system_prompt = _load_system_prompt()
         self._tools = _load_groq_tools()
@@ -389,14 +424,14 @@ class AIOrchestrator:
 
     def _get_subset_tools(self, user_message: str) -> list[dict[str, Any]] | None:
         """
-        Phân tích user_message để chọn ra subset tools phù hợp, giảm lượng token payload.
+        PhÃ¢n tÃ­ch user_message Ä‘á»ƒ chá»n ra subset tools phÃ¹ há»£p, giáº£m lÆ°á»£ng token payload.
         """
         if not self._tools:
             return None
 
         msg_lower = user_message.lower()
 
-        # Định nghĩa các group tools
+        # Äá»‹nh nghÄ©a cÃ¡c group tools
         kpi_tools = {"GetKpiSummary", "GetKpiByCustomer", "GetKpiByProduct"}
         create_update_tools = {"CreateOrder", "UpdateOrderReference"}
         order_op_tools = {
@@ -414,38 +449,39 @@ class AIOrchestrator:
             "ViewAuditLog",
             "DelegateApproval",
             "RevokeDelegation",
+            "ListDelegations",
         }
 
-        # Từ khóa định vị nhóm (gồm cả Tiếng Việt không dấu và synonyms)
+        # Tá»« khÃ³a Ä‘á»‹nh vá»‹ nhÃ³m (gá»“m cáº£ Tiáº¿ng Viá»‡t khÃ´ng dáº¥u vÃ  synonyms)
         kpi_keywords = [
             "kpi",
             "doanh thu",
-            "doanh số",
+            "doanh sá»‘",
             "doanh so",
             "dashboard",
-            "hiệu suất",
+            "hiá»‡u suáº¥t",
             "hieu suat",
-            "bán chạy",
+            "bÃ¡n cháº¡y",
             "ban chay",
             "revenue",
         ]
         create_update_keywords = [
-            "tạo",
+            "táº¡o",
             "tao",
-            "đặt hàng",
+            "Ä‘áº·t hÃ ng",
             "dat hang",
-            "lập đơn",
+            "láº­p Ä‘Æ¡n",
             "lap don",
-            "lên đơn",
+            "lÃªn Ä‘Æ¡n",
             "len don",
-            "cập nhật",
+            "cáº­p nháº­t",
             "cap nhat",
             "reference",
-            "số po",
+            "sá»‘ po",
             "so po",
-            "đổi po",
+            "Ä‘á»•i po",
             "doi po",
-            "gán số po",
+            "gÃ¡n sá»‘ po",
             "gan so po",
             "create",
             "update",
@@ -455,13 +491,15 @@ class AIOrchestrator:
         ]
         admin_keywords = [
             "delegate",
+            "delegation",
+            "delegations",
             "revoke",
-            "uỷ quyền",
-            "ủy quyền",
-            "thu hồi",
+            "uá»· quyá»n",
+            "á»§y quyá»n",
+            "thu há»“i",
             "thu hoi",
             "force delegate",
-            "cưỡng chế",
+            "cÆ°á»¡ng cháº¿",
             "user",
             "users",
             "role",
@@ -469,23 +507,23 @@ class AIOrchestrator:
             "audit",
             "log",
             "add user",
-            "thêm user",
+            "thÃªm user",
             "pre assign",
             "allow list",
-            "nhật ký",
+            "nháº­t kÃ½",
         ]
         order_list_keywords = [
-            "danh sách",
+            "danh sÃ¡ch",
             "danh sach",
-            "lọc đơn",
+            "lá»c Ä‘Æ¡n",
             "loc don",
-            "tìm đơn",
+            "tÃ¬m Ä‘Æ¡n",
             "tim don",
-            "quá hạn",
+            "quÃ¡ háº¡n",
             "qua han",
-            "giao hàng trễ",
+            "giao hÃ ng trá»…",
             "giao hang tre",
-            "trễ hạn",
+            "trá»… háº¡n",
             "tre han",
             "late",
             "overdue",
@@ -495,42 +533,42 @@ class AIOrchestrator:
 
         selected_names = set()
 
-        # 1. Khớp nhóm KPI
+        # 1. Khá»›p nhÃ³m KPI
         if any(kw in msg_lower for kw in kpi_keywords):
             selected_names.update(kpi_tools)
 
-        # 2. Khớp nhóm Create/Update
+        # 2. Khá»›p nhÃ³m Create/Update
         if any(kw in msg_lower for kw in create_update_keywords):
             selected_names.update(create_update_tools)
 
-        # 3. Khớp nhóm List
+        # 3. Khá»›p nhÃ³m List
         if any(kw in msg_lower for kw in order_list_keywords):
             selected_names.update(order_list_tools)
             selected_names.update(order_op_tools)
 
-        # 3.5. Khớp nhóm Admin
+        # 3.5. Khá»›p nhÃ³m Admin
         if any(kw in msg_lower for kw in admin_keywords):
             selected_names.update(admin_tools)
 
-        # 4. Nếu không khớp nhóm đặc trưng nào hoặc khớp thao tác đơn lẻ, mặc định dùng Fallback (Op + List)
+        # 4. Náº¿u khÃ´ng khá»›p nhÃ³m Ä‘áº·c trÆ°ng nÃ o hoáº·c khá»›p thao tÃ¡c Ä‘Æ¡n láº», máº·c Ä‘á»‹nh dÃ¹ng Fallback (Op + List)
         if not selected_names or any(
             kw in msg_lower
             for kw in [
-                "duyệt",
+                "duyá»‡t",
                 "duyet",
-                "hủy",
+                "há»§y",
                 "huy",
-                "từ chối",
+                "tá»« chá»‘i",
                 "tu choi",
-                "chuyển tiếp",
+                "chuyá»ƒn tiáº¿p",
                 "chuyen tiep",
-                "bàn giao",
+                "bÃ n giao",
                 "ban giao",
-                "nhờ xử lý",
+                "nhá» xá»­ lÃ½",
                 "nho xu ly",
-                "chi tiết",
+                "chi tiáº¿t",
                 "chi tiet",
-                "xem đơn",
+                "xem Ä‘Æ¡n",
                 "xem don",
                 "release",
                 "approve",
@@ -548,11 +586,32 @@ class AIOrchestrator:
         ]
         return subset if subset else None
 
+    def _detect_forced_tool(self, user_message: str) -> str | None:
+        """Detect delegation/revoke intent and return forced tool name."""
+        msg = user_message.lower()
+        # Revoke keywords first (more specific)
+        revoke_kws = ["revoke", "thu hồi", "thu hoi", "huỷ uỷ quyền", "huy uy quyen"]
+        if any(kw in msg for kw in revoke_kws):
+            return "RevokeDelegation"
+        # Force delegate
+        force_kws = ["force delegate", "cưỡng chế"]
+        if any(kw in msg for kw in force_kws):
+            return "ForceDelegateApproval"
+        # List delegations
+        list_kws = ["list delegation", "danh sách uỷ quyền", "danh sach uy quyen"]
+        if any(kw in msg for kw in list_kws):
+            return "ListDelegations"
+        # Normal delegate
+        delegate_kws = ["delegate", "uỷ quyền", "ủy quyền", "uy quyen"]
+        if any(kw in msg for kw in delegate_kws):
+            return "DelegateApproval"
+        return None
+
     def process(
         self, user_message: str, chat_history: list[Any] | None = None
     ) -> ChatResponse:
         """
-        Gửi user_message tới Groq và parse kết quả.
+        Gá»­i user_message tá»›i Groq vÃ  parse káº¿t quáº£.
         """
         messages = [
             {"role": "system", "content": self._system_prompt},
@@ -574,11 +633,31 @@ class AIOrchestrator:
         kwargs: dict[str, Any] = {
             "model": _GROQ_MODEL,
             "messages": messages,
-            "temperature": 0.1,
+            "temperature": 0.0,
         }
         subset_tools = self._get_subset_tools(user_message)
         if subset_tools:
             kwargs["tools"] = subset_tools
+
+            # Force specific tool for delegation intents
+            forced_tool = self._detect_forced_tool(user_message)
+            if forced_tool:
+                # Ensure the forced tool is in the subset
+                forced_in_subset = any(
+                    t.get("function", {}).get("name") == forced_tool
+                    for t in subset_tools
+                )
+                if not forced_in_subset:
+                    # Add it from full tools list
+                    for t in self._tools or []:
+                        if t.get("function", {}).get("name") == forced_tool:
+                            subset_tools.append(t)
+                            kwargs["tools"] = subset_tools
+                            break
+                kwargs["tool_choice"] = {
+                    "type": "function",
+                    "function": {"name": forced_tool},
+                }
 
         max_retries = 6
         initial_backoff = 3
@@ -664,7 +743,7 @@ class AIOrchestrator:
         raise RuntimeError("Groq API call failed after max retries.")
 
     def _is_missing_or_null(self, value: Any) -> bool:
-        """Trả về True nếu value là None, chuỗi rỗng, hoặc chuỗi 'null'."""
+        """Tráº£ vá» True náº¿u value lÃ  None, chuá»—i rá»—ng, hoáº·c chuá»—i 'null'."""
         if value is None:
             return True
         return bool(
@@ -676,12 +755,12 @@ class AIOrchestrator:
         self, fn_name: str, args: dict, user_message: str
     ) -> ChatResponse | None:
         """
-        Kiểm tra tính hợp lệ của tham số theo JSON Schema (generic).
-        - Phát hiện ảo tưởng (hallucinated) order_id / forward_to_user
-        - Kiểm tra required fields từ schema cache
-        - Kiểm tra các điều kiện nghiệp vụ đặc thù (RejectOrder, ForwardOrder)
-        Trả về ChatResponse nếu cần yêu cầu người dùng cung cấp thêm thông tin,
-        hoặc None nếu tất cả tham số hợp lệ.
+        Kiá»ƒm tra tÃ­nh há»£p lá»‡ cá»§a tham sá»‘ theo JSON Schema (generic).
+        - PhÃ¡t hiá»‡n áº£o tÆ°á»Ÿng (hallucinated) order_id / forward_to_user
+        - Kiá»ƒm tra required fields tá»« schema cache
+        - Kiá»ƒm tra cÃ¡c Ä‘iá»u kiá»‡n nghiá»‡p vá»¥ Ä‘áº·c thÃ¹ (RejectOrder, ForwardOrder)
+        Tráº£ vá» ChatResponse náº¿u cáº§n yÃªu cáº§u ngÆ°á»i dÃ¹ng cung cáº¥p thÃªm thÃ´ng tin,
+        hoáº·c None náº¿u táº¥t cáº£ tham sá»‘ há»£p lá»‡.
         """
         # Convert string-serialized items array to list if needed
         items = args.get("items")
@@ -695,7 +774,7 @@ class AIOrchestrator:
         order_id = args.get("order_id")
         is_reject_intent = fn_name == "RejectOrder"
 
-        # ── Chống ảo tưởng order_id ──────────────────────────────────────────
+        # â”€â”€ Chá»‘ng áº£o tÆ°á»Ÿng order_id â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (
             order_id
             and not self._is_missing_or_null(order_id)
@@ -708,17 +787,17 @@ class AIOrchestrator:
             )
             if is_reject_intent:
                 return ChatResponse(
-                    reply="Tôi chưa xác định được đơn hàng nào. Vui lòng cho tôi mã đơn hàng.",
+                    reply="TÃ´i chÆ°a xÃ¡c Ä‘á»‹nh Ä‘Æ°á»£c Ä‘Æ¡n hÃ ng nÃ o. Vui lÃ²ng cho tÃ´i mÃ£ Ä‘Æ¡n hÃ ng.",
                     intent="general_query",
                     tool_calls=[],
                 )
             return ChatResponse(
-                reply="Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện.",
+                reply="Vui lÃ²ng cung cáº¥p mÃ£ Ä‘Æ¡n hÃ ng cá»¥ thá»ƒ Ä‘á»ƒ tÃ´i thá»±c hiá»‡n.",
                 intent="general_query",
                 tool_calls=[],
             )
 
-        # ── Chống ảo tưởng forward_to_user ──────────────────────────────────
+        # â”€â”€ Chá»‘ng áº£o tÆ°á»Ÿng forward_to_user â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         forward_to_user = args.get("forward_to_user")
         if (
             forward_to_user
@@ -732,14 +811,14 @@ class AIOrchestrator:
             )
             return ChatResponse(
                 reply=(
-                    f"Tôi chưa rõ bạn muốn chuyển tiếp đơn hàng {order_id} cho ai. "
-                    "Vui lòng cung cấp tên hoặc email người nhận."
+                    f"TÃ´i chÆ°a rÃµ báº¡n muá»‘n chuyá»ƒn tiáº¿p Ä‘Æ¡n hÃ ng {order_id} cho ai. "
+                    "Vui lÃ²ng cung cáº¥p tÃªn hoáº·c email ngÆ°á»i nháº­n."
                 ),
                 intent="general_query",
                 tool_calls=[],
             )
 
-        # ── Kiểm tra required fields từ JSON Schema (generic) ────────────────
+        # â”€â”€ Kiá»ƒm tra required fields tá»« JSON Schema (generic) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         schema = self._schema_cache.get(fn_name, {})
         required_fields: list[str] = schema.get("required", [])
         properties: dict[str, Any] = schema.get("properties", {})
@@ -750,26 +829,26 @@ class AIOrchestrator:
                 logger.warning(
                     "Missing required field '%s' for function '%s'", field, fn_name
                 )
-                # Thông điệp ngữ cảnh theo từng loại field
+                # ThÃ´ng Ä‘iá»‡p ngá»¯ cáº£nh theo tá»«ng loáº¡i field
                 if field == "order_id":
                     if is_reject_intent:
                         return ChatResponse(
-                            reply="Tôi chưa xác định được đơn hàng nào. Vui lòng cho tôi mã đơn hàng.",
+                            reply="TÃ´i chÆ°a xÃ¡c Ä‘á»‹nh Ä‘Æ°á»£c Ä‘Æ¡n hÃ ng nÃ o. Vui lÃ²ng cho tÃ´i mÃ£ Ä‘Æ¡n hÃ ng.",
                             intent="general_query",
                             tool_calls=[],
                         )
                     return ChatResponse(
-                        reply="Vui lòng cung cấp mã đơn hàng cụ thể để tôi thực hiện.",
+                        reply="Vui lÃ²ng cung cáº¥p mÃ£ Ä‘Æ¡n hÃ ng cá»¥ thá»ƒ Ä‘á»ƒ tÃ´i thá»±c hiá»‡n.",
                         intent="general_query",
                         tool_calls=[],
                     )
                 elif field == "reason_code":
                     return ChatResponse(
                         reply=(
-                            f"Tôi đã ghi nhận yêu cầu hủy đơn hàng {order_id}. "
-                            "Bạn vui lòng cho biết lý do hủy đơn là gì "
-                            "(do sai giá, hết hàng, hay lý do khác) để tôi cập nhật "
-                            "chính xác lên hệ thống SAP nhé?"
+                            f"TÃ´i Ä‘Ã£ ghi nháº­n yÃªu cáº§u há»§y Ä‘Æ¡n hÃ ng {order_id}. "
+                            "Báº¡n vui lÃ²ng cho biáº¿t lÃ½ do há»§y Ä‘Æ¡n lÃ  gÃ¬ "
+                            "(do sai giÃ¡, háº¿t hÃ ng, hay lÃ½ do khÃ¡c) Ä‘á»ƒ tÃ´i cáº­p nháº­t "
+                            "chÃ­nh xÃ¡c lÃªn há»‡ thá»‘ng SAP nhÃ©?"
                         ),
                         intent="general_query",
                         tool_calls=[],
@@ -789,17 +868,17 @@ class AIOrchestrator:
                 elif field == "forward_to_user":
                     return ChatResponse(
                         reply=(
-                            f"Tôi chưa rõ bạn muốn chuyển tiếp đơn hàng {order_id} cho ai. "
-                            "Vui lòng cung cấp tên hoặc email người nhận."
+                            f"TÃ´i chÆ°a rÃµ báº¡n muá»‘n chuyá»ƒn tiáº¿p Ä‘Æ¡n hÃ ng {order_id} cho ai. "
+                            "Vui lÃ²ng cung cáº¥p tÃªn hoáº·c email ngÆ°á»i nháº­n."
                         ),
                         intent="general_query",
                         tool_calls=[],
                     )
                 else:
-                    # Generic fallback cho required fields khác
+                    # Generic fallback cho required fields khÃ¡c
                     field_desc = properties.get(field, {}).get("description", field)
                     return ChatResponse(
-                        reply=f"Vui lòng cung cấp thông tin bắt buộc: {field_desc}.",
+                        reply=f"Vui lÃ²ng cung cáº¥p thÃ´ng tin báº¯t buá»™c: {field_desc}.",
                         intent="general_query",
                         tool_calls=[],
                     )
@@ -812,8 +891,8 @@ class AIOrchestrator:
         user_message: str,
     ) -> ChatResponse | None:
         """
-        Trích xuất thông tin function call bị lỗi từ failed_generation của Groq API (400 Bad Request).
-        Kiểm tra tính hợp lệ của tham số và trả về ChatResponse tương ứng hoặc None nếu không khôi phục được.
+        TrÃ­ch xuáº¥t thÃ´ng tin function call bá»‹ lá»—i tá»« failed_generation cá»§a Groq API (400 Bad Request).
+        Kiá»ƒm tra tÃ­nh há»£p lá»‡ cá»§a tham sá»‘ vÃ  tráº£ vá» ChatResponse tÆ°Æ¡ng á»©ng hoáº·c None náº¿u khÃ´ng khÃ´i phá»¥c Ä‘Æ°á»£c.
         """
         try:
             failed_gen = None
@@ -864,14 +943,14 @@ class AIOrchestrator:
                         except json.JSONDecodeError:
                             args = {}
 
-                # Validation các quy tắc
+                # Validation cÃ¡c quy táº¯c
                 validation_resp = self._validate_and_build_response(
                     fn_name, args, user_message
                 )
                 if validation_resp is not None:
                     return validation_resp
 
-                # Làm sạch null/empty cho hàm có optional-only params
+                # LÃ m sáº¡ch null/empty cho hÃ m cÃ³ optional-only params
                 schema = self._schema_cache.get(fn_name, {})
                 if not schema.get("required"):
                     args = {
@@ -913,7 +992,7 @@ class AIOrchestrator:
             logger.warning("Failed to recover from failed_generation: %s", e)
             return None
 
-    # ── Response parser ────────────────────────────────────────────────────
+    # â”€â”€ Response parser â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
     def _parse_response(
         self,
@@ -921,9 +1000,9 @@ class AIOrchestrator:
         user_message: str,
     ) -> ChatResponse:
         """
-        Bóc tách kết quả từ ChatCompletion:
-        - Nếu có tool_calls → is_function_call=True, trích xuất name + args
-        - Nếu chỉ có text      → general_query, tool_calls=[]
+        BÃ³c tÃ¡ch káº¿t quáº£ tá»« ChatCompletion:
+        - Náº¿u cÃ³ tool_calls â†’ is_function_call=True, trÃ­ch xuáº¥t name + args
+        - Náº¿u chá»‰ cÃ³ text      â†’ general_query, tool_calls=[]
         """
         parsed_tool_calls: list[ToolCall] = []
         intent = "general_query"
@@ -953,12 +1032,12 @@ class AIOrchestrator:
                 if validation_resp is not None:
                     return validation_resp
 
-                # Làm sạch null/empty cho các hàm có optional-only params
-                # (áp dụng chung: GetSalesOrders, GetKpiSummary, GetKpiByCustomer, GetKpiByProduct, GetOverdueOrders)
+                # LÃ m sáº¡ch null/empty cho cÃ¡c hÃ m cÃ³ optional-only params
+                # (Ã¡p dá»¥ng chung: GetSalesOrders, GetKpiSummary, GetKpiByCustomer, GetKpiByProduct, GetOverdueOrders)
                 schema = self._schema_cache.get(fn_name, {})
                 if not schema.get(
                     "required"
-                ):  # Hàm không có required field → clean nulls
+                ):  # HÃ m khÃ´ng cÃ³ required field â†’ clean nulls
                     cleaned_args = {
                         k: v
                         for k, v in args.items()
@@ -998,7 +1077,7 @@ _orchestrator_instance: AIOrchestrator | None = None
 
 
 def _get_orchestrator() -> AIOrchestrator:
-    """Trả về singleton AIOrchestrator, khởi tạo lần đầu khi cần."""
+    """Tráº£ vá» singleton AIOrchestrator, khá»Ÿi táº¡o láº§n Ä‘áº§u khi cáº§n."""
     global _orchestrator_instance
     if _orchestrator_instance is None:
         _orchestrator_instance = AIOrchestrator()
@@ -1006,17 +1085,17 @@ def _get_orchestrator() -> AIOrchestrator:
 
 
 # ---------------------------------------------------------------------------
-# Public API – entry point từ main.py (giữ nguyên signature)
+# Public API â€“ entry point tá»« main.py (giá»¯ nguyÃªn signature)
 # ---------------------------------------------------------------------------
 
 
 def process_user_message(request: ChatRequest) -> ChatResponse:
     """
-    Entry point được gọi từ FastAPI route handler.
-    Signature không đổi → Backend .NET không bị ảnh hưởng.
+    Entry point Ä‘Æ°á»£c gá»i tá»« FastAPI route handler.
+    Signature khÃ´ng Ä‘á»•i â†’ Backend .NET khÃ´ng bá»‹ áº£nh hÆ°á»Ÿng.
 
-    - Có GROQ_API_KEY thật → gọi Groq API
-    - Không có key         → trả mock response
+    - CÃ³ GROQ_API_KEY tháº­t â†’ gá»i Groq API
+    - KhÃ´ng cÃ³ key         â†’ tráº£ mock response
     """
     if _is_real_key_configured():
         try:
@@ -1024,7 +1103,7 @@ def process_user_message(request: ChatRequest) -> ChatResponse:
                 request.user_message, request.chat_history
             )
         except Exception as exc:
-            logger.error("Groq orchestration error: %s – raising exception.", exc)
+            logger.error("Groq orchestration error: %s â€“ raising exception.", exc)
             raise
     else:
         return _mock_response(request.user_message)

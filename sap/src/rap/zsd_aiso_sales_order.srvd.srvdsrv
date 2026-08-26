@@ -14,4 +14,11 @@ define service ZSD_AISO_SALES_ORDER {
   expose ZI_AISO_VALID_MATERIAL as ValidMaterial;
   expose ZI_AISO_VALID_MATERIAL_PLANT as ValidMaterialPlant;
   expose ZC_AISO_MATERIAL as Material;
+  expose ZC_AISO_SO_ITEM as SalesOrderItems;
+  expose ZC_AISO_VALID_MATERIAL_SALES as ValidMaterialSales;
+  expose ZC_AISO_USER_ROLE_QUERY as UserRoles;
+  expose ZC_AISO_SALES_ORG_LIST as SalesOrgList;
+  expose ZC_AISO_DIST_CHANNEL_LIST as DistChannelList;
+  expose ZC_AISO_DIVISION_LIST as DivisionList;
+  expose ZC_AISO_DOC_TYPE_LIST as DocTypeList;
 }

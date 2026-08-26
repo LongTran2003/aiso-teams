@@ -1,0 +1,198 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Create sales order (Step 2 of 4)",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Sales Area: ${salesAreaLabel}",
+          "size": "Small",
+          "isSubtle": true,
+          "spacing": "None",
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "spacing": "Medium",
+      "items": [
+        {
+          "type": "Input.ChoiceSet",
+          "id": "customer",
+          "label": "Customer",
+          "style": "compact",
+          "isRequired": true,
+          "errorMessage": "Customer is required",
+          "value": "${customer}",
+          "choices": [ { "$data": "${customerChoices}", "title": "${title}", "value": "${value}" } ]
+        },
+        {
+          "type": "Input.Text",
+          "id": "manualCustomer",
+          "label": "Customer not in list? Type customer number",
+          "placeholder": "e.g. 135001 or 0000135001",
+          "isRequired": false,
+          "regex": "^0*[0-9]{1,10}$",
+          "errorMessage": "Must be 1-10 digits"
+        },
+        {
+          "type": "TextBlock",
+          "text": "Either pick from dropdown above OR type below. Typed value takes priority.",
+          "size": "Small",
+          "isSubtle": true,
+          "wrap": true
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Order details",
+      "weight": "Bolder",
+      "size": "Small",
+      "spacing": "Medium",
+      "wrap": true
+    },
+    {
+      "type": "Container",
+      "spacing": "Small",
+      "items": [
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "Input.ChoiceSet",
+                  "id": "docType",
+                  "label": "Order Type *",
+                  "style": "compact",
+                  "isRequired": true,
+                  "errorMessage": "Order type is required",
+                  "value": "${selectedDocType}",
+                  "choices": [ { "$data": "${docTypeChoices}", "title": "${title}", "value": "${value}" } ]
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "120px",
+              "items": [
+                {
+                  "type": "Input.Text",
+                  "id": "currency",
+                  "label": "Currency",
+                  "value": "${currency}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "ColumnSet",
+          "spacing": "Small",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "stretch",
+              "items": [
+                {
+                  "type": "Input.Text",
+                  "id": "purchaseOrderRef",
+                  "label": "Customer PO Number",
+                  "placeholder": "Optional",
+                  "value": "${purchaseOrderRef}"
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "180px",
+              "items": [
+                {
+                  "type": "Input.Date",
+                  "id": "requestedDeliveryDate",
+                  "label": "Requested Delivery",
+                  "value": "${requestedDeliveryDate}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Ship-to Party",
+      "weight": "Bolder",
+      "size": "Small",
+      "spacing": "Medium",
+      "wrap": true
+    },
+    {
+      "type": "Container",
+      "spacing": "Small",
+      "items": [
+        {
+          "type": "Input.Toggle",
+          "id": "showShipToParty",
+          "title": "Specify a different ship-to address",
+          "value": "${showShipToParty}"
+        },
+        {
+          "type": "Input.Text",
+          "id": "shipToParty",
+          "label": "Ship-to Party Customer Number",
+          "placeholder": "Optional — leave empty to use customer default",
+          "value": "${shipToParty}",
+          "isVisible": "${showShipToParty} == true"
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Next",
+      "style": "positive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Next step",
+          "text": "Next"
+        },
+        "action": "create_so_step2_submit",
+        "salesArea": "${salesAreaKey}",
+        "salesOrg": "${salesOrg}",
+        "distChannel": "${distChannel}",
+        "division": "${division}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}

@@ -4,6 +4,10 @@
 
 define view entity ZI_AISO_SO_ITEM
   as select from vbap
+
+  association to parent ZI_AISO_SO_HEADER as _Header
+    on $projection.SoNumber = _Header.SoNumber
+
   association [0..1] to makt as _Material
     on  $projection.Material = _Material.matnr
     and _Material.spras      = $session.system_language
@@ -21,5 +25,6 @@ define view entity ZI_AISO_SO_ITEM
       vbap.waerk                              as Currency,
       vbap.abgru                              as RejectionRsn,
 
+      _Header,
       _Material
 }

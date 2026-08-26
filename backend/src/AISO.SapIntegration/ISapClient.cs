@@ -148,19 +148,54 @@ public interface ISapClient
     /// </summary>
     Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default);
 
-    /// <summary>Valid sales areas from <c>SalesArea</c> (TVTA).</summary>
-    Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default);
+    /// <summary>Valid sales areas from <c>SalesArea</c> (TVTA). Optionally filter by SalesOrg.</summary>
+    Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(string? salesOrg = null, CancellationToken ct = default);
 
-    /// <summary>Materials from <c>Material</c> (MARA/MAKT).</summary>
+    /// <summary>Material master from <c>Material</c>.</summary>
     Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default);
+
+    /// <summary>Valid Material per Plant from <c>ValidMaterialPlant</c>.</summary>
+    Task<IReadOnlyList<SapValidMaterialPlant>> GetValidMaterialPlantsAsync(CancellationToken ct = default);
+
+    /// <summary>Valid Materials for a specific Sales Org and Dist Channel.</summary>
+    Task<IReadOnlyList<SapValidMaterialSales>> GetValidMaterialSalesAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        int top = 30,
+        CancellationToken ct = default);
 
     /// <summary>Customers valid per sales area from <c>ValidCustomer</c> (KNVV).</summary>
     Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
         string? salesOrg = null,
         string? distChannel = null,
         string? division = null,
-        int top = 100,
+        int top = 30,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Sales organizations from <c>SalesOrgList</c>.
+    /// </summary>
+    Task<IReadOnlyList<SapSalesOrg>> GetSalesOrgListAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Distribution channels from <c>DistChannelList</c>, optionally filtered by SalesOrg.
+    /// </summary>
+    Task<IReadOnlyList<SapDistChannel>> GetDistChannelListAsync(
+        string? salesOrg = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Divisions from <c>DivisionList</c>, optionally filtered by SalesOrg + DistChannel.
+    /// </summary>
+    Task<IReadOnlyList<SapDivision>> GetDivisionListAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        CancellationToken ct = default);
+
+    /// <summary>
+    /// Order types from <c>DocTypeList</c>.
+    /// </summary>
+    Task<IReadOnlyList<SapDocType>> GetDocTypeListAsync(CancellationToken ct = default);
 
     /// <summary>
     /// Whether customer is maintained for the sales area.
@@ -172,13 +207,38 @@ public interface ISapClient
         string distChannel,
         string division,
         CancellationToken ct = default);
+
+    /// <summary>
+    /// Read the current role + sales org for a SAP user from
+    /// <c>ZI_AISO_USER_ROLE</c> (alias <c>UserRole</c>, OData
+    /// service <c>ZSD_AISO_SALES_ORDER</c>). Returns <c>null</c> when the
+    /// user has no row — caller should fall back to
+    /// <c>IUserScopeLookup</c> / Postgres.
+    /// </summary>
+    Task<SapUserRoleRow?> GetUserRoleAsync(string sapUserId, CancellationToken ct = default);
 }
 
 /// <summary>OData <c>SalesArea</c> row (VKORG / VTWEG / SPART).</summary>
-public sealed record SapSalesArea(string SalesOrg, string DistChannel, string Division)
+public sealed record SapSalesArea(
+    string SalesOrg,
+    string DistChannel,
+    string Division,
+    string? SalesOrgName = null,
+    string? DistChannelName = null,
+    string? DivisionName = null)
 {
     public string Key => $"{SalesOrg}|{DistChannel}|{Division}";
-    public string Label => $"{SalesOrg} / {DistChannel} / {Division}";
+
+    public string Label
+    {
+        get
+        {
+            var org = string.IsNullOrWhiteSpace(SalesOrgName) ? SalesOrg : $"{SalesOrg} ({SalesOrgName})";
+            var dist = string.IsNullOrWhiteSpace(DistChannelName) ? DistChannel : $"{DistChannel} ({DistChannelName})";
+            var div = string.IsNullOrWhiteSpace(DivisionName) ? Division : $"{Division} ({DivisionName})";
+            return $"{org} / {dist} / {div}";
+        }
+    }
 
     public static bool TryParseKey(string? key, out string salesOrg, out string distChannel, out string division)
     {
@@ -196,6 +256,18 @@ public sealed record SapSalesArea(string SalesOrg, string DistChannel, string Di
         return true;
     }
 }
+
+/// <summary>OData <c>SalesOrgList</c> row.</summary>
+public sealed record SapSalesOrg(string SalesOrg, string SalesOrgName);
+
+/// <summary>OData <c>DistChannelList</c> row (keyed by SalesOrg + DistChannel).</summary>
+public sealed record SapDistChannel(string SalesOrg, string DistChannel);
+
+/// <summary>OData <c>DivisionList</c> row (keyed by SalesOrg + DistChannel + Division).</summary>
+public sealed record SapDivision(string SalesOrg, string DistChannel, string Division);
+
+/// <summary>OData <c>DocTypeList</c> row.</summary>
+public sealed record SapDocType(string DocType, string DocTypeName);
 
 /// <summary>OData <c>ValidCustomer</c> row (KNVV + name).</summary>
 public sealed record SapValidCustomer(
@@ -253,6 +325,29 @@ public sealed record SapMaterial(
     public string Label => $"{Material} - {MaterialName}";
 }
 
+/// <summary>OData <c>ValidMaterialPlant</c> row.</summary>
+public sealed record SapValidMaterialPlant(
+    string Material,
+    string Plant,
+    string MaterialType,
+    string BaseUnit);
+
+/// <summary>OData <c>ValidMaterialSales</c> row.</summary>
+/// <remarks>
+/// CDS v5 added <c>Plant</c> as part of the key, so the same
+/// (Material, SalesOrg, DistChannel) may now appear under several valid
+/// plants. The HTTP layer dedupes by <see cref="Material"/> and returns
+/// the first plant encountered; downstream code can ignore <see cref="Plant"/>
+/// for the create-SO suggestion dropdown.
+/// </remarks>
+public sealed record SapValidMaterialSales(
+    string Material,
+    string SalesOrg,
+    string DistChannel,
+    string Plant = "",
+    string BaseUnit = "",
+    string MaterialName = "");
+
 public sealed record CreateSalesOrderDto
 {
     public required string DocType { get; init; }
@@ -265,6 +360,18 @@ public sealed record CreateSalesOrderDto
 
     /// <summary>SAP user id of the creator (OData <c>REQUESTING_TEAMS_USER</c>).</summary>
     public string? RequestingSapUser { get; init; }
+
+    /// <summary>Customer-side purchase order reference (PO Number, NEW_REFERENCE).</summary>
+    public string? PurchaseOrderRef { get; init; }
+
+    /// <summary>yyyy-MM-dd, normalised in SapClient before reaching SAP (REQUESTED_DELIVERY_DATE).</summary>
+    public string? RequestedDeliveryDate { get; init; }
+
+    /// <summary>
+    /// Ship-to party customer number. Optional — if null/empty, SAP ABAP
+    /// falls back to deriving it from KNVP (role WE), then to the Sold-to.
+    /// </summary>
+    public string? ShipToParty { get; init; }
 }
 
 public sealed record CreateSalesOrderItemDto
@@ -273,6 +380,15 @@ public sealed record CreateSalesOrderItemDto
     public required string Plant { get; init; }
     public required decimal OrderQty { get; init; }
     public required string Unit { get; init; }
+
+    /// <summary>Per-item requested delivery date (overrides header date).</summary>
+    public string? RequestedDeliveryDate { get; init; }
+
+    /// <summary>Per-item customer purchase order reference (overrides header PO).</summary>
+    public string? PurchaseOrderRef { get; init; }
+
+    /// <summary>Free-text description for the line item.</summary>
+    public string? ItemDescription { get; init; }
 }
 
 /// <summary>Payload for SAP <c>updateSalesOrder</c> (ZAISO_A_UPDATE_SO: NEW_REFERENCE, REQUESTED_DELIVERY_DATE, ITEMS).</summary>
@@ -293,7 +409,7 @@ public sealed record UpdateSalesOrderItemDto
     public required string Operation { get; init; }
     public string? ItemNumber { get; init; }
     public string? Material { get; init; }
-    /// <summary>Not sent on update OData yet (ZAISO_S_SO_ITEM_UPDATE has no PLANT).</summary>
+    /// <summary>Plant code for the line item (supported by SAP ZAISO_S_SO_ITEM_UPDATE).</summary>
     public string? Plant { get; init; }
     public decimal? OrderQty { get; init; }
     public string? Unit { get; init; }
@@ -334,3 +450,15 @@ public sealed record SalesOrdersQuery
     /// <summary>Maximum number of records to return (default 10, max 50).</summary>
     public int Top { get; init; } = 10;
 }
+
+/// <summary>
+/// Single row from <c>ZI_AISO_USER_ROLE</c> (CDS view over
+/// <c>ZAISO_USER_ROLE</c>). Exposed via the OData <c>UserRole</c>
+/// entity set on <c>ZSD_AISO_SALES_ORDER</c>.
+/// </summary>
+public sealed record SapUserRoleRow(
+    string SapUser,
+    string? Role,
+    string? SalesOrg,
+    DateOnly? ValidFrom = null,
+    DateOnly? ValidTo = null);

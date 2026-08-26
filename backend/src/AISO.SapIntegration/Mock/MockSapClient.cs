@@ -211,6 +211,50 @@ public sealed class MockSapClient : ISapClient
         return Task.FromResult<IReadOnlyList<SalesOrder>>(result);
     }
 
+    public Task<IReadOnlyList<SapValidMaterialPlant>> GetValidMaterialPlantsAsync(CancellationToken ct = default)
+    {
+        IReadOnlyList<SapValidMaterialPlant> list = new List<SapValidMaterialPlant>
+        {
+            new("000000000000000110", "1010", "ROH", "EA"),
+            new("000000000000000111", "1010", "ROH", "EA"),
+            new("000000000000000113", "1010", "ROH", "EA")
+        };
+        return Task.FromResult(list);
+    }
+
+    public Task<IReadOnlyList<SapValidMaterialSales>> GetValidMaterialSalesAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        int top = 30,
+        CancellationToken ct = default)
+    {
+        // CDS v5: (Material, SalesOrg, DistChannel, Plant) — same Material can repeat per plant.
+        var allMaterials = new List<SapValidMaterialSales>
+        {
+            new("000000000000000110", "1000", "10", "1010"),
+            new("000000000000000111", "1000", "10", "1010"),
+            new("000000000000000113", "1000", "10", "1010"),
+            new("000000000000000110", "1000", "00", "1010"),
+            new("000000000000000111", "1000", "00", "1010"),
+            new("000000000000000113", "1000", "00", "1010"),
+            // Same material but in a different valid plant — must not appear twice in dropdown.
+            new("000000000000000110", "1000", "10", "1020")
+        };
+
+        IEnumerable<SapValidMaterialSales> filtered = allMaterials;
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            filtered = filtered.Where(m => string.Equals(m.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(distChannel))
+            filtered = filtered.Where(m => string.Equals(m.DistChannel, distChannel, StringComparison.OrdinalIgnoreCase));
+
+        // Match the SAP client dedupe behaviour: distinct by Material, keep first plant.
+        IReadOnlyList<SapValidMaterialSales> list = filtered
+            .GroupBy(m => m.Material)
+            .Select(g => g.First())
+            .ToList();
+        return Task.FromResult(list);
+    }
+
     public Task<SalesOrder?> GetSalesOrderByIdAsync(string soNumber, CancellationToken ct = default)
     {
         _logger?.LogDebug("MockSapClient.GetSalesOrderByIdAsync: {SoNumber}", soNumber);
@@ -510,9 +554,51 @@ public sealed class MockSapClient : ISapClient
         return Task.FromResult<bool?>(known);
     }
 
-    public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default)
+    /// <summary>
+    /// Returns a mock SAP user-role row for known demo SAP users (DEV-*).
+    /// Unknown SAP users yield <c>null</c>, matching the real
+    /// <c>SapClient.GetUserRoleAsync</c> contract.
+    /// </summary>
+    public Task<SapUserRoleRow?> GetUserRoleAsync(string sapUserId, CancellationToken ct = default)
     {
-        IReadOnlyList<SapSalesArea> areas =
+        if (string.IsNullOrWhiteSpace(sapUserId))
+            return Task.FromResult<SapUserRoleRow?>(null);
+
+        var normalized = sapUserId.Trim().ToUpperInvariant();
+        SapUserRoleRow? row = normalized switch
+        {
+            // Demo seed: Employee + TV01
+            "DEV-249" => new SapUserRoleRow(normalized, "EMPLOYEE", "TV01"),
+            // Demo seed: Manager + UE00
+            "DEV-024" => new SapUserRoleRow(normalized, "MANAGER", "UE00"),
+            // Quân: Admin + DN00 (smoke test for Admin)
+            "DEV-230" => new SapUserRoleRow(normalized, "ADMIN", "DN00"),
+            // DEV-251: Employee + TV01 with a validity window that covers today.
+            // Used by B3 tests to assert MyProfileResponse.SalesOrgIsActive.
+            "DEV-251" => new SapUserRoleRow(
+                normalized,
+                "EMPLOYEE",
+                "TV01",
+                ValidFrom: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-30),
+                ValidTo: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(60)),
+            // DEV-252: Employee + TV01 with expired window (today > ValidTo).
+            "DEV-252" => new SapUserRoleRow(
+                normalized,
+                "EMPLOYEE",
+                "TV01",
+                ValidFrom: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-365),
+                ValidTo: DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1)),
+            // Generic DEV-* users get a default Employee + TV01 row.
+            _ when normalized.StartsWith("DEV-", StringComparison.Ordinal)
+                => new SapUserRoleRow(normalized, "EMPLOYEE", "TV01"),
+            _ => null,
+        };
+        return Task.FromResult(row);
+    }
+
+    public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(string? salesOrg = null, CancellationToken ct = default)
+    {
+        IReadOnlyList<SapSalesArea> allAreas =
         [
             new("TV01", "10", "00"),
             new("FU24", "10", "00"),
@@ -521,7 +607,89 @@ public sealed class MockSapClient : ISapClient
             new("DN00", "10", "00"),
             new("DS00", "10", "00")
         ];
-        return Task.FromResult(areas);
+
+        if (string.IsNullOrWhiteSpace(salesOrg))
+            return Task.FromResult(allAreas);
+
+        var filtered = allAreas.Where(a => string.Equals(a.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase)).ToList();
+        return Task.FromResult<IReadOnlyList<SapSalesArea>>(filtered);
+    }
+
+    public Task<IReadOnlyList<SapSalesOrg>> GetSalesOrgListAsync(CancellationToken ct = default)
+    {
+        IReadOnlyList<SapSalesOrg> orgs =
+        [
+            new("TV01", "Domestic Org"),
+            new("FU24", "FUrni"),
+            new("UE00", "UE Org"),
+            new("UW00", "UW Org"),
+            new("DN00", "DN Org"),
+            new("DS00", "DS Org")
+        ];
+        return Task.FromResult(orgs);
+    }
+
+    public Task<IReadOnlyList<SapDistChannel>> GetDistChannelListAsync(
+        string? salesOrg = null,
+        CancellationToken ct = default)
+    {
+        IReadOnlyList<SapDistChannel> allChannels =
+        [
+            new("TV01", "10"),
+            new("TV01", "20"),
+            new("FU24", "10"),
+            new("FU24", "FR"),
+            new("UE00", "10"),
+            new("UW00", "10"),
+            new("DN00", "10"),
+            new("DS00", "10")
+        ];
+
+        if (string.IsNullOrWhiteSpace(salesOrg))
+            return Task.FromResult(allChannels);
+
+        var filtered = allChannels
+            .Where(c => string.Equals(c.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        return Task.FromResult<IReadOnlyList<SapDistChannel>>(filtered);
+    }
+
+    public Task<IReadOnlyList<SapDivision>> GetDivisionListAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        CancellationToken ct = default)
+    {
+        IReadOnlyList<SapDivision> allDivisions =
+        [
+            new("TV01", "10", "00"),
+            new("TV01", "10", "AS"),
+            new("FU24", "10", "00"),
+            new("FU24", "10", "FS"),
+            new("FU24", "FR", "FG"),
+            new("UE00", "10", "00"),
+            new("UW00", "10", "00"),
+            new("DN00", "10", "00"),
+            new("DS00", "10", "00")
+        ];
+
+        IEnumerable<SapDivision> result = allDivisions;
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            result = result.Where(d => string.Equals(d.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(distChannel))
+            result = result.Where(d => string.Equals(d.DistChannel, distChannel, StringComparison.OrdinalIgnoreCase));
+
+        return Task.FromResult<IReadOnlyList<SapDivision>>(result.ToList());
+    }
+
+    public Task<IReadOnlyList<SapDocType>> GetDocTypeListAsync(CancellationToken ct = default)
+    {
+        IReadOnlyList<SapDocType> docTypes =
+        [
+            new("TA", "Sales Order"),
+            new("OR", "Order"),
+            new("ZOR", "Returns")
+        ];
+        return Task.FromResult(docTypes);
     }
 
     public Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default)
@@ -541,7 +709,7 @@ public sealed class MockSapClient : ISapClient
         string? salesOrg = null,
         string? distChannel = null,
         string? division = null,
-        int top = 100,
+        int top = 30,
         CancellationToken ct = default)
     {
         IEnumerable<SapValidCustomer> rows =

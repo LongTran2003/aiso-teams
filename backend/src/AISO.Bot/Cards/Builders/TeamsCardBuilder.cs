@@ -3,6 +3,7 @@ using AISO.AiOrchestration.Functions;
 using AISO.Domain.Approvals;
 using AISO.Domain.SalesOrders;
 using AISO.Domain.Users;
+using AISO.SapIntegration;
 using Microsoft.Bot.Schema;
 
 namespace AISO.Bot.Cards.Builders;
@@ -27,11 +28,95 @@ internal static class TeamsCardBuilder
                 assignedSapUserId = assignedSapUserId?.Trim().ToUpperInvariant() ?? string.Empty
             });
 
-    public static Attachment BuildHelpCard(string? role = null) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment("help.json", new { role = role ?? "Employee" });
+    public static Attachment BuildHelpCard(string? role = null)
+    {
+        var (parsedRole, roleLabel) = NormalizeRole(role);
+        var commands = HelpCommandCatalog
+            .ForRole(parsedRole)
+            .Select(c => new
+            {
+                icon = c.Icon,
+                en = c.En,
+                vi = c.Vi,
+                note = c.Note ?? string.Empty,
+                flow = c.Flow,
+            })
+            .ToList();
+
+        return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "help.json",
+            new
+            {
+                role = roleLabel,
+                hasCommands = commands.Count > 0 ? "true" : "false",
+                commands
+            });
+    }
+
+    private static (UserRole role, string label) NormalizeRole(string? role) =>
+        role?.Trim().ToLowerInvariant() switch
+        {
+            "admin" => (UserRole.Admin, "Admin"),
+            "manager" => (UserRole.Manager, "Manager"),
+            "employee" => (UserRole.Employee, "Employee"),
+            _ => (UserRole.Employee, "Employee"),
+        };
 
     public static Attachment BuildEmptyCard() =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("empty.json");
+
+    public static Attachment BuildMyProfileCard(MyProfileResponse response) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "my-profile.json",
+            new
+            {
+                sapUser = response.SapUser,
+                displayName = string.IsNullOrWhiteSpace(response.SapUser) ? "(unknown)" : response.SapUser,
+                role = response.Role.ToString(),
+                salesOrg = string.IsNullOrWhiteSpace(response.SalesOrg) ? "(none)" : response.SalesOrg,
+                email = string.IsNullOrWhiteSpace(response.Email) ? "(unlinked)" : response.Email,
+                hasEmail = string.IsNullOrWhiteSpace(response.Email) ? "false" : "true",
+                salesOrgValidFrom = response.SalesOrgValidFrom?.ToString("dd MMM yyyy") ?? "",
+                salesOrgValidTo = response.SalesOrgValidTo?.ToString("dd MMM yyyy") ?? "",
+                hasValidFrom = response.SalesOrgValidFrom.HasValue ? "true" : "false",
+                hasValidTo = response.SalesOrgValidTo.HasValue ? "true" : "false",
+                salesOrgStatus = DescribeSalesOrgStatus(response.SalesOrgIsActive),
+                hasSalesOrgStatus = response.SalesOrgIsActive.HasValue ? "true" : "false",
+                total = response.Counts.Total,
+                open = response.Counts.Open,
+                blocked = response.Counts.Blocked,
+                partial = response.Counts.PartiallyDelivered,
+                delivered = response.Counts.Delivered,
+                invoiced = response.Counts.Invoiced,
+                cancelled = response.Counts.Cancelled,
+                approximateHint = response.Approximate
+                    ? $"Counts are approximate — showing the {MyProfileFunction.MaxOrdersForStats} most recent orders. You may own more."
+                    : $"Counts are exact ({response.Counts.Total} order(s) owned).",
+                hasLoadError = string.IsNullOrEmpty(response.LoadError) ? "false" : "true",
+                loadError = response.LoadError ?? string.Empty,
+                hasTopOrders = response.TopOrders.Count > 0 ? "true" : "false",
+                topOrders = response.TopOrders.Select(o => new
+                {
+                    soNumber = o.SoNumber,
+                    customerLabel = string.IsNullOrWhiteSpace(o.CustomerName) ? o.CustomerId : $"{o.CustomerId} · {o.CustomerName}",
+                    orderDate = o.OrderDate.ToString("dd MMM yyyy"),
+                    status = o.Status.ToString(),
+                    formattedNetValue = $"{o.NetValue:N0} {o.Currency}"
+                }).ToList()
+            });
+
+    /// <summary>
+    /// Renders the Sales-org validity status into a short label the card can
+    /// colour: <c>Active</c>, <c>Expired</c>, <c>Pending</c>. Only called when
+    /// <c>SalesOrgIsActive</c> has a value (the template hides the row otherwise).
+    /// </summary>
+    private static string DescribeSalesOrgStatus(bool? isActive)
+        => isActive switch
+        {
+            true => "Active",
+            false => "Expired or pending",
+            _ => "Unknown",
+        };
 
     public static Attachment BuildLoadingCard() =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("loading.json");
@@ -107,6 +192,8 @@ internal static class TeamsCardBuilder
         "NOT_AUTHORIZED" => "Not authorized",
         "UNAUTHENTICATED" => "Session expired",
         "SAP_ERROR" => "SAP error",
+        "SAP_UNAVAILABLE" => "SAP unavailable",
+        "COLD_START" => "Bot is starting up",
         _ => "Something went wrong"
     };
 
@@ -117,7 +204,9 @@ internal static class TeamsCardBuilder
         "VALIDATION" => "Check the details below and try again.",
         "UNAUTHENTICATED" => "Your session expired or is not authenticated. Send any message to sign in again.",
         "SAP_ERROR" => "SAP could not complete this request.",
-        _ => "The bot could not complete this request right now."
+        "SAP_UNAVAILABLE" => "The SAP system is unreachable or your account does not have access. Please contact your administrator.",
+        "COLD_START" => "The bot is warming up after a restart. Please send your message again in a few seconds — the next reply is usually faster.",
+        _ => "The bot could not complete this request right now. Please try again in a moment."
     };
 
     public static Attachment BuildNotAuthorizedCard(string errorMessage, string currentRole, string requiredRole) =>
@@ -147,20 +236,243 @@ internal static class TeamsCardBuilder
                 reason = reason ?? string.Empty
             });
 
-    public static Attachment BuildConfirmCreateOrderCard(
-        string customer,
+    public static Attachment BuildCreateOrderStep1Card(
+        IReadOnlyList<SapSalesOrg> salesOrgs,
+        string? selectedSalesOrg = null,
+        IReadOnlyList<SapDistChannel>? distChannels = null,
+        string? selectedDistChannel = null,
+        IReadOnlyList<SapDivision>? divisions = null,
+        string? selectedDivision = null)
+    {
+        var card = BuildStep1CardData(
+            salesOrgs, selectedSalesOrg,
+            distChannels, selectedDistChannel,
+            divisions, selectedDivision);
+
+        return CardTemplateFileLoader.BuildAdaptiveCardFromObject(card);
+    }
+
+    private static object BuildStep1CardData(
+        IReadOnlyList<SapSalesOrg> salesOrgs,
+        string? selectedSalesOrg,
+        IReadOnlyList<SapDistChannel>? distChannels,
+        string? selectedDistChannel,
+        IReadOnlyList<SapDivision>? divisions,
+        string? selectedDivision)
+    {
+        var orgChoices = salesOrgs
+            .Select(o => new Dictionary<string, object> { ["title"] = $"{o.SalesOrg} — {o.SalesOrgName}", ["value"] = o.SalesOrg.ToUpperInvariant().Trim() })
+            .ToList();
+
+        var chanChoices = (distChannels ?? [])
+            .Select(c => new Dictionary<string, object> { ["title"] = c.DistChannel, ["value"] = c.DistChannel.ToUpperInvariant().Trim() })
+            .ToList();
+
+        var divChoices = (divisions ?? [])
+            .Select(d => new Dictionary<string, object> { ["title"] = d.Division, ["value"] = d.Division.ToUpperInvariant().Trim() })
+            .ToList();
+
+        var body = new List<object>
+        {
+            new Dictionary<string, object> {
+                ["type"] = "Container",
+                ["style"] = "Accent",
+                ["bleed"] = true,
+                ["items"] = new object[] {
+                    new Dictionary<string, object> { ["type"] = "TextBlock", ["text"] = "Create sales order (Step 1 of 4)", ["weight"] = "Bolder", ["size"] = "Medium", ["color"] = "Accent", ["wrap"] = true }
+                }
+            },
+            new Dictionary<string, object> { ["type"] = "TextBlock", ["text"] = "Sales Organization *", ["weight"] = "Bolder", ["size"] = "Small", ["spacing"] = "Medium", ["wrap"] = true },
+            new Dictionary<string, object> {
+                ["type"] = "Input.ChoiceSet",
+                ["id"] = "salesOrg",
+                ["label"] = "Sales Organization",
+                ["style"] = "compact",
+                ["isRequired"] = true,
+                ["errorMessage"] = "Please select a Sales Organization",
+                ["value"] = selectedSalesOrg ?? "",
+                ["choices"] = orgChoices
+            }
+        };
+
+        body.Add(new Dictionary<string, object> { ["type"] = "TextBlock", ["text"] = "Distribution Channel *", ["weight"] = "Bolder", ["size"] = "Small", ["spacing"] = "Medium", ["wrap"] = true });
+
+        if (chanChoices.Count > 0)
+        {
+            body.Add(new Dictionary<string, object>
+            {
+                ["type"] = "Input.ChoiceSet",
+                ["id"] = "distChannel",
+                ["label"] = "Distribution Channel",
+                ["style"] = "compact",
+                ["isRequired"] = true,
+                ["errorMessage"] = "Please select a Distribution Channel",
+                ["value"] = selectedDistChannel ?? "",
+                ["choices"] = chanChoices
+            });
+        }
+        else
+        {
+            body.Add(new Dictionary<string, object>
+            {
+                ["type"] = "TextBlock",
+                ["text"] = "(select Sales Organization to load)",
+                ["size"] = "Small",
+                ["isSubtle"] = true,
+                ["wrap"] = true
+            });
+        }
+
+        body.Add(new Dictionary<string, object> { ["type"] = "TextBlock", ["text"] = "Division *", ["weight"] = "Bolder", ["size"] = "Small", ["spacing"] = "Medium", ["wrap"] = true });
+
+        if (divChoices.Count > 0)
+        {
+            body.Add(new Dictionary<string, object>
+            {
+                ["type"] = "Input.ChoiceSet",
+                ["id"] = "division",
+                ["label"] = "Division",
+                ["style"] = "compact",
+                ["isRequired"] = true,
+                ["errorMessage"] = "Please select a Division",
+                ["value"] = selectedDivision ?? "",
+                ["choices"] = divChoices
+            });
+        }
+        else
+        {
+            body.Add(new Dictionary<string, object>
+            {
+                ["type"] = "TextBlock",
+                ["text"] = "(select Distribution Channel to load)",
+                ["size"] = "Small",
+                ["isSubtle"] = true,
+                ["wrap"] = true
+            });
+        }
+
+        return new Dictionary<string, object>
+        {
+            ["type"] = "AdaptiveCard",
+            ["$schema"] = "http://adaptivecards.io/schemas/adaptive-card.json",
+            ["version"] = "1.5",
+            ["body"] = body,
+            ["actions"] = new object[] {
+                new Dictionary<string, object> {
+                    ["type"] = "Action.Submit",
+                    ["title"] = "Next",
+                    ["style"] = "positive",
+                    ["data"] = new Dictionary<string, object> {
+                        ["msteams"] = new Dictionary<string, object> { ["type"] = "messageBack", ["displayText"] = "Next step", ["text"] = "Next" },
+                        ["action"] = "create_so_step1_submit"
+                    }
+                },
+                new Dictionary<string, object> {
+                    ["type"] = "Action.Submit",
+                    ["title"] = "Cancel",
+                    ["data"] = new Dictionary<string, object> {
+                        ["msteams"] = new Dictionary<string, object> { ["type"] = "messageBack", ["displayText"] = "cancel", ["text"] = "cancel" }
+                    }
+                }
+            }
+        };
+    }
+
+    public static Attachment BuildCreateOrderStep2Card(
+        string salesAreaLabel,
+        string salesAreaKey,
         string salesOrg,
+        string distChannel,
+        string division,
+        IReadOnlyList<ConfirmCreateChoice> customerChoices,
+        IReadOnlyList<SapDocType>? docTypes = null,
+        string? selectedDocType = null,
+        string? currency = null,
+        string? purchaseOrderRef = null,
+        string? requestedDeliveryDate = null,
+        string? shipToParty = null) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "create-so-step2.json",
+            new
+            {
+                salesAreaLabel,
+                salesAreaKey,
+                salesOrg,
+                distChannel,
+                division,
+                customerChoices,
+                docTypeChoices = docTypes?.Select(d => new { title = $"{d.DocType} — {d.DocTypeName}", value = d.DocType }).ToList(),
+                selectedDocType = selectedDocType ?? "",
+                currency = currency ?? "USD",
+                purchaseOrderRef = purchaseOrderRef ?? "",
+                requestedDeliveryDate = requestedDeliveryDate ?? "",
+                shipToParty = shipToParty ?? "",
+                hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false"
+            });
+
+    public static Attachment BuildCreateOrderStep3Card(
+        string customerLabel,
+        string customerKey,
+        string salesAreaLabel,
+        string salesAreaKey,
+        IReadOnlyList<ConfirmCreateChoice> materialChoices,
+        string? docType = null,
+        string? currency = null,
+        string? purchaseOrderRef = null,
+        string? requestedDeliveryDate = null,
+        string? shipToParty = null) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "create-so-step3.json",
+            new
+            {
+                customerLabel,
+                customerKey,
+                salesAreaLabel,
+                salesAreaKey,
+                materialChoices,
+                docType = docType ?? "TA",
+                currency = currency ?? "USD",
+                purchaseOrderRef = purchaseOrderRef ?? "",
+                requestedDeliveryDate = requestedDeliveryDate ?? "",
+                shipToParty = shipToParty ?? "",
+                hasShipToParty = !string.IsNullOrWhiteSpace(shipToParty) ? "true" : "false"
+            });
+
+    public static Attachment BuildCreateOrderStep4ReviewCard(
+        string salesAreaLabel,
+        string customerLabel,
+        string? shipToParty,
+        string docType,
         string currency,
-        string plant = "1010",
-        string unit = "PC",
-        IReadOnlyList<ConfirmCreateOrderLine>? lines = null) =>
-        BuildConfirmCreateOrderCard(new ConfirmCreateOrderResponse(
-            customer,
-            salesOrg,
-            currency,
-            plant,
-            unit,
-            NormalizeCreateLines(lines)));
+        string? purchaseOrderRef,
+        string? requestedDeliveryDate,
+        IReadOnlyList<ConfirmCreateOrderLine> lineItems,
+        string salesAreaKey,
+        string salesOrg,
+        string distChannel,
+        string division,
+        string customerKey,
+        string customerId) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+            "create-so-step4.json",
+            new
+            {
+                salesAreaLabel,
+                customerLabel,
+                shipToParty = string.IsNullOrWhiteSpace(shipToParty) ? "(default)" : shipToParty,
+                docType,
+                currency,
+                purchaseOrderRef = string.IsNullOrWhiteSpace(purchaseOrderRef) ? "-" : purchaseOrderRef,
+                requestedDeliveryDate = string.IsNullOrWhiteSpace(requestedDeliveryDate) ? "-" : requestedDeliveryDate,
+                lineItems = lineItems.Select(l => new { l.Material, l.Qty }).ToList(),
+                lineItemsJson = System.Text.Json.JsonSerializer.Serialize(lineItems),
+                salesAreaKey,
+                salesOrg,
+                distChannel,
+                division,
+                customerKey,
+                customerId
+            });
 
     /// <summary>Backward-compatible overload (single material).</summary>
     public static Attachment BuildConfirmCreateOrderCard(
@@ -172,12 +484,13 @@ internal static class TeamsCardBuilder
         string plant = "1010",
         string unit = "PC") =>
         BuildConfirmCreateOrderCard(
-            customer,
-            salesOrg,
-            currency,
-            plant,
-            unit,
-            new[] { new ConfirmCreateOrderLine(material, qty) });
+            new ConfirmCreateOrderResponse(
+                customer,
+                salesOrg,
+                currency,
+                plant,
+                unit,
+                new[] { new ConfirmCreateOrderLine(material, qty) }));
 
     public static Attachment BuildConfirmCreateOrderCard(ConfirmCreateOrderResponse draft)
     {
@@ -265,7 +578,9 @@ internal static class TeamsCardBuilder
             .Take(CreateOrderFunction.MaxLineSlots)
             .Select(l => new ConfirmCreateOrderLine(
                 l.Material.Trim().ToUpperInvariant(),
-                l.Qty < 1 ? 1m : l.Qty))
+                l.Qty < 1 ? 1m : l.Qty,
+                l.Plant,
+                l.Unit))
             .ToList();
     }
 
@@ -333,6 +648,9 @@ internal static class TeamsCardBuilder
     public static Attachment BuildConfirmRejectApprovalCard(string salesOrderNumber) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment("confirm-reject-approval.json", new { salesOrderNumber });
 
+    public static Attachment BuildListDelegationsCard(IReadOnlyList<DelegationItem> delegations) =>
+        CardTemplateFileLoader.BuildAdaptiveCardAttachment("list-delegations.json", new { delegations });
+
     public static Attachment BuildConfirmRevokeDelegationCard(string delegateUser, string? delegationId) =>
         CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "confirm-revoke-delegation.json",
@@ -351,8 +669,16 @@ internal static class TeamsCardBuilder
         string reason,
         string maxAmountRaw,
         string maxAmount,
-        string currency) =>
-        CardTemplateFileLoader.BuildAdaptiveCardAttachment(
+        string currency,
+        IEnumerable<object>? managerChoices = null)
+    {
+        var choices = managerChoices ?? new object[]
+        {
+            new { title = "DEV-031 (Manager)", value = "DEV-031" },
+            new { title = "DEV-025 (Manager)", value = "DEV-025" }
+        };
+
+        return CardTemplateFileLoader.BuildAdaptiveCardAttachment(
             "confirm-delegate.json",
             new
             {
@@ -364,8 +690,10 @@ internal static class TeamsCardBuilder
                 reason,
                 maxAmountRaw,
                 maxAmount,
-                currency
+                currency,
+                managerChoices = choices
             });
+    }
     public static Attachment BuildConfirmForceCancelCard(
         string salesOrderNumber,
         string? reason = null) =>

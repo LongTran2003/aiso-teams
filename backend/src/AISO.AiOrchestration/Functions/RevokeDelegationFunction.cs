@@ -54,16 +54,20 @@ public class RevokeDelegationFunction : IFunction
 
         try
         {
-            // Validate if the targetUser is actually delegated
+            // Attempt to get delegation info from local DB for display purposes, but do not block if missing
             var delegateeInfo = await _scope.GetDelegationInfoAsync(targetUser, ct);
-            if (string.IsNullOrWhiteSpace(delegateeInfo.DelegatorSapUser))
+            var delegator = delegateeInfo.DelegatorSapUser;
+
+            if (string.IsNullOrWhiteSpace(delegator))
             {
-                return FunctionResult.Fail($"User {targetUser} does not currently have any active delegation.");
+                // Local DB is out of sync or delegation was created directly in SAP.
+                // We'll let SAP handle the final validation of existence and permissions.
+                delegator = requestingSapUser; // Fallback to the requester for display/audit purposes
             }
 
-            // Validate permissions: Only the original delegator or Admin can revoke.
+            // Validate permissions locally if we know the delegator
             var requestingRole = await _scope.GetRoleBySapUserAsync(requestingSapUser, ct);
-            if (requestingRole < UserRole.Admin && !string.Equals(delegateeInfo.DelegatorSapUser, requestingSapUser, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrWhiteSpace(delegateeInfo.DelegatorSapUser) && requestingRole < UserRole.Admin && !string.Equals(delegateeInfo.DelegatorSapUser, requestingSapUser, StringComparison.OrdinalIgnoreCase))
             {
                 return FunctionResult.Fail($"You cannot revoke this delegation. Only the original delegator ({delegateeInfo.DelegatorSapUser}) or an Admin can revoke it.", "UNAUTHORIZED");
             }
@@ -71,7 +75,7 @@ public class RevokeDelegationFunction : IFunction
             return FunctionResult.Ok(new ConfirmRevokeDelegationResponse(
                 targetUser,
                 delegationId,
-                delegateeInfo.DelegatorSapUser
+                delegator
             ));
         }
         catch (Exception ex)

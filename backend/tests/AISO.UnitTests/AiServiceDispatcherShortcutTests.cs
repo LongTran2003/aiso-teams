@@ -26,6 +26,16 @@ public class AiServiceDispatcherShortcutTests
     }
 
     [Theory]
+    [InlineData("my profile")]
+    [InlineData("My Profile")]
+    [InlineData("hồ sơ của tôi")]
+    [InlineData("thông tin của tôi")]
+    public void IsDeterministicShortcut_MatchesMyProfilePhrases(string message)
+    {
+        Assert.True(AiServiceDispatcher.IsDeterministicShortcut(message));
+    }
+
+    [Theory]
     [InlineData("GetAuditLog", "ViewAuditLog")]
     [InlineData("GetAuditLogs", "ViewAuditLog")]
     [InlineData("ViewAuditLog", "ViewAuditLog")]

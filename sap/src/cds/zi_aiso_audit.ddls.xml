@@ -6,7 +6,7 @@
     <DDLNAME>ZI_AISO_AUDIT</DDLNAME>
     <DDLANGUAGE>E</DDLANGUAGE>
     <DDTEXT>AISO Audit Log</DDTEXT>
-    <SOURCE_TYPE>V</SOURCE_TYPE>
+    <SOURCE_TYPE>W</SOURCE_TYPE>
    </DDLS>
   </asx:values>
  </asx:abap>

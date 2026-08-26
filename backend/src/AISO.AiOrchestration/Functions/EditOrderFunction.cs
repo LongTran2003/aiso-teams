@@ -45,19 +45,19 @@ public sealed class EditOrderFunction : IFunction
               "type": "string",
               "description": "Optional draft PO / customer reference."
             },
-            "req_delivery_date": {
+            "reqDeliveryDate": {
               "type": "string",
               "description": "Optional requested delivery date (yyyy-MM-dd)."
             },
-            "line_op": {
+            "lineOperation": {
               "type": "string",
-              "description": "Optional line operation: none, U, I, or D."
+              "description": "Optional line operation: 'Update quantity / material', 'Add line', 'Delete line', or omit for default."
             },
-            "item_no": { "type": "string" },
-            "material": { "type": "string" },
-            "qty": { "type": "number" },
-            "plant": { "type": "string" },
-            "unit": { "type": "string" }
+            "itemNumber": { "type": "string", "description": "Line item number to edit/delete." },
+            "material": { "type": "string", "description": "Material number for the line item." },
+            "qty": { "type": "number", "description": "Quantity for the line item." },
+            "plant": { "type": "string", "description": "Plant code." },
+            "unit": { "type": "string", "description": "Unit of measure." }
           },
           "required": ["order_id"]
         }
@@ -99,7 +99,7 @@ public sealed class EditOrderFunction : IFunction
             if (string.IsNullOrWhiteSpace(draftRef))
                 draftRef = existing.CustomerReference ?? string.Empty;
 
-            var draftDate = ReadString(parameters, "req_delivery_date");
+            var draftDate = ReadString(parameters, "reqDeliveryDate");
             if (string.IsNullOrWhiteSpace(draftDate))
             {
                 draftDate = existing.RequestedDeliveryDate?.ToString("yyyy-MM-dd") ?? string.Empty;
@@ -108,16 +108,16 @@ public sealed class EditOrderFunction : IFunction
             var explicitQty = parameters.TryGetProperty("qty", out var qtyEl) && qtyEl.ValueKind == JsonValueKind.Number;
             var explicitMaterial = ReadString(parameters, "material") != null;
 
-            var lineOp = (ReadString(parameters, "line_op") ?? string.Empty).Trim().ToUpperInvariant();
-            if (lineOp is not ("U" or "I" or "D" or "NONE"))
+            var rawLineOp = ReadString(parameters, "lineOperation");
+            var lineOp = rawLineOp switch
             {
-                lineOp = explicitQty || explicitMaterial ? "U" : "NONE";
-            }
+                "Update quantity / material" => "U",
+                "Add line" => "I",
+                "Delete line" => "D",
+                _ => explicitQty || explicitMaterial ? "U" : "none"
+            };
 
-            if (lineOp == "NONE")
-                lineOp = "none";
-
-            var itemNo = ReadString(parameters, "item_no");
+            var itemNo = ReadString(parameters, "itemNumber");
             var targetItem = existing.Items?.FirstOrDefault(); // Default
 
             if (!string.IsNullOrWhiteSpace(itemNo))

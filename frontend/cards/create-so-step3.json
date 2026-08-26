@@ -1,0 +1,258 @@
+{
+  "type": "AdaptiveCard",
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "version": "1.5",
+  "body": [
+    {
+      "type": "Container",
+      "style": "Accent",
+      "bleed": true,
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Create sales order (Step 3 of 4) — Line Items",
+          "weight": "Bolder",
+          "size": "Medium",
+          "color": "Accent",
+          "wrap": true
+        },
+        {
+          "type": "FactSet",
+          "spacing": "Small",
+          "facts": [
+            { "title": "Customer", "value": "${customerLabel}" },
+            { "title": "Sales area", "value": "${salesAreaLabel}" }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Container",
+      "spacing": "Medium",
+      "items": [
+        {
+          "type": "FactSet",
+          "spacing": "Small",
+          "facts": [
+            { "title": "Order type", "value": "${docType}" },
+            { "title": "Currency", "value": "${currency}" },
+            { "title": "PO", "value": "${purchaseOrderRef != '' ? purchaseOrderRef : '(none)'}" },
+            { "title": "Delivery", "value": "${requestedDeliveryDate != '' ? requestedDeliveryDate : '(none)'}" }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": "Line items — fill at least one row before continuing",
+      "weight": "Bolder",
+      "size": "Small",
+      "spacing": "Medium",
+      "wrap": true
+    },
+    {
+      "type": "Container",
+      "id": "lineItemsContainer",
+      "spacing": "Small",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Material",
+          "weight": "Bolder",
+          "size": "Small",
+          "wrap": true
+        },
+        {
+          "type": "TextBlock",
+          "text": "Qty",
+          "weight": "Bolder",
+          "size": "Small",
+          "horizontalAlignment": "Right"
+        }
+      ]
+    },
+    {
+      "type": "Input.Text",
+      "id": "itemsJson",
+      "label": "Items (hidden)",
+      "value": "${itemsJson}",
+      "isVisible": false
+    },
+    {
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.ChoiceSet",
+              "id": "material1",
+              "label": "Material 1 *",
+              "style": "compact",
+              "isRequired": true,
+              "errorMessage": "At least one material is required",
+              "value": "${material1}",
+              "choices": [ { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" } ]
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty1",
+              "label": "Qty *",
+              "isRequired": true,
+              "errorMessage": "Qty required",
+              "min": 1,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "unit1",
+              "label": "Unit",
+              "value": "${unit1}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.ChoiceSet",
+              "id": "material2",
+              "label": "Material 2 (optional)",
+              "style": "compact",
+              "value": "${material2}",
+              "choices": [ { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" } ]
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty2",
+              "label": "Qty",
+              "min": 0,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "unit2",
+              "label": "Unit",
+              "value": "${unit2}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.ChoiceSet",
+              "id": "material3",
+              "label": "Material 3 (optional)",
+              "style": "compact",
+              "value": "${material3}",
+              "choices": [ { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" } ]
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Number",
+              "id": "qty3",
+              "label": "Qty",
+              "min": 0,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "80px",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "unit3",
+              "label": "Unit",
+              "value": "${unit3}"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Next: Review",
+      "style": "positive",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "Review order",
+          "text": "Review"
+        },
+        "action": "create_so_step3_submit",
+        "salesArea": "${salesAreaKey}",
+        "salesOrg": "${salesOrg}",
+        "distChannel": "${distChannel}",
+        "division": "${division}",
+        "docType": "${docType}",
+        "currency": "${currency}",
+        "purchaseOrderRef": "${purchaseOrderRef}",
+        "requestedDeliveryDate": "${requestedDeliveryDate}",
+        "shipToParty": "${shipToParty}",
+        "customer": "${customer}",
+        "customerLabel": "${customerLabel}"
+      }
+    },
+    {
+      "type": "Action.Submit",
+      "title": "Cancel",
+      "data": {
+        "msteams": {
+          "type": "messageBack",
+          "displayText": "cancel",
+          "text": "cancel"
+        }
+      }
+    }
+  ]
+}

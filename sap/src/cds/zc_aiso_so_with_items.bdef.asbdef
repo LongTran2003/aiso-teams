@@ -1,18 +1,26 @@
-projection;
+projection;                              // ← THÊM dòng này
 strict ( 1 );
 
 define behavior for ZC_AISO_SO_WITH_ITEMS alias SalesOrder
 {
+  use create;
+  use association _Items { create; }
+
   use action cancelOrder;
   use action releaseOrder;
   use action forwardOrder;
   use action updateReference;
   use action updateSalesOrder;
-  use action createSalesOrder;
   use action rejectOrder;
   use action approveOrder;
   use action rejectApproval;
   use action reassignOwner;
   use action forceCancel;
   use action forceRelease;
+}
+
+define behavior for ZC_AISO_SO_ITEM alias SalesOrderItem
+{
+  use create;
+  use association _Header;
 }

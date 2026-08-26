@@ -5,12 +5,12 @@
   "body": [
     {
       "type": "Container",
-      "style": "default",
+      "style": "Accent",
       "bleed": true,
       "items": [
         {
           "type": "TextBlock",
-          "text": "Delegate Approval",
+          "text": "Delegate approval authority",
           "weight": "Bolder",
           "size": "Medium",
           "color": "Accent",
@@ -18,7 +18,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "User ${delegateUser}",
+          "text": "Select a manager, valid dates, max amount and optional reason.",
           "size": "Small",
           "isSubtle": true,
           "spacing": "None",
@@ -27,46 +27,116 @@
       ]
     },
     {
-      "type": "TextBlock",
-      "text": "You are about to delegate your approval authority. Please review the details below:",
-      "wrap": true,
-      "spacing": "Medium"
-    },
-    {
-      "type": "FactSet",
-      "facts": [
+      "type": "Input.ChoiceSet",
+      "id": "delegateUser",
+      "label": "Delegate to (Manager)",
+      "style": "compact",
+      "isRequired": true,
+      "errorMessage": "Delegate user is required",
+      "value": "${delegateUser}",
+      "choices": [
         {
-          "title": "Delegate To:",
-          "value": "${delegateUser}"
-        },
-        {
-          "title": "Valid From:",
-          "value": "${validFrom}"
-        },
-        {
-          "title": "Valid To:",
-          "value": "${validTo}"
-        },
-        {
-          "title": "Max Amount:",
-          "value": "${maxAmount}"
-        },
-        {
-          "title": "Currency:",
-          "value": "${currency}"
-        },
-        {
-          "title": "Reason:",
-          "value": "${reason}"
+          "$data": "${managerChoices}",
+          "title": "${title}",
+          "value": "${value}"
         }
       ]
+    },
+    {
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Date",
+              "id": "validFromRaw",
+              "label": "Valid from",
+              "isRequired": true,
+              "errorMessage": "Valid from date is required",
+              "value": "${validFromRaw}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Date",
+              "id": "validToRaw",
+              "label": "Valid to",
+              "isRequired": true,
+              "errorMessage": "Valid to date is required",
+              "value": "${validToRaw}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "ColumnSet",
+      "spacing": "Small",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [
+            {
+              "type": "Input.Text",
+              "id": "maxAmountRaw",
+              "label": "Max amount (Optional)",
+              "placeholder": "e.g. 10000000",
+              "value": "${maxAmountRaw}"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "90px",
+          "items": [
+            {
+              "type": "Input.ChoiceSet",
+              "id": "currency",
+              "label": "Currency",
+              "style": "compact",
+              "value": "${currency}",
+              "choices": [
+                {
+                  "title": "VND",
+                  "value": "VND"
+                },
+                {
+                  "title": "USD",
+                  "value": "USD"
+                },
+                {
+                  "title": "EUR",
+                  "value": "EUR"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Input.Text",
+      "id": "reason",
+      "label": "Reason (Optional)",
+      "placeholder": "e.g. Annual leave / Vacation context...",
+      "isMultiline": true,
+      "value": "${reason}"
     },
     {
       "type": "TextBlock",
       "text": "During this period, the delegated user will be able to approve sales orders on your behalf.",
       "wrap": true,
       "size": "Small",
-      "isSubtle": true
+      "isSubtle": true,
+      "spacing": "Medium"
     }
   ],
   "actions": [
@@ -77,8 +147,8 @@
       "data": {
         "msteams": {
           "type": "messageBack",
-          "displayText": "Confirm delegation for ${delegateUser}",
-          "text": "delegate confirm ${delegateUser}"
+          "displayText": "Confirm delegation",
+          "text": "delegate confirm"
         },
         "action": "delegate_confirm",
         "delegateUser": "${delegateUser}",

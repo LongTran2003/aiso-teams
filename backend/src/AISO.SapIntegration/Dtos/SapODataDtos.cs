@@ -8,11 +8,32 @@ internal class ODataResponse<T>
     public List<T>? Value { get; set; }
 }
 
+internal class SapValidMaterialPlantDto
+{
+    public string Material { get; set; } = string.Empty;
+    public string Plant { get; set; } = string.Empty;
+    public string MaterialType { get; set; } = string.Empty;
+    public string BaseUnit { get; set; } = string.Empty;
+}
+
+internal class SapValidMaterialSalesDto
+{
+    public string Material { get; set; } = string.Empty;
+    public string SalesOrg { get; set; } = string.Empty;
+    public string DistChannel { get; set; } = string.Empty;
+    public string Plant { get; set; } = string.Empty;
+    public string? BaseUnit { get; set; }
+    public string? MaterialName { get; set; }
+}
+
 internal class SapSalesAreaDto
 {
     public string? SalesOrg { get; set; }
-    public string? DistChannel { get; set; }
+    public string? DistrChannel { get; set; }
     public string? Division { get; set; }
+    public string? SalesOrgName { get; set; }
+    public string? DistChannelName { get; set; }
+    public string? DivisionName { get; set; }
 }
 
 internal class SapValidCustomerDto
@@ -79,6 +100,11 @@ internal class SapSalesOrderItemDto
     public string? RejectionRsn { get; set; }
 }
 
+/// <summary>
+/// CDS view <c>ZI_AISO_USER_ROLE</c> row. Exposed as the OData
+/// <c>UserRole</c> entity set in <c>ZSD_AISO_SALES_ORDER</c>.
+/// Field names match the CDS element names after PascalCase mapping.
+/// </summary>
 internal class SapUserRoleDto
 {
     public string? SapUser { get; set; }
@@ -90,6 +116,20 @@ internal class SapUserRoleDto
     public string? Role { get; set; }
 
     public string? SalesOrg { get; set; }
+}
+
+/// <summary>
+/// CDS view <c>ZC_AISO_USER_ROLE_QUERY</c> row (read-only projection over
+/// <c>ZAISO_USER_ROLE</c>, exposed as the OData <c>UserRoles</c> entity set).
+/// Field names match the CDS element names after PascalCase mapping.
+/// </summary>
+internal class SapUserRoleQueryDto
+{
+    public string? SapUser { get; set; }
+    public string? SalesOrg { get; set; }
+    public string? Role { get; set; }
+    public string? ValidFrom { get; set; }
+    public string? ValidTo { get; set; }
 }
 
 // KPI DTOs — field names must match SAP CDS view element names (PascalCase via OData)
@@ -145,4 +185,30 @@ internal class SapOverdueOrderDto
     public int? DaysPastDue { get; set; }
     public decimal? NetValue { get; set; }
     public string? Currency { get; set; }
+}
+
+// New DTOs for cascading dropdown endpoints (Step 1 of 4)
+internal class SapSalesOrgDto
+{
+    public string? SalesOrg { get; set; }
+    public string? SalesOrgName { get; set; }
+}
+
+internal class SapDistChannelDto
+{
+    public string? SalesOrg { get; set; }
+    public string? DistChannel { get; set; }
+}
+
+internal class SapDivisionDto
+{
+    public string? SalesOrg { get; set; }
+    public string? DistChannel { get; set; }
+    public string? Division { get; set; }
+}
+
+internal class SapDocTypeDto
+{
+    public string? DocType { get; set; }
+    public string? DocTypeName { get; set; }
 }

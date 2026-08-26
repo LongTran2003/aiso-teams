@@ -1,26 +1,65 @@
 CLASS lcl_buffer DEFINITION.
   PUBLIC SECTION.
+    " --- Item structure cho UPDATE_SO ---
+    TYPES: BEGIN OF ty_update_item,
+             change_flag TYPE c LENGTH 1,
+             item_no     TYPE posnr_va,
+             material    TYPE matnr,
+             order_qty   TYPE kwmeng,
+             unit        TYPE meins,
+           END OF ty_update_item,
+           tt_update_item TYPE TABLE OF ty_update_item WITH EMPTY KEY.
+
     TYPES: BEGIN OF ty_release_reject,
-             so_number      TYPE vbeln_va,
-             action_type    TYPE string,   " RELEASE / REJECT / CANCEL / UPDATE_REF / UPDATE_SO
-             rejection_code TYPE bapisditm-reason_rej,
-             requesting_user TYPE char100,
-             new_reference  TYPE bstnk,
-             req_date       TYPE dats,
-             items          TYPE zaiso_tt_so_item_update,
+             so_number       TYPE vbeln_va,
+             action_type     TYPE string,
+             rejection_code  TYPE bapisditm-reason_rej,
+             requesting_user TYPE char100,           " ← THÊM
+             new_reference   TYPE bapisdh1-purch_no_c, " ← THÊM
+             req_date        TYPE sydatum,            " ← THÊM
+             items           TYPE zaiso_tt_so_item_update,    " ← THÊM
            END OF ty_release_reject.
+
+    " --- Create buffer types (giữ nguyên) ---
+    TYPES: BEGIN OF ty_create_item,
+             cid       TYPE string,
+             cid_ref   TYPE string,
+             material  TYPE matnr,
+             plant     TYPE werks_d,
+             order_qty TYPE kwmeng,
+             unit      TYPE meins,
+           END OF ty_create_item,
+           tt_create_item TYPE TABLE OF ty_create_item WITH EMPTY KEY.
+
+    TYPES: BEGIN OF ty_create_header,
+             cid             TYPE string,
+             requesting_user TYPE char100,
+             customer        TYPE kunnr,
+             ship_to           TYPE kunnr,
+             doc_type        TYPE auart,
+             sales_org       TYPE vkorg,
+             dist_channel    TYPE vtweg,
+             division        TYPE spart,
+             currency        TYPE waers,
+             req_delivery_date TYPE sydatum,
+           END OF ty_create_header,
+           tt_create_header TYPE TABLE OF ty_create_header WITH EMPTY KEY.
 
     CLASS-DATA: gt_so_map_db      TYPE TABLE OF zaiso_so_map,
                 gt_audit_db       TYPE TABLE OF zaiso_audit,
-                gt_release_reject TYPE TABLE OF ty_release_reject.
+                gt_release_reject TYPE TABLE OF ty_release_reject,
+                gt_create_header  TYPE tt_create_header,
+                gt_create_items   TYPE tt_create_item.
 ENDCLASS.
-
 CLASS lhc_SalesOrder DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
   PRIVATE SECTION.
 
-    METHODS createSalesOrder FOR MODIFY
-      IMPORTING keys FOR ACTION SalesOrder~createSalesOrder RESULT result.
+    METHODS create FOR MODIFY
+      IMPORTING entities FOR CREATE SalesOrder.
+
+    METHODS cba_Items FOR MODIFY
+      IMPORTING entities_cba FOR CREATE SalesOrder\_Items.
 
     METHODS cancelOrder FOR MODIFY
       IMPORTING keys FOR ACTION SalesOrder~cancelOrder RESULT result.
@@ -485,216 +524,122 @@ CLASS lhc_SalesOrder IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-  METHOD createSalesOrder.
-    DATA: ls_header_in       TYPE bapisdhd1,
-          ls_header_inx      TYPE bapisdhd1x,
-          lt_partners        TYPE TABLE OF bapiparnr,
-          lt_items_in        TYPE TABLE OF bapisditm,
-          lt_items_inx       TYPE TABLE OF bapisditmx,
-          lt_schedules_in    TYPE TABLE OF bapischdl,
-          lt_schedules_inx   TYPE TABLE OF bapischdlx,
-          lt_return          TYPE TABLE OF bapiret2,
-          lv_so_number       TYPE vbeln_va,
-          lv_timestamp       TYPE c LENGTH 14,
-          lv_audit_id        TYPE sysuuid_c32,
-          lv_requesting_user TYPE char100,
-          lv_customer        TYPE kunnr,
-          lv_material        TYPE matnr,
-          lv_item_no         TYPE posnr_va.
+  METHOD create.
+  LOOP AT entities INTO DATA(ls_entity).
 
-    LOOP AT keys INTO DATA(ls_key).
-      CLEAR: ls_header_in, ls_header_inx, lt_partners,
-             lt_items_in, lt_items_inx, lt_schedules_in, lt_schedules_inx,
-             lt_return, lv_so_number.
+    " ══ Validate requesting user ══
+    IF ls_entity-RequestingTeamsUser IS INITIAL.
+      APPEND VALUE #( %cid        = ls_entity-%cid
+                       %fail-cause = if_abap_behv=>cause-unauthorized )
+             TO failed-salesorder.
+      APPEND VALUE #( %cid = ls_entity-%cid
+                       %msg = new_message(
+                         id = '00' number = '001'
+                         severity = if_abap_behv_message=>severity-error
+                         v1 = 'Requesting user is required' ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
 
-      lv_requesting_user = ls_key-%param-requesting_teams_user.
-      DATA(lv_role) = get_user_role( iv_sap_user = lv_requesting_user ).
+    " ══ Validate customer + sales area ══
+    DATA(lv_customer) = |{ ls_entity-Customer ALPHA = IN }|.
+    SELECT SINGLE kunnr FROM knvv
+      INTO @DATA(lv_cust_valid)
+      WHERE kunnr = @lv_customer
+        AND vkorg = @ls_entity-SalesOrg
+        AND vtweg = @ls_entity-DistChannel
+        AND spart = @ls_entity-Division.
 
-      IF lv_requesting_user IS INITIAL.
-        APPEND VALUE #( %cid        = ls_key-%cid
-                         %fail-cause = if_abap_behv=>cause-unauthorized )
-               TO failed-salesorder.
-        APPEND VALUE #( %cid = ls_key-%cid
-                         %msg = new_message(
-                           id       = '00'
-                           number   = '001'
-                           severity = if_abap_behv_message=>severity-error
-                           v1       = 'Requesting user is required' ) )
-               TO reported-salesorder.
-        CONTINUE.
-      ENDIF.
+    IF sy-subrc <> 0.
+      APPEND VALUE #( %cid        = ls_entity-%cid
+                       %fail-cause = if_abap_behv=>cause-not_found )
+             TO failed-salesorder.
+      APPEND VALUE #( %cid = ls_entity-%cid
+                       %msg = new_message(
+                         id = '00' number = '001'
+                         severity = if_abap_behv_message=>severity-error
+                         v1 = |Customer { lv_customer } not valid for sales area| ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
 
-      lv_customer = |{ ls_key-%param-customer ALPHA = IN }|.
+    " ══ Buffer header (BAPI sẽ gọi trong adjust_numbers) ══
+    APPEND VALUE #(
+      cid             = ls_entity-%cid
+      requesting_user = ls_entity-RequestingTeamsUser
+      customer        = lv_customer
+      ship_to         = |{ ls_entity-ShipToParty ALPHA = IN }|
+      doc_type        = ls_entity-DocType
+      sales_org       = ls_entity-SalesOrg
+      dist_channel    = ls_entity-DistChannel
+      division        = ls_entity-Division
+      currency        = ls_entity-Currency
+      req_delivery_date     = ls_entity-RequestedDeliveryDate
+    ) TO lcl_buffer=>gt_create_header.
 
-      SELECT SINGLE kunnr FROM knvv
-        INTO @DATA(lv_customer_exists)
-        WHERE kunnr = @lv_customer
-          AND vkorg = @ls_key-%param-sales_org
-          AND vtweg = @ls_key-%param-dist_channel
-          AND spart = @ls_key-%param-division.
+    " ══ Register mapped (chưa có key, late numbering gán sau) ══
+    APPEND VALUE #( %cid = ls_entity-%cid ) TO mapped-salesorder.
+
+  ENDLOOP.
+ENDMETHOD.
+
+  METHOD cba_Items.
+  LOOP AT entities_cba INTO DATA(ls_header_cba).
+    LOOP AT ls_header_cba-%target INTO DATA(ls_item).
+
+      " ══ Validate material ══
+      SELECT SINGLE matnr FROM mara
+        INTO @DATA(lv_matnr_check)
+        WHERE matnr = @ls_item-Material.
 
       IF sy-subrc <> 0.
-        " --- FIX: đổi cause-not_found -> cause-unspecific để giữ được message chi tiết ---
-        APPEND VALUE #( %cid        = ls_key-%cid
-                         %fail-cause = if_abap_behv=>cause-unspecific )
-               TO failed-salesorder.
-        APPEND VALUE #( %cid = ls_key-%cid
+        APPEND VALUE #( %cid = ls_item-%cid
+                         %fail-cause = if_abap_behv=>cause-not_found )
+               TO failed-salesorderitem.
+        APPEND VALUE #( %cid = ls_item-%cid
                          %msg = new_message(
-                           id       = '00'
-                           number   = '001'
+                           id = '00' number = '001'
                            severity = if_abap_behv_message=>severity-error
-                           v1       = |Customer { lv_customer } not maintained for this sales area| ) )
-               TO reported-salesorder.
+                           v1 = |Material { ls_item-Material } does not exist| ) )
+               TO reported-salesorderitem.
         CONTINUE.
       ENDIF.
 
-      DATA(lv_has_invalid_item) = abap_false.
-      DATA(lv_invalid_detail)   = ''.
-      LOOP AT ls_key-%param-items INTO DATA(ls_check_item).
-        lv_material = |{ ls_check_item-material ALPHA = IN }|.
+      " ══ Validate material-plant ══
+      SELECT SINGLE werks FROM marc
+        INTO @DATA(lv_plant_check)
+        WHERE matnr = @ls_item-Material
+          AND werks = @ls_item-Plant.
 
-        SELECT SINGLE matnr FROM mara
-          INTO @DATA(lv_matnr_exists)
-          WHERE matnr = @lv_material.
-        IF sy-subrc <> 0.
-          lv_has_invalid_item = abap_true.
-          lv_invalid_detail = |Material { lv_material } does not exist|.
-          EXIT.
-        ENDIF.
-
-        SELECT SINGLE werks FROM marc
-          INTO @DATA(lv_plant_exists)
-          WHERE matnr = @lv_material
-            AND werks = @ls_check_item-plant.
-        IF sy-subrc <> 0.
-          lv_has_invalid_item = abap_true.
-          lv_invalid_detail = |Material { lv_material } not extended to plant { ls_check_item-plant }|.
-          EXIT.
-        ENDIF.
-
-        IF ls_check_item-order_qty <= 0.
-          lv_has_invalid_item = abap_true.
-          lv_invalid_detail = |Order quantity for material { lv_material } must be greater than 0|.
-          EXIT.
-        ENDIF.
-      ENDLOOP.
-
-      IF lv_has_invalid_item = abap_true.
-        " --- FIX: đổi cause-not_found -> cause-unspecific ---
-        APPEND VALUE #( %cid        = ls_key-%cid
-                         %fail-cause = if_abap_behv=>cause-unspecific )
-               TO failed-salesorder.
-        APPEND VALUE #( %cid = ls_key-%cid
+      IF sy-subrc <> 0.
+        APPEND VALUE #( %cid = ls_item-%cid
+                         %fail-cause = if_abap_behv=>cause-not_found )
+               TO failed-salesorderitem.
+        APPEND VALUE #( %cid = ls_item-%cid
                          %msg = new_message(
-                           id       = '00'
-                           number   = '001'
+                           id = '00' number = '001'
                            severity = if_abap_behv_message=>severity-error
-                           v1       = lv_invalid_detail ) )
-               TO reported-salesorder.
+                           v1 = |Material not extended to plant { ls_item-Plant }| ) )
+               TO reported-salesorderitem.
         CONTINUE.
       ENDIF.
 
-      ls_header_in-doc_type   = ls_key-%param-doc_type.
-      ls_header_in-sales_org  = ls_key-%param-sales_org.
-      ls_header_in-distr_chan = ls_key-%param-dist_channel.
-      ls_header_in-division   = ls_key-%param-division.
-      ls_header_in-currency   = ls_key-%param-currency.
-
-      ls_header_inx-doc_type   = 'X'.
-      ls_header_inx-sales_org  = 'X'.
-      ls_header_inx-distr_chan = 'X'.
-      ls_header_inx-division   = 'X'.
-      ls_header_inx-currency   = 'X'.
-      ls_header_inx-updateflag = 'I'.
-
-      APPEND VALUE #( partn_role = 'AG' partn_numb = lv_customer ) TO lt_partners.
-
-      lv_item_no = 0.
-      LOOP AT ls_key-%param-items INTO DATA(ls_item).
-        lv_item_no = lv_item_no + 10.
-
-        DATA(lv_item_material) = |{ ls_item-material ALPHA = IN }|.
-
-        APPEND VALUE #( itm_number = lv_item_no
-                         material   = lv_item_material
-                         plant      = ls_item-plant
-                         target_qty = ls_item-order_qty
-                         target_qu  = ls_item-unit ) TO lt_items_in.
-
-        APPEND VALUE #( itm_number = lv_item_no
-                         material   = 'X'
-                         plant      = 'X'
-                         target_qty = 'X'
-                         target_qu  = 'X' ) TO lt_items_inx.
-
-        APPEND VALUE #( itm_number = lv_item_no
-                         req_qty    = ls_item-order_qty ) TO lt_schedules_in.
-
-        APPEND VALUE #( itm_number = lv_item_no
-                         req_qty    = 'X' ) TO lt_schedules_inx.
-      ENDLOOP.
-
-      CALL FUNCTION 'BAPI_SALESORDER_CREATEFROMDAT2'
-        EXPORTING
-          order_header_in    = ls_header_in
-          order_header_inx   = ls_header_inx
-        IMPORTING
-          salesdocument      = lv_so_number
-        TABLES
-          return              = lt_return
-          order_partners      = lt_partners
-          order_items_in      = lt_items_in
-          order_items_inx     = lt_items_inx
-          order_schedules_in  = lt_schedules_in
-          order_schedules_inx = lt_schedules_inx.
-
-      READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
-      IF sy-subrc = 0.
-        APPEND VALUE #( %cid        = ls_key-%cid
-                         %fail-cause = if_abap_behv=>cause-unspecific )
-               TO failed-salesorder.
-        APPEND VALUE #( %cid = ls_key-%cid
-                         %msg = new_message(
-                           id       = ls_error-id
-                           number   = ls_error-number
-                           severity = if_abap_behv_message=>severity-error
-                           v1       = ls_error-message_v1
-                           v2       = ls_error-message_v2
-                           v3       = ls_error-message_v3
-                           v4       = ls_error-message_v4 ) )
-               TO reported-salesorder.
-        CONTINUE.
-      ENDIF.
-
+      " ══ Buffer item ══
       APPEND VALUE #(
-        mandt     = sy-mandt
-        so_number = lv_so_number
-        sap_user  = lv_requesting_user
-      ) TO lcl_buffer=>gt_so_map_db.
+        cid       = ls_item-%cid
+        cid_ref   = ls_header_cba-%cid_ref    " link tới header's %cid
+        material  = ls_item-Material
+        plant     = ls_item-Plant
+        order_qty = ls_item-OrderQty
+        unit      = ls_item-Unit
+      ) TO lcl_buffer=>gt_create_items.
 
-      CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+      " ══ Register mapped ══
+      APPEND VALUE #( %cid = ls_item-%cid ) TO mapped-salesorderitem.
 
-      TRY.
-          lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
-        CATCH cx_uuid_error.
-          CLEAR lv_audit_id.
-      ENDTRY.
-
-      APPEND VALUE #(
-        mandt       = sy-mandt
-        audit_id    = lv_audit_id
-        sap_user    = lv_requesting_user
-        actor_role  = lv_role
-        action_type = 'CREATE_SO'
-        so_number   = lv_so_number
-        status      = 'SUCCESS'
-        created_at  = lv_timestamp
-      ) TO lcl_buffer=>gt_audit_db.
-
-      APPEND VALUE #( %cid             = ls_key-%cid
-                       %param-SoNumber = lv_so_number ) TO result.
     ENDLOOP.
-  ENDMETHOD.
+  ENDLOOP.
+ENDMETHOD.
 
   METHOD cancelorder.
     " FIX: chỉ validate + buffer. KHÔNG gọi BAPI_SALESORDER_CHANGE trực tiếp ở đây
@@ -1218,6 +1163,7 @@ CLASS lsc_zbp_i_aiso_so_header DEFINITION INHERITING FROM cl_abap_behavior_saver
   PROTECTED SECTION.
     METHODS save REDEFINITION.
     METHODS cleanup REDEFINITION.
+    METHODS adjust_numbers REDEFINITION.
 ENDCLASS.
 
 CLASS lsc_zbp_i_aiso_so_header IMPLEMENTATION.
@@ -1270,43 +1216,47 @@ CLASS lsc_zbp_i_aiso_so_header IMPLEMENTATION.
           ls_header_inx-purch_no_c = 'X'.
 
         WHEN 'UPDATE_SO'.
-          IF ls_rr-new_reference IS NOT INITIAL.
-            ls_header_in-purch_no_c  = ls_rr-new_reference.
-            ls_header_inx-purch_no_c = 'X'.
-          ENDIF.
-          IF ls_rr-req_date IS NOT INITIAL.
-            ls_header_in-req_date_h  = ls_rr-req_date.
-            ls_header_inx-req_date_h = 'X'.
-          ENDIF.
+  IF ls_rr-new_reference IS NOT INITIAL.
+    ls_header_in-purch_no_c  = ls_rr-new_reference.
+    ls_header_inx-purch_no_c = 'X'.
+  ENDIF.
+  IF ls_rr-req_date IS NOT INITIAL.
+    ls_header_in-req_date_h  = ls_rr-req_date.
+    ls_header_inx-req_date_h = 'X'.
+  ENDIF.
 
-          LOOP AT ls_rr-items INTO DATA(ls_line).
-            CASE ls_line-change_flag.
-              WHEN 'I'.
-                APPEND VALUE #( itm_number = ls_line-item_no
-                                 material   = ls_line-material
-                                 target_qty = ls_line-order_qty
-                                 target_qu  = ls_line-unit )   TO lt_items_in.
-                APPEND VALUE #( itm_number = ls_line-item_no
-                                 updateflag = 'I'
-                                 material   = 'X'
-                                 target_qty = 'X'
-                                 target_qu  = 'X' )            TO lt_items_inx.
-              WHEN 'U'.
-                APPEND VALUE #( itm_number = ls_line-item_no
-                                 material   = ls_line-material
-                                 target_qty = ls_line-order_qty
-                                 target_qu  = ls_line-unit )   TO lt_items_in.
-                APPEND VALUE #( itm_number = ls_line-item_no
-                                 updateflag = 'U'
-                                 material   = 'X'
-                                 target_qty = 'X'
-                                 target_qu  = 'X' )            TO lt_items_inx.
-              WHEN 'D'.
-                APPEND VALUE #( itm_number = ls_line-item_no ) TO lt_items_in.
-                APPEND VALUE #( itm_number = ls_line-item_no
-                                 updateflag = 'D' )            TO lt_items_inx.
-            ENDCASE.
-          ENDLOOP.
+  LOOP AT ls_rr-items INTO DATA(ls_line).
+    CASE ls_line-change_flag.
+      WHEN 'I'.
+        APPEND VALUE #( itm_number = ls_line-item_no
+                         material   = ls_line-material
+                         plant      = ls_line-plant
+                         target_qty = ls_line-order_qty
+                         target_qu  = ls_line-unit )   TO lt_items_in.
+        APPEND VALUE #( itm_number = ls_line-item_no
+                         updateflag = 'I'
+                         material   = 'X'
+                         plant      = 'X'
+                         target_qty = 'X'
+                         target_qu  = 'X' )            TO lt_items_inx.
+      WHEN 'U'.
+        APPEND VALUE #( itm_number = ls_line-item_no
+                         material   = ls_line-material
+                         plant      = ls_line-plant
+                         target_qty = ls_line-order_qty
+                         target_qu  = ls_line-unit )   TO lt_items_in.
+        APPEND VALUE #( itm_number = ls_line-item_no
+                         updateflag = 'U'
+                         material   = 'X'
+                         plant      = COND #( WHEN ls_line-plant IS NOT INITIAL THEN 'X' ELSE '' )
+                         target_qty = 'X'
+                         target_qu  = 'X' )            TO lt_items_inx.
+      WHEN 'D'.
+        APPEND VALUE #( itm_number = ls_line-item_no ) TO lt_items_in.
+        APPEND VALUE #( itm_number = ls_line-item_no
+                         updateflag = 'D' )            TO lt_items_inx.
+    ENDCASE.
+  ENDLOOP.
 
       ENDCASE.
 
@@ -1374,7 +1324,215 @@ CLASS lsc_zbp_i_aiso_so_header IMPLEMENTATION.
     ENDIF.
   ENDMETHOD.
 
-  METHOD cleanup.
-    CLEAR: lcl_buffer=>gt_so_map_db, lcl_buffer=>gt_audit_db, lcl_buffer=>gt_release_reject.
-  ENDMETHOD.
+METHOD cleanup.
+  CLEAR: lcl_buffer=>gt_so_map_db,
+         lcl_buffer=>gt_audit_db,
+         lcl_buffer=>gt_release_reject,
+         lcl_buffer=>gt_create_header,     " ← THÊM
+         lcl_buffer=>gt_create_items.      " ← THÊM
+ENDMETHOD.
+
+    METHOD adjust_numbers.
+  DATA: ls_header_in       TYPE bapisdhd1,
+        ls_header_inx      TYPE bapisdhd1x,
+        lt_partners        TYPE TABLE OF bapiparnr,
+        lt_items_in        TYPE TABLE OF bapisditm,
+        lt_items_inx       TYPE TABLE OF bapisditmx,
+        lt_schedules_in    TYPE TABLE OF bapischdl,
+        lt_schedules_inx   TYPE TABLE OF bapischdlx,
+        lt_return          TYPE TABLE OF bapiret2,
+        lv_so_number       TYPE vbeln_va,
+        lv_item_no         TYPE posnr_va,
+        lv_timestamp       TYPE c LENGTH 14,
+        lv_audit_id        TYPE sysuuid_c32.
+
+  LOOP AT lcl_buffer=>gt_create_header INTO DATA(ls_hdr).
+
+    CLEAR: ls_header_in, ls_header_inx, lt_partners,
+           lt_items_in, lt_items_inx, lt_schedules_in, lt_schedules_inx,
+           lt_return, lv_so_number.
+
+    " ═══════════════════════════════════════════════
+    " BƯỚC 3 (all-or-nothing): validate MVKE cho TẤT CẢ item
+    " của header này TRƯỚC khi build bất kỳ BAPI table nào
+    " ═══════════════════════════════════════════════
+    DATA(lv_has_invalid_mvke) = abap_false.
+    DATA(lv_invalid_mvke_msg) = ''.
+
+    LOOP AT lcl_buffer=>gt_create_items INTO DATA(ls_check_mvke)
+         WHERE cid_ref = ls_hdr-cid.
+
+     SELECT SINGLE material FROM zi_aiso_valid_material_sales
+  INTO @DATA(lv_valid_material)
+  WHERE material  = @ls_check_mvke-material
+    AND salesorg  = @ls_hdr-sales_org
+    AND distchannel = @ls_hdr-dist_channel
+    AND plant     = @ls_check_mvke-plant.
+
+      IF sy-subrc <> 0.
+        lv_has_invalid_mvke = abap_true.
+        lv_invalid_mvke_msg = |Material { ls_check_mvke-material } chưa có sales view cho { ls_hdr-sales_org }/{ ls_hdr-dist_channel }|.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
+
+    IF lv_has_invalid_mvke = abap_true.
+      APPEND VALUE #( %pid        = ls_hdr-cid
+                       %fail-cause = if_abap_behv=>cause-not_found )
+             TO failed-salesorder.
+      APPEND VALUE #( %pid = ls_hdr-cid
+                       %msg = new_message(
+                         id = '00' number = '001'
+                         severity = if_abap_behv_message=>severity-error
+                         v1 = lv_invalid_mvke_msg ) )
+             TO reported-salesorder.
+      CONTINUE.  " skip toàn bộ header này, không gọi BAPI
+    ENDIF.
+
+    " ═══════════════════════════════════════════════
+    " Build header
+    " ═══════════════════════════════════════════════
+    ls_header_in-doc_type   = ls_hdr-doc_type.
+    ls_header_in-sales_org  = ls_hdr-sales_org.
+    ls_header_in-distr_chan = ls_hdr-dist_channel.
+    ls_header_in-division   = ls_hdr-division.
+    ls_header_in-currency   = ls_hdr-currency.
+    ls_header_in-req_date_h = ls_hdr-req_delivery_date.
+
+    ls_header_inx-doc_type   = 'X'.
+    ls_header_inx-sales_org  = 'X'.
+    ls_header_inx-distr_chan = 'X'.
+    ls_header_inx-division   = 'X'.
+    ls_header_inx-currency   = 'X'.
+    ls_header_inx-updateflag = 'I'.
+    ls_header_inx-req_date_h = 'X'.
+
+    " ═══════════════════════════════════════════════
+    " BƯỚC 1: Sold-to (AG) + Ship-to (WE)
+    " ═══════════════════════════════════════════════
+    DATA(lv_customer_alpha) = |{ ls_hdr-customer ALPHA = IN }|.
+
+DATA(lv_ship_to) = ls_hdr-ship_to.
+
+IF lv_ship_to IS INITIAL.
+  " User không chọn Ship-to → fallback tự suy ra như cũ
+  SELECT SINGLE parvw, kunn2 FROM knvp
+    INTO @DATA(ls_ship_to)
+    WHERE kunnr = @lv_customer_alpha
+      AND vkorg = @ls_hdr-sales_org
+      AND vtweg = @ls_hdr-dist_channel
+      AND spart = @ls_hdr-division
+      AND parvw = 'WE'.
+
+  lv_ship_to = COND kunnr( WHEN sy-subrc = 0 AND ls_ship_to-kunn2 IS NOT INITIAL
+                            THEN ls_ship_to-kunn2
+                            ELSE lv_customer_alpha ).
+ENDIF.
+
+APPEND VALUE #( partn_role = 'AG' partn_numb = lv_customer_alpha ) TO lt_partners.
+APPEND VALUE #( partn_role = 'WE' partn_numb = lv_ship_to )        TO lt_partners.
+
+    " ═══════════════════════════════════════════════
+    " Build items + schedule lines (BƯỚC 2: req_date vào schedule)
+    " ═══════════════════════════════════════════════
+    lv_item_no = 0.
+    LOOP AT lcl_buffer=>gt_create_items INTO DATA(ls_itm)
+         WHERE cid_ref = ls_hdr-cid.
+
+      lv_item_no = lv_item_no + 10.
+
+      APPEND VALUE #( itm_number = lv_item_no
+                       material   = |{ ls_itm-material ALPHA = IN }|
+                       plant      = ls_itm-plant
+                       target_qty = ls_itm-order_qty
+                       target_qu  = ls_itm-unit ) TO lt_items_in.
+
+      APPEND VALUE #( itm_number = lv_item_no
+                       material   = 'X'
+                       plant      = 'X'
+                       target_qty = 'X'
+                       target_qu  = 'X' ) TO lt_items_inx.
+
+     APPEND VALUE #( itm_number = lv_item_no
+                 req_date   = COND #( WHEN ls_hdr-req_delivery_date IS NOT INITIAL
+                                       THEN ls_hdr-req_delivery_date ELSE space )
+                 req_qty    = ls_itm-order_qty ) TO lt_schedules_in.
+
+APPEND VALUE #( itm_number = lv_item_no
+                 req_date   = COND #( WHEN ls_hdr-req_delivery_date IS NOT INITIAL THEN 'X' ELSE space )
+                 req_qty    = 'X' ) TO lt_schedules_inx.
+    ENDLOOP.
+
+    CALL FUNCTION 'BAPI_SALESORDER_CREATEFROMDAT2'
+      EXPORTING
+        order_header_in    = ls_header_in
+        order_header_inx   = ls_header_inx
+      IMPORTING
+        salesdocument      = lv_so_number
+      TABLES
+        return              = lt_return
+        order_partners      = lt_partners
+        order_items_in      = lt_items_in
+        order_items_inx     = lt_items_inx
+        order_schedules_in  = lt_schedules_in
+        order_schedules_inx = lt_schedules_inx.
+
+    READ TABLE lt_return WITH KEY type = 'E' INTO DATA(ls_error).
+    IF sy-subrc = 0.
+      APPEND VALUE #( %pid        = ls_hdr-cid
+                       %fail-cause = if_abap_behv=>cause-unspecific )
+             TO failed-salesorder.
+      APPEND VALUE #( %pid = ls_hdr-cid
+                       %msg = new_message(
+                         id       = ls_error-id
+                         number   = ls_error-number
+                         severity = if_abap_behv_message=>severity-error
+                         v1       = ls_error-message_v1
+                         v2       = ls_error-message_v2
+                         v3       = ls_error-message_v3
+                         v4       = ls_error-message_v4 ) )
+             TO reported-salesorder.
+      CONTINUE.
+    ENDIF.
+
+    APPEND VALUE #( %pid           = ls_hdr-cid
+                     %key-SoNumber = lv_so_number )
+           TO mapped-salesorder.
+
+    lv_item_no = 0.
+    LOOP AT lcl_buffer=>gt_create_items INTO DATA(ls_itm_map)
+         WHERE cid_ref = ls_hdr-cid.
+      lv_item_no = lv_item_no + 10.
+      APPEND VALUE #( %pid           = ls_itm_map-cid
+                       %key-SoNumber = lv_so_number
+                       %key-ItemNo   = lv_item_no )
+             TO mapped-salesorderitem.
+    ENDLOOP.
+
+    APPEND VALUE #(
+      mandt     = sy-mandt
+      so_number = lv_so_number
+      sap_user  = ls_hdr-requesting_user
+    ) TO lcl_buffer=>gt_so_map_db.
+
+    CONCATENATE sy-datum sy-uzeit INTO lv_timestamp.
+    TRY.
+        lv_audit_id = cl_system_uuid=>create_uuid_c32_static( ).
+      CATCH cx_uuid_error.
+        CLEAR lv_audit_id.
+    ENDTRY.
+
+    APPEND VALUE #(
+      mandt       = sy-mandt
+      audit_id    = lv_audit_id
+      sap_user    = ls_hdr-requesting_user
+      actor_role  = 'EMPLOYEE'
+      action_type = 'CREATE_SO'
+      so_number   = lv_so_number
+      status      = 'SUCCESS'
+      created_at  = lv_timestamp
+    ) TO lcl_buffer=>gt_audit_db.
+
+  ENDLOOP.
+ENDMETHOD.
 ENDCLASS.

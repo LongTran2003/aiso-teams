@@ -71,7 +71,7 @@
         },
         {
           "type": "TextBlock",
-          "text": "1. **List users** → Manage to set Role / SalesOrg (confirm card)\n2. **View audit log** for who did what\n3. Force release / force cancel only for emergencies",
+          "text": "1. **List users** → Manage to set Role / SalesOrg (confirm card)\n2. **View audit log** for who did what\n3. Force release / force cancel only for emergencies\n4. Manage approval delegation for Managers",
           "wrap": true,
           "spacing": "Small"
         }
@@ -88,101 +88,18 @@
       "type": "ActionSet",
       "$when": "${role == 'Employee'}",
       "actions": [
-        {
-          "type": "Action.Submit",
-          "title": "Recent orders",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "Recent orders",
-              "text": "recent orders"
-            }
-          }
-        },
-        {
-          "type": "Action.Submit",
-          "title": "My Orders",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "My Orders",
-              "text": "show my sales orders"
-            }
-          }
-        },
-        {
-          "type": "Action.Submit",
-          "title": "Revenue KPI",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "Revenue KPI",
-              "text": "show revenue kpi"
-            }
-          }
-        },
-        {
-          "type": "Action.Submit",
-          "title": "Request release",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "Request release",
-              "text": "request release"
-            }
-          }
-        },
-        {
-          "type": "Action.Submit",
-          "title": "Create order",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "Create order",
-              "text": "create order"
-            }
-          }
-        }
+        { "type": "Action.Submit", "title": "Recent orders", "data": { "msteams": { "type": "messageBack", "displayText": "Recent orders", "text": "recent orders" } } },
+        { "type": "Action.Submit", "title": "My Orders", "data": { "msteams": { "type": "messageBack", "displayText": "My Orders", "text": "show my sales orders" } } },
+        { "type": "Action.Submit", "title": "My profile", "data": { "msteams": { "type": "messageBack", "displayText": "My profile", "text": "my profile" } } },
+        { "type": "Action.Submit", "title": "Revenue KPI", "data": { "msteams": { "type": "messageBack", "displayText": "Revenue KPI", "text": "show revenue kpi" } } },
+        { "type": "Action.Submit", "title": "Request release", "data": { "msteams": { "type": "messageBack", "displayText": "Request release", "text": "request release" } } },
+        { "type": "Action.Submit", "title": "Create order", "data": { "msteams": { "type": "messageBack", "displayText": "Create order", "text": "create order" } } }
       ],
       "spacing": "Small"
     },
     {
       "type": "TextBlock",
-      "text": "Example commands (EN)",
-      "weight": "Bolder",
-      "spacing": "Medium",
-      "size": "Small",
-      "$when": "${role == 'Employee'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "• recent orders\n• show my sales orders\n• show open orders\n• show orders of TV01\n• show open orders of FU24\n• show order 13122\n• show overdue orders\n• create order / tạo đơn (up to 5 materials on form)\n• edit order 13122 / sửa đơn 13122\n• update reference 13122 to 'PO-99'\n• show revenue kpi\n• kpi by customer 1000\n• kpi by product MAT-01\n• request release 13122\n• reject order 13122\n• cancel order 13122\n• forward order 13122 to DEV-xxx\n• help · logout",
-      "wrap": true,
-      "spacing": "Small",
-      "fontType": "Monospace",
-      "size": "Small",
-      "$when": "${role == 'Employee'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "Ví dụ lệnh (VI)",
-      "weight": "Bolder",
-      "spacing": "Medium",
-      "size": "Small",
-      "$when": "${role == 'Employee'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "• đơn hàng gần đây · show my sales orders\n• đơn của tôi · show overdue orders\n• kiểm tra đơn 13122 · tạo đơn\n• sửa đơn 13122 · edit order 13122\n• yêu cầu duyệt 13122 · xin duyệt 13122\n• hủy đơn 13122 · reject order 13122\n• chuyển đơn 13122 cho DEV-xxx\n• cập nhật reference 13122 thành 'PO-99'\n• hướng dẫn · đăng xuất",
-      "wrap": true,
-      "spacing": "Small",
-      "fontType": "Monospace",
-      "size": "Small",
-      "$when": "${role == 'Employee'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "Commands for Manager",
+      "text": "Shortcuts",
       "weight": "Bolder",
       "spacing": "Medium",
       "$when": "${role == 'Manager'}"
@@ -191,75 +108,13 @@
       "type": "ActionSet",
       "$when": "${role == 'Manager'}",
       "actions": [
-        {
-          "type": "Action.Submit",
-          "title": "Pending approvals",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "Pending approvals",
-              "text": "show pending approvals"
-            }
-          }
-        },
-        {
-          "type": "Action.Submit",
-          "title": "Approve order",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "Approve order",
-              "text": "approve order"
-            }
-          }
-        },
-        {
-          "type": "Action.Submit",
-          "title": "Reject approval",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "Reject approval",
-              "text": "reject approval"
-            }
-          }
-        }
+        { "type": "Action.Submit", "title": "Pending approvals", "data": { "msteams": { "type": "messageBack", "displayText": "Pending approvals", "text": "show pending approvals" } } },
+        { "type": "Action.Submit", "title": "Approve order", "data": { "msteams": { "type": "messageBack", "displayText": "Approve order", "text": "approve order" } } },
+        { "type": "Action.Submit", "title": "Reject approval", "data": { "msteams": { "type": "messageBack", "displayText": "Reject approval", "text": "reject approval" } } },
+        { "type": "Action.Submit", "title": "Delegate approval", "data": { "msteams": { "type": "messageBack", "displayText": "Delegate approval", "text": "delegate approval" } } },
+        { "type": "Action.Submit", "title": "My delegations", "data": { "msteams": { "type": "messageBack", "displayText": "My delegations", "text": "list my delegations" } } }
       ],
       "spacing": "Small"
-    },
-    {
-      "type": "TextBlock",
-      "text": "Try saying (EN)",
-      "weight": "Bolder",
-      "spacing": "Medium",
-      "size": "Small",
-      "$when": "${role == 'Manager'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "• show pending approvals\n• approve order 13122 · reject approval 13122\n• show order 13122 · cancel order 13122\n• show revenue kpi · logout",
-      "wrap": true,
-      "spacing": "Small",
-      "fontType": "Monospace",
-      "size": "Small",
-      "$when": "${role == 'Manager'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "Ví dụ lệnh (VI)",
-      "weight": "Bolder",
-      "spacing": "Medium",
-      "size": "Small",
-      "$when": "${role == 'Manager'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "• chờ duyệt · danh sách chờ duyệt\n• phê duyệt đơn 13122 · duyệt đơn 13122\n• từ chối duyệt 13122 · không duyệt 13122\n• hủy đơn 13122 · kiểm tra đơn 13122\n• đăng xuất",
-      "wrap": true,
-      "spacing": "Small",
-      "fontType": "Monospace",
-      "size": "Small",
-      "$when": "${role == 'Manager'}"
     },
     {
       "type": "TextBlock",
@@ -272,75 +127,101 @@
       "type": "ActionSet",
       "$when": "${role == 'Admin'}",
       "actions": [
-        {
-          "type": "Action.Submit",
-          "title": "List users",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "List users",
-              "text": "list users"
-            }
-          }
-        },
-        {
-          "type": "Action.Submit",
-          "title": "View audit log",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "View audit log",
-              "text": "view audit log"
-            }
-          }
-        },
-        {
-          "type": "Action.Submit",
-          "title": "Force release",
-          "data": {
-            "msteams": {
-              "type": "messageBack",
-              "displayText": "Force release",
-              "text": "force release"
-            }
-          }
-        }
+        { "type": "Action.Submit", "title": "List users", "data": { "msteams": { "type": "messageBack", "displayText": "List users", "text": "list users" } } },
+        { "type": "Action.Submit", "title": "View audit log", "data": { "msteams": { "type": "messageBack", "displayText": "View audit log", "text": "view audit log" } } },
+        { "type": "Action.Submit", "title": "Force release", "data": { "msteams": { "type": "messageBack", "displayText": "Force release", "text": "force release" } } }
       ],
       "spacing": "Small"
     },
     {
-      "type": "TextBlock",
-      "text": "Try saying (EN)",
-      "weight": "Bolder",
+      "type": "Container",
+      "style": "emphasis",
       "spacing": "Medium",
-      "size": "Small",
-      "$when": "${role == 'Admin'}"
+      "selectAction": {
+        "type": "Action.ToggleVisibility",
+        "targetElements": ["commands-section", "chevron-down", "chevron-up"]
+      },
+      "items": [
+        {
+          "type": "ColumnSet",
+          "columns": [
+            {
+              "type": "Column",
+              "width": "auto",
+              "verticalContentAlignment": "Center",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "id": "chevron-down",
+                  "text": "▸",
+                  "weight": "Bolder",
+                  "size": "Medium"
+                },
+                {
+                  "type": "TextBlock",
+                  "id": "chevron-up",
+                  "text": "▾",
+                  "weight": "Bolder",
+                  "size": "Medium",
+                  "isVisible": false
+                }
+              ]
+            },
+            {
+              "type": "Column",
+              "width": "stretch",
+              "verticalContentAlignment": "Center",
+              "items": [
+                {
+                  "type": "TextBlock",
+                  "text": "All commands you can say (${role})",
+                  "weight": "Bolder",
+                  "wrap": true
+                }
+              ]
+            }
+          ]
+        }
+      ]
     },
     {
-      "type": "TextBlock",
-      "text": "• list users · manage user DEV-xxx\n• view audit log · force release 13122 · force cancel 13122 · logout",
-      "wrap": true,
-      "spacing": "Small",
-      "fontType": "Monospace",
-      "size": "Small",
-      "$when": "${role == 'Admin'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "Ví dụ lệnh (VI)",
-      "weight": "Bolder",
+      "type": "Container",
+      "id": "commands-section",
       "spacing": "Medium",
-      "size": "Small",
-      "$when": "${role == 'Admin'}"
-    },
-    {
-      "type": "TextBlock",
-      "text": "• danh sách user · nhật ký audit\n• ép release 13122 · ép hủy 13122\n• đăng xuất",
-      "wrap": true,
-      "spacing": "Small",
-      "fontType": "Monospace",
-      "size": "Small",
-      "$when": "${role == 'Admin'}"
+      "isVisible": false,
+      "$when": "${hasCommands == 'true'}",
+      "items": [
+        {
+          "type": "TextBlock",
+          "text": "Tap a heading to expand · arranged by flow",
+          "isSubtle": true,
+          "size": "Small",
+          "wrap": true,
+          "spacing": "Small"
+        },
+        {
+          "type": "Container",
+          "$data": "${commands}",
+          "items": [
+            {
+              "type": "TextBlock",
+              "text": "${icon} ${en}  ·  ${vi}",
+              "wrap": true,
+              "fontType": "Monospace",
+              "size": "Small",
+              "spacing": "Small"
+            },
+            {
+              "type": "TextBlock",
+              "text": "${note}",
+              "isSubtle": true,
+              "wrap": true,
+              "size": "Small",
+              "spacing": "None"
+            }
+          ]
+        }
+      ]
     },
     {
       "type": "TextBlock",

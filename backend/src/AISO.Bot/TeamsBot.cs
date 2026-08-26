@@ -3,6 +3,7 @@ using System.Diagnostics;
 using AISO.AiOrchestration;
 using AISO.Bot.Cards;
 using AISO.Bot.Cards.Builders;
+using AISO.Bot.Notifications;
 using AISO.Domain.Approvals;
 using AISO.Domain.SalesOrders;
 using AISO.Domain.Users;
@@ -328,6 +329,10 @@ public class TeamsBot : TeamsActivityHandler
 
                         try
                         {
+                            // Capture prior values for the change-notification email before we mutate.
+                            var oldRole = await _scopeLookup.GetRoleBySapUserAsync(sapUserId, cancellationToken);
+                            var oldSalesOrg = await _scopeLookup.GetSalesOrgBySapUserAsync(sapUserId, cancellationToken);
+
                             var updated = await _botUserAdmin.UpdateAccessAsync(
                                 sapUserId,
                                 newRole,
@@ -385,6 +390,42 @@ public class TeamsBot : TeamsActivityHandler
                                         sapSyncWarning)),
                                     cancellationToken);
                                 return;
+                            }
+
+                            // Notify the affected user via email — best effort, mutation already succeeded.
+                            // Skip when nothing actually changed (no role + no sales-org delta).
+                            if (UserAccessChangeEmailBuilder.HasChange(oldRole, updated.Role, oldSalesOrg, updated.SalesOrg))
+                            {
+                                try
+                                {
+                                    var targetEmail = await _scopeLookup.GetEmailBySapUserAsync(updated.SapUserId, cancellationToken);
+                                    if (!string.IsNullOrWhiteSpace(targetEmail))
+                                    {
+                                        var subject = _config["Email:SalesOrgChangeSubject"]
+                                            ?? "Your AISO access has been updated";
+                                        var html = UserAccessChangeEmailBuilder.Build(
+                                            displayName: string.IsNullOrWhiteSpace(updated.DisplayName) ? updated.SapUserId : updated.DisplayName,
+                                            adminSapUser: adminSap ?? "an administrator",
+                                            oldRole: oldRole,
+                                            newRole: updated.Role,
+                                            oldSalesOrg: oldSalesOrg,
+                                            newSalesOrg: updated.SalesOrg);
+                                        await _emailService.SendEmailAsync(targetEmail, subject, html, cancellationToken);
+                                    }
+                                    else
+                                    {
+                                        _logger.LogInformation(
+                                            "Skipped access-change email for {SapUser}: no Teams email on file",
+                                            updated.SapUserId);
+                                    }
+                                }
+                                catch (Exception emailEx)
+                                {
+                                    _logger.LogWarning(
+                                        emailEx,
+                                        "Failed to send access-change email for {SapUser}",
+                                        updated.SapUserId);
+                                }
                             }
 
                             await turnContext.SendActivityAsync(
@@ -773,8 +814,23 @@ public class TeamsBot : TeamsActivityHandler
                     {
                         var delegateUser = valueObj.TryGetValue("delegateUser", StringComparison.OrdinalIgnoreCase, out var uToken) ? uToken.ToString() : null;
                         var validFromStr = valueObj.TryGetValue("validFromRaw", StringComparison.OrdinalIgnoreCase, out var vfToken) ? vfToken.ToString() : null;
+                        if (string.IsNullOrWhiteSpace(validFromStr))
+                        {
+                            validFromStr = valueObj.TryGetValue("validFrom", StringComparison.OrdinalIgnoreCase, out var vfToken2) ? vfToken2.ToString() : null;
+                        }
+
                         var validToStr = valueObj.TryGetValue("validToRaw", StringComparison.OrdinalIgnoreCase, out var vtToken) ? vtToken.ToString() : null;
+                        if (string.IsNullOrWhiteSpace(validToStr))
+                        {
+                            validToStr = valueObj.TryGetValue("validTo", StringComparison.OrdinalIgnoreCase, out var vtToken2) ? vtToken2.ToString() : null;
+                        }
+
                         var maxAmountStr = valueObj.TryGetValue("maxAmountRaw", StringComparison.OrdinalIgnoreCase, out var maToken) ? maToken.ToString() : null;
+                        if (string.IsNullOrWhiteSpace(maxAmountStr))
+                        {
+                            maxAmountStr = valueObj.TryGetValue("maxAmount", StringComparison.OrdinalIgnoreCase, out var maToken2) ? maToken2.ToString() : null;
+                        }
+
                         var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var currToken) ? currToken.ToString() : "VND";
                         var reason = valueObj.TryGetValue("reason", StringComparison.OrdinalIgnoreCase, out var rToken) ? rToken.ToString() : null;
 
@@ -845,6 +901,21 @@ public class TeamsBot : TeamsActivityHandler
                         catch (SapODataException sapEx)
                         {
                             _logger.LogError(sapEx, "SAP error delegating approval for {DelegateUser}", delegateUser);
+
+                            // If SAP says delegation already exists, sync local DB
+                            if (sapEx.Message.Contains("already has active delegation", StringComparison.OrdinalIgnoreCase))
+                            {
+                                try
+                                {
+                                    await _scopeLookup.SetDelegatedBySapUserAsync(delegateUser, linkedSapUsername, toDate, maxAmount, cancellationToken);
+                                    _logger.LogInformation("Synced existing SAP delegation for {DelegateUser} to local DB", delegateUser);
+                                }
+                                catch (Exception syncEx)
+                                {
+                                    _logger.LogWarning(syncEx, "Failed to sync SAP delegation for {DelegateUser}", delegateUser);
+                                }
+                            }
+
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("SAP_ERROR", sapEx.Message)),
                                 cancellationToken);
@@ -1516,6 +1587,393 @@ public class TeamsBot : TeamsActivityHandler
                         return;
                     }
 
+                    if (string.Equals(action, "create_so_step1_submit", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // ── Cascade logic: step through Org → Channel → Division ──
+                        var rawSalesOrg = valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var soTok)
+                            ? soTok?.ToString()?.Trim() : null;
+                        var rawDistChannel = valueObj.TryGetValue("distChannel", StringComparison.OrdinalIgnoreCase, out var dcTok)
+                            ? dcTok?.ToString()?.Trim() : null;
+                        var rawDivision = valueObj.TryGetValue("division", StringComparison.OrdinalIgnoreCase, out var dvTok)
+                            ? dvTok?.ToString()?.Trim() : null;
+
+                        // Load the full SalesOrg list (always needed for the first dropdown).
+                        IReadOnlyList<SapSalesOrg> salesOrgs;
+                        try { salesOrgs = await _sap.GetSalesOrgListAsync(cancellationToken); }
+                        catch { salesOrgs = Array.Empty<SapSalesOrg>(); }
+
+                        // Step 1a: no Org selected yet — show Org dropdown only.
+                        if (string.IsNullOrWhiteSpace(rawSalesOrg))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep1Card(salesOrgs)),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var salesOrg = rawSalesOrg.ToUpperInvariant();
+
+                        // Step 1b: Org selected, no Channel yet — show Org + Channel dropdown.
+                        IReadOnlyList<SapDistChannel> distChannels;
+                        try { distChannels = await _sap.GetDistChannelListAsync(salesOrg, cancellationToken); }
+                        catch { distChannels = Array.Empty<SapDistChannel>(); }
+
+                        if (string.IsNullOrWhiteSpace(rawDistChannel))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep1Card(
+                                    salesOrgs, salesOrg, distChannels, null)),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var distChannel = rawDistChannel.ToUpperInvariant();
+
+                        // Step 1c: Org + Channel selected, no Division yet — show all three.
+                        IReadOnlyList<SapDivision> divisions;
+                        try { divisions = await _sap.GetDivisionListAsync(salesOrg, distChannel, cancellationToken); }
+                        catch { divisions = Array.Empty<SapDivision>(); }
+
+                        if (string.IsNullOrWhiteSpace(rawDivision))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep1Card(
+                                    salesOrgs, salesOrg, distChannels, distChannel, divisions, null)),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var division = rawDivision.ToUpperInvariant();
+
+                        // Step 1d: all three selected — validate and advance to Step 2.
+                        // Build composite keys so Step 2 can re-derive individual parts.
+                        var salesAreaKey = $"{salesOrg}|{distChannel}|{division}";
+                        var salesAreaLabel = $"{salesOrg} / {distChannel} / {division}";
+
+                        IReadOnlyList<SapValidCustomer> customers;
+                        IReadOnlyList<SapDocType> docTypes;
+                        try
+                        {
+                            var custTask = _sap.GetValidCustomersAsync(salesOrg, distChannel, division, top: 500, ct: cancellationToken);
+                            var doctypeTask = _sap.GetDocTypeListAsync(cancellationToken);
+                            await Task.WhenAll(custTask, doctypeTask);
+                            customers = custTask.Result;
+                            docTypes = doctypeTask.Result;
+                            if (customers.Count == 0)
+                                customers = await _sap.GetValidCustomersAsync(top: 500, ct: cancellationToken);
+                        }
+                        catch
+                        {
+                            customers = Array.Empty<SapValidCustomer>();
+                            docTypes = Array.Empty<SapDocType>();
+                        }
+
+                        var customerChoices = customers
+                            .Select(c => new AISO.AiOrchestration.Functions.ConfirmCreateChoice(c.Label, c.Key))
+                            .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
+                            .Select(g => g.First())
+                            .ToList();
+
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep2Card(
+                                salesAreaLabel,
+                                salesAreaKey,
+                                salesOrg,
+                                distChannel,
+                                division,
+                                customerChoices,
+                                docTypes)),
+                            cancellationToken);
+                        return;
+                    }
+
+                    if (string.Equals(action, "create_so_step2_submit", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesAreaKey = valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken)
+                            ? areaToken?.ToString()?.Trim() : null;
+                        var salesOrg = valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var soTok)
+                            ? soTok?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var distChannel = valueObj.TryGetValue("distChannel", StringComparison.OrdinalIgnoreCase, out var dcTok)
+                            ? dcTok?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var division = valueObj.TryGetValue("division", StringComparison.OrdinalIgnoreCase, out var dvTok)
+                            ? dvTok?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var customerKey = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken)
+                            ? custToken?.ToString()?.Trim() : null;
+                        var manualCustomerRaw = valueObj.TryGetValue("manualCustomer", StringComparison.OrdinalIgnoreCase, out var manualTok)
+                            ? manualTok?.ToString()?.Trim() : null;
+                        var docType = valueObj.TryGetValue("docType", StringComparison.OrdinalIgnoreCase, out var dtTok)
+                            ? dtTok?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var curTok)
+                            ? curTok?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var purchaseOrderRef = valueObj.TryGetValue("purchaseOrderRef", StringComparison.OrdinalIgnoreCase, out var poTok)
+                            ? poTok?.ToString()?.Trim() : null;
+                        var requestedDeliveryDate = valueObj.TryGetValue("requestedDeliveryDate", StringComparison.OrdinalIgnoreCase, out var dateTok)
+                            ? dateTok?.ToString()?.Trim() : null;
+                        var shipToParty = valueObj.TryGetValue("shipToParty", StringComparison.OrdinalIgnoreCase, out var stpTok)
+                            ? stpTok?.ToString()?.Trim() : null;
+
+                        // Validate Sales Area context.
+                        if (string.IsNullOrWhiteSpace(salesAreaKey)
+                            || string.IsNullOrWhiteSpace(salesOrg)
+                            || string.IsNullOrWhiteSpace(distChannel)
+                            || string.IsNullOrWhiteSpace(division))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Missing Sales Area context. Please go back to Step 1.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        // Validate DocType (required).
+                        if (string.IsNullOrWhiteSpace(docType))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Order type is required.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        // Validate customer.
+                        string? validatedCustomerKey = null;
+                        if (!string.IsNullOrWhiteSpace(customerKey)
+                            && SapValidCustomer.TryParseKey(customerKey, out var custId, out _, out _, out _))
+                        {
+                            validatedCustomerKey = customerKey;
+                        }
+                        else if (!string.IsNullOrWhiteSpace(manualCustomerRaw))
+                        {
+                            // Manual entry: validate against SAP.
+                            var manualOk = await _sap.IsCustomerValidForSalesAreaAsync(
+                                manualCustomerRaw, salesOrg, distChannel, division, cancellationToken);
+
+                            if (manualOk != true)
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "VALIDATION",
+                                        manualOk == null
+                                            ? "SAP is unavailable; cannot verify that customer."
+                                            : $"Customer '{manualCustomerRaw}' is not assigned to {salesOrg} / {distChannel} / {division}.")),
+                                    cancellationToken);
+                                return;
+                            }
+
+                            var stripped = manualCustomerRaw.TrimStart('0');
+                            validatedCustomerKey = string.IsNullOrEmpty(stripped) ? "0" : stripped;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(validatedCustomerKey))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Please select a valid Customer or type one in the manual field.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        // Build customer label for Step 3 display.
+                        string customerLabel;
+                        try
+                        {
+                            var custRows = await _sap.GetValidCustomersAsync(salesOrg, distChannel, division, top: 500, ct: cancellationToken);
+                            var found = custRows.FirstOrDefault(c =>
+                                string.Equals(c.Customer.TrimStart('0'), validatedCustomerKey.TrimStart('0'), StringComparison.OrdinalIgnoreCase)
+                                || string.Equals(c.Customer, validatedCustomerKey, StringComparison.OrdinalIgnoreCase));
+                            customerLabel = found?.Label ?? validatedCustomerKey.TrimStart('0');
+                        }
+                        catch
+                        {
+                            customerLabel = validatedCustomerKey.TrimStart('0');
+                        }
+
+                        // Load materials for Step 3 dropdown.
+                        IReadOnlyList<SapValidMaterialSales> materials;
+                        try
+                        {
+                            materials = await _sap.GetValidMaterialSalesAsync(salesOrg, distChannel, top: 200, ct: cancellationToken);
+                            if (materials.Count == 0)
+                                materials = await _sap.GetValidMaterialSalesAsync(top: 200, ct: cancellationToken);
+                        }
+                        catch
+                        {
+                            materials = Array.Empty<SapValidMaterialSales>();
+                        }
+
+                        if (materials.Count == 0)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                    "VALIDATION",
+                                    $"No materials are available for SalesArea {salesOrg} / {distChannel} / {division}.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        // Build material choices: include Plant in label (Plant is part of ValidMaterialSales key).
+                        IReadOnlyList<SapMaterial> materialInfos;
+                        try { materialInfos = await _sap.GetMaterialsAsync(cancellationToken); } catch { materialInfos = Array.Empty<SapMaterial>(); }
+                        var matDict = materialInfos.ToDictionary(m => m.Material, m => m.MaterialName, StringComparer.OrdinalIgnoreCase);
+
+                        var materialChoices = materials
+                            .Select(m =>
+                            {
+                                var name = !string.IsNullOrWhiteSpace(m.MaterialName)
+                                    ? m.MaterialName.Trim()
+                                    : (matDict.TryGetValue(m.Material, out var n) && !string.IsNullOrWhiteSpace(n)
+                                        ? n.Trim()
+                                        : $"Material {m.Material.TrimStart('0')}");
+                                var plant = !string.IsNullOrWhiteSpace(m.Plant) ? m.Plant.Trim() : "1010";
+                                var baseUnit = m.BaseUnit?.Trim().ToUpperInvariant() ?? "";
+                                return new AISO.AiOrchestration.Functions.ConfirmCreateChoice(
+                                    $"{m.Material.TrimStart('0')} - {name} (Plant: {plant})",
+                                    $"{m.Material}|{plant}|{baseUnit}");
+                            })
+                            .GroupBy(c => c.Value, StringComparer.OrdinalIgnoreCase)
+                            .Select(g => g.First())
+                            .ToList();
+
+                        // Persist header fields across Step 3 via card data.
+                        var headerData = new Dictionary<string, object?>
+                        {
+                            ["salesArea"] = salesAreaKey,
+                            ["salesOrg"] = salesOrg,
+                            ["distChannel"] = distChannel,
+                            ["division"] = division,
+                            ["docType"] = docType,
+                            ["currency"] = currency ?? "USD",
+                            ["purchaseOrderRef"] = string.IsNullOrWhiteSpace(purchaseOrderRef) ? null : purchaseOrderRef,
+                            ["requestedDeliveryDate"] = string.IsNullOrWhiteSpace(requestedDeliveryDate) ? null : requestedDeliveryDate,
+                            ["shipToParty"] = string.IsNullOrWhiteSpace(shipToParty) ? null : shipToParty,
+                            ["customer"] = validatedCustomerKey,
+                            ["customerLabel"] = customerLabel
+                        };
+
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep3Card(
+                                customerLabel,
+                                validatedCustomerKey,
+                                $"{salesOrg} / {distChannel} / {division}",
+                                salesAreaKey,
+                                materialChoices,
+                                docType,
+                                currency ?? "USD",
+                                purchaseOrderRef,
+                                requestedDeliveryDate,
+                                shipToParty)),
+                            cancellationToken);
+                        return;
+                    }
+
+                    // ── Step 3: validate items → show Step 4 Review ──────────────────
+                    if (string.Equals(action, "create_so_step3_submit", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var salesAreaKey = valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var saTok)
+                            ? saTok?.ToString()?.Trim() : null;
+                        var salesOrg = valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var soTok)
+                            ? soTok?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var distChannel = valueObj.TryGetValue("distChannel", StringComparison.OrdinalIgnoreCase, out var dcTok)
+                            ? dcTok?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var division = valueObj.TryGetValue("division", StringComparison.OrdinalIgnoreCase, out var dvTok)
+                            ? dvTok?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var docType = valueObj.TryGetValue("docType", StringComparison.OrdinalIgnoreCase, out var dtTok)
+                            ? dtTok?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var cuTok)
+                            ? cuTok?.ToString()?.Trim()?.ToUpperInvariant() : "USD";
+                        var purchaseOrderRef = valueObj.TryGetValue("purchaseOrderRef", StringComparison.OrdinalIgnoreCase, out var poTok)
+                            ? poTok?.ToString()?.Trim() : null;
+                        var requestedDeliveryDate = valueObj.TryGetValue("requestedDeliveryDate", StringComparison.OrdinalIgnoreCase, out var rdTok)
+                            ? rdTok?.ToString()?.Trim() : null;
+                        var shipToParty = valueObj.TryGetValue("shipToParty", StringComparison.OrdinalIgnoreCase, out var stpTok)
+                            ? stpTok?.ToString()?.Trim() : null;
+                        var customerId = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custTok)
+                            ? custTok?.ToString()?.Trim() : null;
+                        var customerLabel = valueObj.TryGetValue("customerLabel", StringComparison.OrdinalIgnoreCase, out var clTok)
+                            ? clTok?.ToString()?.Trim() ?? customerId ?? "" : customerId ?? "";
+
+                        // Validate DocType.
+                        if (string.IsNullOrWhiteSpace(docType))
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Order type is required.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        // Parse line items from unit inputs.
+                        var parsedItems = new List<(string Material, decimal Qty, string Plant, string Unit)>();
+                        for (var i = 1; i <= 20; i++)
+                        {
+                            var matKey = $"material{i}";
+                            var qtyKey = $"qty{i}";
+                            var unitKey = $"unit{i}";
+
+                            var matVal = valueObj.TryGetValue(matKey, StringComparison.OrdinalIgnoreCase, out var mv) ? mv?.ToString()?.Trim() : null;
+                            if (string.IsNullOrWhiteSpace(matVal))
+                                continue;
+
+                            decimal qty = 1m;
+                            if (valueObj.TryGetValue(qtyKey, StringComparison.OrdinalIgnoreCase, out var qtyVal)
+                                && decimal.TryParse(qtyVal?.ToString(), out var parsedQty)
+                                && parsedQty > 0)
+                                qty = parsedQty;
+                            else
+                                continue;
+
+                            // Parse Material|Plant|Unit from dropdown value.
+                            var parts = matVal.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                            var itemMaterial = parts.Length >= 1 ? parts[0].Trim() : matVal;
+                            var itemPlant = parts.Length >= 2 ? parts[1].Trim() : "";
+                            var itemUnit = valueObj.TryGetValue(unitKey, StringComparison.OrdinalIgnoreCase, out var uVal)
+                                ? uVal?.ToString()?.Trim() : (parts.Length >= 3 ? parts[2].Trim() : "");
+
+                            if (string.IsNullOrWhiteSpace(itemPlant) || string.IsNullOrWhiteSpace(itemUnit))
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "VALIDATION",
+                                        $"Material {itemMaterial} is missing Plant or Unit. Please pick a valid material.")),
+                                    cancellationToken);
+                                return;
+                            }
+
+                            parsedItems.Add((itemMaterial.ToUpperInvariant(), qty, itemPlant, itemUnit.ToUpperInvariant()));
+                        }
+
+                        if (parsedItems.Count == 0)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "At least one material with qty > 0 is required.")),
+                                cancellationToken);
+                            return;
+                        }
+
+                        var lineItems = parsedItems
+                            .Select(p => new AISO.AiOrchestration.Functions.ConfirmCreateOrderLine(
+                                p.Material, p.Qty, p.Plant, p.Unit))
+                            .ToList();
+
+                        var salesAreaLabel = $"{salesOrg} / {distChannel} / {division}";
+                        var customerKey = $"{customerId}|{salesOrg}|{distChannel}|{division}";
+
+                        await turnContext.SendActivityAsync(
+                            MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep4ReviewCard(
+                                salesAreaLabel,
+                                customerLabel,
+                                shipToParty,
+                                docType,
+                                currency ?? "USD",
+                                purchaseOrderRef,
+                                requestedDeliveryDate,
+                                lineItems,
+                                salesAreaKey ?? "",
+                                salesOrg ?? "",
+                                distChannel ?? "",
+                                division ?? "",
+                                customerKey,
+                                customerId ?? "")),
+                            cancellationToken);
+                        return;
+                    }
+
                     if (string.Equals(action, "create_so_confirm", StringComparison.OrdinalIgnoreCase))
                     {
                         var linkedSapUsername = await _userMappingService.GetSapUsernameAsync(teamsUserId, cancellationToken);
@@ -1529,120 +1987,151 @@ public class TeamsBot : TeamsActivityHandler
                             return;
                         }
 
-                        var customerRaw = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken)
-                            ? custToken.ToString()?.Trim()
-                            : null;
+                        // ── Parse Step 4 review card data ──────────────────────────────────
+                        var customerId = valueObj.TryGetValue("customer", StringComparison.OrdinalIgnoreCase, out var custToken)
+                            ? custToken?.ToString()?.Trim() : null;
                         var salesOrg = valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var orgToken)
-                            ? orgToken.ToString()?.Trim()
-                            : null;
-                        var distChannel = valueObj.TryGetValue("distChannel", StringComparison.OrdinalIgnoreCase, out var distToken)
-                            ? distToken.ToString()?.Trim()
-                            : (valueObj.TryGetValue("distributionChannel", StringComparison.OrdinalIgnoreCase, out distToken) ? distToken.ToString()?.Trim() : null);
-                        var division = valueObj.TryGetValue("division", StringComparison.OrdinalIgnoreCase, out var divToken)
-                            ? divToken.ToString()?.Trim()
-                            : null;
+                            ? orgToken?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var distChannel = valueObj.TryGetValue("distChannel", StringComparison.OrdinalIgnoreCase, out var dcToken)
+                            ? dcToken?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var division = valueObj.TryGetValue("division", StringComparison.OrdinalIgnoreCase, out var dvToken)
+                            ? dvToken?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var docType = valueObj.TryGetValue("docType", StringComparison.OrdinalIgnoreCase, out var dtToken)
+                            ? dtToken?.ToString()?.Trim()?.ToUpperInvariant() : null;
+                        var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var cuToken)
+                            ? cuToken?.ToString()?.Trim()?.ToUpperInvariant() : "USD";
+                        var purchaseOrderRef = valueObj.TryGetValue("purchaseOrderRef", StringComparison.OrdinalIgnoreCase, out var poToken)
+                            ? poToken?.ToString()?.Trim() : null;
+                        var requestedDeliveryDate = valueObj.TryGetValue("requestedDeliveryDate", StringComparison.OrdinalIgnoreCase, out var rdToken)
+                            ? rdToken?.ToString()?.Trim() : null;
+                        var shipToParty = valueObj.TryGetValue("shipToParty", StringComparison.OrdinalIgnoreCase, out var stpToken)
+                            ? (stpToken?.ToString()?.Trim() is { } s && !string.Equals(s, "(default)", StringComparison.OrdinalIgnoreCase) ? s : null) : null;
 
-                        // Customer dropdown value encodes ValidCustomer key → wins over separate salesArea.
-                        string? customer = customerRaw;
-                        if (SapValidCustomer.TryParseKey(customerRaw, out var keyCust, out var keyOrg, out var keyChan, out var keyDiv))
-                        {
-                            customer = keyCust;
-                            salesOrg = keyOrg;
-                            distChannel = keyChan;
-                            division = keyDiv;
-                        }
-                        else if (valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var areaToken)
-                            && SapSalesArea.TryParseKey(areaToken.ToString(), out var areaOrg, out var areaChan, out var areaDiv))
-                        {
-                            salesOrg = areaOrg;
-                            distChannel = areaChan;
-                            division = areaDiv;
-                        }
-
-                        salesOrg = string.IsNullOrWhiteSpace(salesOrg) ? "TV01" : salesOrg;
-                        distChannel = string.IsNullOrWhiteSpace(distChannel) ? "10" : distChannel;
-                        division = string.IsNullOrWhiteSpace(division) ? "00" : division;
-
-                        var currency = valueObj.TryGetValue("currency", StringComparison.OrdinalIgnoreCase, out var curToken)
-                            ? curToken.ToString()?.Trim()
-                            : "USD";
-                        var plant = valueObj.TryGetValue("plant", StringComparison.OrdinalIgnoreCase, out var plantToken)
-                            ? plantToken.ToString()?.Trim()
-                            : "1010";
-                        var unit = valueObj.TryGetValue("unit", StringComparison.OrdinalIgnoreCase, out var unitToken)
-                            ? unitToken.ToString()?.Trim()
-                            : "PC";
-
-                        var lineItems = new List<CreateSalesOrderItemDto>();
-                        for (var i = 1; i <= AISO.AiOrchestration.Functions.CreateOrderFunction.MaxLineSlots; i++)
-                        {
-                            var matKey = $"material{i}";
-                            var qtyKey = $"qty{i}";
-                            // Legacy single-field card
-                            if (i == 1
-                                && !valueObj.TryGetValue(matKey, StringComparison.OrdinalIgnoreCase, out _)
-                                && valueObj.TryGetValue("material", StringComparison.OrdinalIgnoreCase, out var legacyMat))
-                            {
-                                matKey = "material";
-                                qtyKey = "qty";
-                            }
-
-                            var material = valueObj.TryGetValue(matKey, StringComparison.OrdinalIgnoreCase, out var matToken)
-                                ? matToken.ToString()?.Trim()
-                                : null;
-                            if (string.IsNullOrWhiteSpace(material))
-                                continue;
-
-                            decimal qty = 1m;
-                            if (valueObj.TryGetValue(qtyKey, StringComparison.OrdinalIgnoreCase, out var qtyToken))
-                            {
-                                if (!decimal.TryParse(qtyToken.ToString(), out qty))
-                                    qty = 0m;
-                            }
-
-                            if (qty <= 0)
-                            {
-                                await turnContext.SendActivityAsync(
-                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
-                                        "VALIDATION",
-                                        $"Material {material} has invalid quantity. Quantity must be greater than 0.")),
-                                    cancellationToken);
-                                return;
-                            }
-
-                            lineItems.Add(new CreateSalesOrderItemDto
-                            {
-                                Material = material.ToUpperInvariant(),
-                                OrderQty = qty,
-                                Plant = string.IsNullOrWhiteSpace(plant) ? (string.IsNullOrWhiteSpace(salesOrg) ? "1010" : salesOrg) : plant,
-                                Unit = string.IsNullOrWhiteSpace(unit) ? "EA" : unit.ToUpperInvariant()
-                            });
-                        }
-
-                        if (string.IsNullOrWhiteSpace(customer) || lineItems.Count == 0)
+                        // Fallback: try to derive from ValidCustomer key if customer is a composite key.
+                        if (string.IsNullOrWhiteSpace(customerId))
                         {
                             await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
-                                    "VALIDATION",
-                                    "Customer ID and at least one material are required to create an order.")),
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "Customer is missing. Please start over.")),
+                                cancellationToken);
+                            return;
+                        }
+                        string? resolvedCustomerId = null;
+                        if (SapValidCustomer.TryParseKey(customerId, out var keyCust, out _, out _, out _))
+                            resolvedCustomerId = keyCust;
+                        else
+                            resolvedCustomerId = customerId;
+
+                        // Fallback sales area from salesArea key if not in individual fields.
+                        if (string.IsNullOrWhiteSpace(salesOrg) && valueObj.TryGetValue("salesArea", StringComparison.OrdinalIgnoreCase, out var saToken)
+                            && SapSalesArea.TryParseKey(saToken?.ToString(), out var saOrg, out var saChan, out var saDiv))
+                        {
+                            salesOrg = saOrg;
+                            distChannel = saChan;
+                            division = saDiv;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(salesOrg)) salesOrg = "TV01";
+                        if (string.IsNullOrWhiteSpace(distChannel)) distChannel = "10";
+                        if (string.IsNullOrWhiteSpace(division)) division = "00";
+
+                        // Parse line items — prefer lineItemsJson (Step 4), fall back to individual materialN/qtyN fields.
+                        var lineItemDtos = new List<CreateSalesOrderItemDto>();
+                        var lineItemsJson = valueObj.TryGetValue("lineItemsJson", StringComparison.OrdinalIgnoreCase, out var ljToken)
+                            ? ljToken?.ToString()?.Trim() : null;
+
+                        if (!string.IsNullOrWhiteSpace(lineItemsJson))
+                        {
+                            // Step 4 confirmed — line items come as JSON.
+                            try
+                            {
+                                var parsed = System.Text.Json.JsonSerializer.Deserialize<List<AISO.AiOrchestration.Functions.ConfirmCreateOrderLine>>(lineItemsJson);
+                                if (parsed != null)
+                                {
+                                    foreach (var item in parsed)
+                                    {
+                                        var plant = !string.IsNullOrWhiteSpace(item.Plant) ? item.Plant : "1010";
+                                        var unit = !string.IsNullOrWhiteSpace(item.Unit) ? item.Unit : "EA";
+                                        lineItemDtos.Add(new CreateSalesOrderItemDto
+                                        {
+                                            Material = item.Material.ToUpperInvariant(),
+                                            Plant = plant,
+                                            OrderQty = item.Qty > 0 ? item.Qty : 1m,
+                                            Unit = unit.ToUpperInvariant()
+                                        });
+                                    }
+                                }
+                            }
+                            catch { /* fall through to field-based parsing */ }
+                        }
+
+                        if (lineItemDtos.Count == 0)
+                        {
+                            // Legacy fallback: parse material1..materialN / qty1..qtyN.
+                            for (var i = 1; i <= AISO.AiOrchestration.Functions.CreateOrderFunction.MaxLineSlots; i++)
+                            {
+                                var matKey = $"material{i}";
+                                var qtyKey = $"qty{i}";
+                                if (i == 1 && !valueObj.ContainsKey(matKey) && valueObj.ContainsKey("material"))
+                                { matKey = "material"; qtyKey = "qty"; }
+
+                                var matVal = valueObj.TryGetValue(matKey, StringComparison.OrdinalIgnoreCase, out var mv)
+                                    ? mv?.ToString()?.Trim() : null;
+                                if (string.IsNullOrWhiteSpace(matVal)) continue;
+
+                                decimal qty = 1m;
+                                if (valueObj.TryGetValue(qtyKey, StringComparison.OrdinalIgnoreCase, out var qv)
+                                    && decimal.TryParse(qv?.ToString(), out var parsedQty) && parsedQty > 0)
+                                    qty = parsedQty;
+                                else continue;
+
+                                var parts = matVal.Split('|', StringSplitOptions.RemoveEmptyEntries);
+                                var itemMat = parts.Length >= 1 ? parts[0].Trim() : matVal;
+                                var itemPlant = parts.Length >= 2 ? parts[1].Trim() : "1010";
+                                var itemUnit = parts.Length >= 3 ? parts[2].Trim() : "EA";
+
+                                lineItemDtos.Add(new CreateSalesOrderItemDto
+                                {
+                                    Material = itemMat.ToUpperInvariant(),
+                                    Plant = itemPlant,
+                                    OrderQty = qty,
+                                    Unit = itemUnit.ToUpperInvariant()
+                                });
+                            }
+                        }
+
+                        if (lineItemDtos.Count == 0)
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard("VALIDATION", "At least one material is required.")),
                                 cancellationToken);
                             return;
                         }
 
+                        // Validate customer.
                         var customerOk = await _sap.IsCustomerValidForSalesAreaAsync(
-                            customer,
-                            salesOrg,
-                            distChannel,
-                            division,
-                            cancellationToken);
+                            resolvedCustomerId, salesOrg, distChannel, division, cancellationToken);
                         if (customerOk == false)
                         {
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
                                     "VALIDATION",
-                                    $"Customer {customer} is not valid for sales area {salesOrg}/{distChannel}/{division}.")),
+                                    $"Customer {resolvedCustomerId} is not valid for sales area {salesOrg}/{distChannel}/{division}.")),
                                 cancellationToken);
                             return;
+                        }
+
+                        // Validate Plant/Unit per line.
+                        foreach (var item in lineItemDtos)
+                        {
+                            if (string.IsNullOrWhiteSpace(item.Plant) || string.IsNullOrWhiteSpace(item.Unit))
+                            {
+                                await turnContext.SendActivityAsync(
+                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
+                                        "VALIDATION",
+                                        $"Material {item.Material} is missing Plant or Unit.")),
+                                    cancellationToken);
+                                return;
+                            }
                         }
 
                         try
@@ -1650,18 +2139,21 @@ public class TeamsBot : TeamsActivityHandler
                             var created = await _sap.CreateSalesOrderAsync(
                                 new CreateSalesOrderDto
                                 {
-                                    DocType = "TA",
-                                    SalesOrg = string.IsNullOrWhiteSpace(salesOrg) ? "1010" : salesOrg.ToUpperInvariant(),
-                                    DistChannel = string.IsNullOrWhiteSpace(distChannel) ? "10" : distChannel.ToUpperInvariant(),
-                                    Division = string.IsNullOrWhiteSpace(division) ? "00" : division.ToUpperInvariant(),
-                                    Customer = customer,
-                                    Currency = string.IsNullOrWhiteSpace(currency) ? "USD" : currency.ToUpperInvariant(),
+                                    DocType = string.IsNullOrWhiteSpace(docType) ? "TA" : docType,
+                                    SalesOrg = salesOrg,
+                                    DistChannel = distChannel,
+                                    Division = division,
+                                    Customer = resolvedCustomerId,
+                                    Currency = string.IsNullOrWhiteSpace(currency) ? "USD" : currency,
+                                    ShipToParty = shipToParty,
                                     RequestingSapUser = linkedSapUsername,
-                                    Items = lineItems
+                                    PurchaseOrderRef = string.IsNullOrWhiteSpace(purchaseOrderRef) ? null : purchaseOrderRef,
+                                    RequestedDeliveryDate = string.IsNullOrWhiteSpace(requestedDeliveryDate) ? null : requestedDeliveryDate,
+                                    Items = lineItemDtos
                                 },
                                 cancellationToken);
 
-                            var linesSummary = string.Join(", ", lineItems.Select(i => $"{i.Material} x {i.OrderQty:0}"));
+                            var linesSummary = string.Join(", ", lineItemDtos.Select(i => $"{i.Material} x {i.OrderQty:0}"));
 
                             await _audit.LogAsync(new AuditEntry
                             {
@@ -1671,10 +2163,12 @@ public class TeamsBot : TeamsActivityHandler
                                 ParametersJson = JsonConvert.SerializeObject(new
                                 {
                                     order_id = created.SoNumber,
-                                    customer,
+                                    customer = resolvedCustomerId,
                                     sales_org = salesOrg,
+                                    docType,
                                     currency,
-                                    items = lineItems.Select(i => new { i.Material, qty = i.OrderQty })
+                                    shipToParty,
+                                    items = lineItemDtos.Select(i => new { i.Material, qty = i.OrderQty })
                                 }),
                                 ResultStatus = "Success"
                             }, cancellationToken);
@@ -1683,7 +2177,7 @@ public class TeamsBot : TeamsActivityHandler
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildSuccessCard(
                                     created.SoNumber,
                                     "Created",
-                                    $"{customer} · {linesSummary}")),
+                                    $"{resolvedCustomerId} · {linesSummary}")),
                                 cancellationToken);
 
                             var roleForDetail = await _userMappingService.GetRoleAsync(teamsUserId, cancellationToken);
@@ -1823,7 +2317,7 @@ public class TeamsBot : TeamsActivityHandler
                             ? dateToken.ToString()?.Trim()
                             : null;
                         var lineOp = valueObj.TryGetValue("lineOp", StringComparison.OrdinalIgnoreCase, out var opToken)
-                            ? opToken.ToString()?.Trim().ToUpperInvariant()
+                            ? opToken.ToString()?.Trim().ToUpperInvariant() ?? "NONE"
                             : "NONE";
                         var itemNumber = valueObj.TryGetValue("itemNumber", StringComparison.OrdinalIgnoreCase, out var itemToken)
                             ? itemToken.ToString()?.Trim()
@@ -1900,6 +2394,8 @@ public class TeamsBot : TeamsActivityHandler
                                 && !string.Equals(reqDeliveryDate, currentDate, StringComparison.Ordinal);
 
                             var items = new List<UpdateSalesOrderItemDto>();
+
+                            // Add line items if operation is specified (U/I/D)
                             if (!string.IsNullOrWhiteSpace(lineOp) && lineOp is not ("NONE" or "N"))
                             {
                                 if (lineOp is "U" or "I")
@@ -1946,15 +2442,21 @@ public class TeamsBot : TeamsActivityHandler
                                 });
                             }
 
-                            if (!changeRef && !changeDate && items.Count == 0)
+                            // Pre-check: skip SAP call if nothing actually changed
+                            var hasItemsToChange = items.Count > 0 && items.Any(i =>
+                                !string.IsNullOrWhiteSpace(i.Operation) &&
+                                i.Operation is not ("NONE" or "N"));
+
+                            if (!changeRef && !changeDate && !hasItemsToChange)
                             {
                                 await turnContext.SendActivityAsync(
-                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
-                                        "VALIDATION",
-                                        "Nothing to update. Change PO reference, delivery date, or a line operation.")),
+                                    MessageFactory.Text("Nothing to update — no changes were made to the sales order."),
                                     cancellationToken);
                                 return;
                             }
+
+                            // Allow submit even if no changes — SAP will handle gracefully
+                            // (null fields = no change). Show info only when truly nothing changed.
 
                             var updated = await _sap.UpdateSalesOrderAsync(
                                 new UpdateSalesOrderDto
@@ -2347,7 +2849,32 @@ public class TeamsBot : TeamsActivityHandler
                     cancellationToken);
                 return;
             }
+            if (string.Equals(normalizedMessage, "delegate approval", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(normalizedMessage, "ủy quyền", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(normalizedMessage, "uy quyen", StringComparison.OrdinalIgnoreCase))
+            {
+                var todayStr = DateTime.UtcNow.ToString("yyyy-MM-dd");
+                var tomorrowStr = DateTime.UtcNow.AddDays(1).ToString("yyyy-MM-dd");
 
+                var rawChoices = await _userMappingService.GetForwardRecipientChoicesAsync(cancellationToken);
+
+                var managerChoices = rawChoices.Select(c => new { title = c.Title, value = c.Value });
+
+                var delegateFormCard = TeamsCardBuilder.BuildConfirmDelegateApprovalCard(
+                    delegateUser: "",
+                    validFromRaw: todayStr,
+                    validToRaw: tomorrowStr,
+                    validFrom: todayStr,
+                    validTo: tomorrowStr,
+                    reason: "",
+                    maxAmountRaw: "10000000",
+                    maxAmount: "10,000,000",
+                    currency: "VND",
+                    managerChoices: managerChoices);
+
+                await turnContext.SendActivityAsync(MessageFactory.Attachment(delegateFormCard), cancellationToken);
+                return;
+            }
             if (string.Equals(normalizedMessage, "cancel", StringComparison.OrdinalIgnoreCase) ||
                 string.Equals(normalizedMessage, "thoát", StringComparison.OrdinalIgnoreCase))
             {
@@ -2468,6 +2995,21 @@ public class TeamsBot : TeamsActivityHandler
                 await ReplaceLoadingActivityAsync(turnContext, loadingActivityId, textReply, cancellationToken);
 
                 _logger.LogInformation("Bot replied with AI text response");
+                return;
+            }
+
+            if (result.Payload is AISO.AiOrchestration.Functions.MyProfileResponse myProfileResponse)
+            {
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildMyProfileCard(myProfileResponse),
+                    cancellationToken);
+
+                _logger.LogInformation(
+                    "Bot replied with My profile card for {SapUser} (total={Total})",
+                    myProfileResponse.SapUser,
+                    myProfileResponse.Counts.Total);
                 return;
             }
 
@@ -2752,6 +3294,26 @@ public class TeamsBot : TeamsActivityHandler
                 return;
             }
 
+            if (result.Payload is AISO.AiOrchestration.Functions.ListDelegationsResponse listDelegationsResponse)
+            {
+                if (listDelegationsResponse.Delegations.Count == 0)
+                {
+                    await ReplaceLoadingActivityAsync(
+                        turnContext,
+                        loadingActivityId,
+                        "There are currently no active delegations.",
+                        cancellationToken);
+                    return;
+                }
+
+                await ReplaceLoadingActivityAsync(
+                    turnContext,
+                    loadingActivityId,
+                    TeamsCardBuilder.BuildListDelegationsCard(listDelegationsResponse.Delegations),
+                    cancellationToken);
+                return;
+            }
+
             if (result.Payload is AISO.AiOrchestration.Functions.ListBotUsersResponse listUsersResponse)
             {
                 if (listUsersResponse.Users.Count == 0)
@@ -2916,10 +3478,38 @@ public class TeamsBot : TeamsActivityHandler
 
             if (result.Payload is AISO.AiOrchestration.Functions.ConfirmCreateOrderResponse confirmCreate)
             {
+                // AI path: show Step 1 with the cascading SalesOrg dropdown.
+                // When the AI provides a pre-selected SalesOrg, load all three levels
+                // so the user can review and navigate. Otherwise start fresh.
+                IReadOnlyList<SapSalesOrg> salesOrgs;
+                IReadOnlyList<SapDistChannel> distChannels = [];
+                IReadOnlyList<SapDivision> divisions = [];
+                string? selOrg = null, selChan = null, selDiv = null;
+
+                try
+                {
+                    salesOrgs = await _sap.GetSalesOrgListAsync(cancellationToken);
+                }
+                catch
+                {
+                    salesOrgs = Array.Empty<SapSalesOrg>();
+                }
+
+                if (!string.IsNullOrWhiteSpace(confirmCreate.SalesAreaKey)
+                    && SapSalesArea.TryParseKey(confirmCreate.SalesAreaKey, out var aiOrg, out var aiChan, out var aiDiv))
+                {
+                    selOrg = aiOrg;
+                    selChan = aiChan;
+                    selDiv = aiDiv;
+                    try { distChannels = await _sap.GetDistChannelListAsync(aiOrg, cancellationToken); } catch { }
+                    try { divisions = await _sap.GetDivisionListAsync(aiOrg, aiChan, cancellationToken); } catch { }
+                }
+
                 await ReplaceLoadingActivityAsync(
                     turnContext,
                     loadingActivityId,
-                    TeamsCardBuilder.BuildConfirmCreateOrderCard(confirmCreate),
+                    TeamsCardBuilder.BuildCreateOrderStep1Card(
+                        salesOrgs, selOrg, distChannels, selChan, divisions, selDiv),
                     cancellationToken);
 
                 _logger.LogInformation(

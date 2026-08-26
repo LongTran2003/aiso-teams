@@ -211,27 +211,33 @@ public class SapClient : ISapClient
         if (string.IsNullOrWhiteSpace(dto.RequestingSapUser))
             throw new ArgumentException("RequestingSapUser is required for createSalesOrder.", nameof(dto));
 
-        var url = "SalesOrder/com.sap.gateway.srvd_a2x.zsd_aiso_sales_order.v0001.createSalesOrder?sap-client=324&$format=json";
+        var url = "SalesOrder?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
-        var payload = new
+        // SAP DDIC `ZAISO_A_CREATE_SO` and item structure `ZAISO_S_SO_ITEM` only
+        // accept the baseline fields. PO Ref / Requested Delivery Date /
+        // Item Description are written via the follow-up update action below
+        // (`UpdateSalesOrderAsync`) which uses `BAPI_SALESORDER_CHANGE` —
+        // those BAPIs support `purch_no_c` / `req_date_h` natively.
+        var payload = new Dictionary<string, object?>
         {
-            DOC_TYPE = dto.DocType,
-            SALES_ORG = dto.SalesOrg,
-            DIST_CHANNEL = dto.DistChannel,
-            DIVISION = dto.Division,
-            CUSTOMER = FormatCustomerNumber(dto.Customer),
-            CURRENCY = dto.Currency,
-            REQUESTING_TEAMS_USER = dto.RequestingSapUser.Trim(),
-            ITEMS = dto.Items.Select((i, index) => new
+            ["DOC_TYPE"] = dto.DocType,
+            ["SALES_ORG"] = dto.SalesOrg,
+            ["DIST_CHANNEL"] = dto.DistChannel,
+            ["DIVISION"] = dto.Division,
+            ["CUSTOMER"] = FormatCustomerNumber(dto.Customer),
+            ["CURRENCY"] = dto.Currency,
+            ["REQUESTING_TEAMS_USER"] = dto.RequestingSapUser.Trim(),
+            ["ITEMS"] = dto.Items.Select(i =>
             {
-                SO_NUMBER = "0000000000",
-                ITEM_NO = ((index + 1) * 10).ToString().PadLeft(6, '0'),
-                MATERIAL = FormatMaterialNumber(i.Material),
-                PLANT = i.Plant,
-                ORDER_QTY = Math.Round(i.OrderQty, 3),
-                UNIT = i.Unit,
-                NET_VALUE = 0m
+                var item = new Dictionary<string, object?>
+                {
+                    ["MATERIAL"] = FormatMaterialNumber(i.Material),
+                    ["PLANT"] = i.Plant,
+                    ["ORDER_QTY"] = Math.Round(i.OrderQty, 3),
+                    ["UNIT"] = i.Unit
+                };
+                return item;
             }).ToList()
         };
 
@@ -248,6 +254,16 @@ public class SapClient : ISapClient
             }
 
             var formatted = FormatSoNumber(soNumber);
+
+            // Apply header PO + delivery date and per-item description / line
+            // date / per-line PO via update action (BAPI_SALESORDER_CHANGE).
+            // We tolerate update failures here so a successful create is not
+            // rolled back just because the follow-up BAPI rejected something.
+            await TryApplyCreateFollowUpAsync(
+                formatted,
+                dto,
+                ct);
+
             var refreshed = await GetSalesOrderByIdAsync(formatted, ct);
             if (refreshed is not null)
                 return refreshed;
@@ -347,7 +363,7 @@ public class SapClient : ISapClient
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
         // Align with ZAISO_A_UPDATE_SO: NEW_REFERENCE, REQUESTED_DELIVERY_DATE, ITEMS
-        // (no CHANGE_* flags — SAP updates a header field only when it is non-initial).
+        // SAP now supports PLANT field in item updates.
         var payload = new Dictionary<string, object?>
         {
             ["REQUESTING_TEAMS_USER"] = dto.RequestingSapUser.Trim(),
@@ -355,6 +371,7 @@ public class SapClient : ISapClient
             {
                 ITEM_NO = PadItemNumber(i.ItemNumber),
                 MATERIAL = FormatMaterialNumber(i.Material),
+                PLANT = i.Plant ?? string.Empty,
                 ORDER_QTY = Math.Round(i.OrderQty ?? 0m, 3),
                 UNIT = i.Unit ?? string.Empty,
                 CHANGE_FLAG = (i.Operation ?? string.Empty).Trim().ToUpperInvariant()
@@ -380,6 +397,62 @@ public class SapClient : ISapClient
         {
             _logger.LogError(ex, "Error calling SAP OData UpdateSalesOrderAsync for {SoNumber}", dto.SoNumber);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Apply header-level PO Ref / Requested Delivery Date to a freshly created
+    /// SO via the update action. Tolerates failures so a successful create is
+    /// not rolled back. Per-line description / date / PO are not supported by
+    /// the update payload and are logged so we know what was dropped.
+    /// </summary>
+    private async Task TryApplyCreateFollowUpAsync(
+        string formattedSoNumber,
+        CreateSalesOrderDto dto,
+        CancellationToken ct)
+    {
+        var hasHeaderPo = !string.IsNullOrWhiteSpace(dto.PurchaseOrderRef);
+        var hasHeaderDate = !string.IsNullOrWhiteSpace(dto.RequestedDeliveryDate);
+
+        // Surface per-line values the backend currently can't forward to SAP
+        // (DDIC doesn't expose them on create or update). This is just an
+        // audit trail so the next dev knows what's silently being dropped.
+        foreach (var item in dto.Items)
+        {
+            if (!string.IsNullOrWhiteSpace(item.ItemDescription)
+                || !string.IsNullOrWhiteSpace(item.PurchaseOrderRef)
+                || !string.IsNullOrWhiteSpace(item.RequestedDeliveryDate))
+            {
+                _logger.LogInformation(
+                    "CreateSalesOrder follow-up: per-line description/po/date for material {Material} on SO {SoNumber} dropped (DDIC limitation)",
+                    item.Material,
+                    formattedSoNumber);
+            }
+        }
+
+        if (!hasHeaderPo && !hasHeaderDate)
+            return;
+
+        try
+        {
+            await UpdateSalesOrderAsync(
+                new UpdateSalesOrderDto
+                {
+                    SoNumber = formattedSoNumber,
+                    RequestingSapUser = dto.RequestingSapUser!.Trim(),
+                    PurchaseOrderRef = hasHeaderPo ? dto.PurchaseOrderRef!.Trim() : null,
+                    ReqDeliveryDate = hasHeaderDate ? dto.RequestedDeliveryDate!.Trim() : null
+                },
+                ct);
+            _logger.LogInformation(
+                "CreateSalesOrder follow-up: applied PO/Date to SO {SoNumber}",
+                formattedSoNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "CreateSalesOrder follow-up: failed to apply PO/Date to SO {SoNumber}. The order is created but PO/Date are not set.",
+                formattedSoNumber);
         }
     }
 
@@ -1191,14 +1264,18 @@ public class SapClient : ISapClient
         }
     }
 
-    public async Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(string? salesOrg = null, CancellationToken ct = default)
     {
-        var url = new ODataQueryBuilder("SalesArea")
+        var builder = new ODataQueryBuilder("SalesArea")
             .AddCustomParam("sap-client", "324")
-            .Top(200)
-            .Build();
+            .Top(200);
 
-        _logger.LogInformation("Calling SAP OData: {Url}", url);
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            builder.Filter("SalesOrg", "eq", salesOrg.Trim().ToUpperInvariant());
+
+        var url = builder.Build();
+
+        _logger.LogInformation("Calling SAP OData: {Url} (filter: SalesOrg={SalesOrg})", url, salesOrg ?? "<all>");
 
         try
         {
@@ -1221,14 +1298,25 @@ public class SapClient : ISapClient
             if (result?.Value is null || result.Value.Count == 0)
                 return Array.Empty<SapSalesArea>();
 
-            return result.Value
+            var query = result.Value
                 .Where(r => !string.IsNullOrWhiteSpace(r.SalesOrg)
-                            && !string.IsNullOrWhiteSpace(r.DistChannel)
-                            && !string.IsNullOrWhiteSpace(r.Division))
+                            && !string.IsNullOrWhiteSpace(r.DistrChannel)
+                            && !string.IsNullOrWhiteSpace(r.Division));
+
+            // Defensive client-side filter in case the OData filter was ignored by the gateway.
+            if (!string.IsNullOrWhiteSpace(salesOrg))
+            {
+                query = query.Where(r => string.Equals(r.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return query
                 .Select(r => new SapSalesArea(
                     r.SalesOrg!.Trim().ToUpperInvariant(),
-                    r.DistChannel!.Trim().ToUpperInvariant(),
-                    r.Division!.Trim().ToUpperInvariant()))
+                    r.DistrChannel!.Trim().ToUpperInvariant(),
+                    r.Division!.Trim().ToUpperInvariant(),
+                    r.SalesOrgName?.Trim(),
+                    r.DistChannelName?.Trim(),
+                    r.DivisionName?.Trim()))
                 .GroupBy(a => a.Key, StringComparer.OrdinalIgnoreCase)
                 .Select(g => g.First())
                 .OrderBy(a => a.SalesOrg, StringComparer.OrdinalIgnoreCase)
@@ -1247,7 +1335,7 @@ public class SapClient : ISapClient
     {
         var url = new ODataQueryBuilder("Material")
             .AddCustomParam("sap-client", "324")
-            .Top(100)
+            .Top(30)
             .Build();
 
         _logger.LogInformation("Calling SAP OData: {Url}", url);
@@ -1298,11 +1386,107 @@ public class SapClient : ISapClient
         }
     }
 
+    public async Task<IReadOnlyList<SapValidMaterialPlant>> GetValidMaterialPlantsAsync(CancellationToken ct = default)
+    {
+        var builder = new ODataQueryBuilder("ValidMaterialPlant")
+            .AddCustomParam("$select", "Material,Plant,MaterialType,BaseUnit")
+            .Top(30);
+
+        var url = builder.Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("ValidMaterialPlant GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapValidMaterialPlant>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapValidMaterialPlantDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapValidMaterialPlant>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.Material) && !string.IsNullOrWhiteSpace(r.Plant))
+                .Select(r => new SapValidMaterialPlant(
+                    Material: FormatMaterialNumber(r.Material),
+                    Plant: r.Plant,
+                    MaterialType: r.MaterialType,
+                    BaseUnit: r.BaseUnit))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching ValidMaterialPlant");
+            return Array.Empty<SapValidMaterialPlant>();
+        }
+    }
+
+    public async Task<IReadOnlyList<SapValidMaterialSales>> GetValidMaterialSalesAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        int top = 30,
+        CancellationToken ct = default)
+    {
+        var builder = new ODataQueryBuilder("ValidMaterialSales")
+            .AddCustomParam("$select", "Material,SalesOrg,DistChannel,Plant,BaseUnit,MaterialName")
+            .Top(Math.Clamp(top, 1, 200));
+
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            builder.Filter("SalesOrg", "eq", salesOrg.Trim().ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(distChannel))
+            builder.Filter("DistChannel", "eq", distChannel.Trim().ToUpperInvariant());
+
+        var url = builder.Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("ValidMaterialSales GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapValidMaterialSales>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapValidMaterialSalesDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapValidMaterialSales>();
+
+            // CDS v5 added Plant to the key, so the same Material can now come back
+            // once per valid plant for the (SalesOrg, DistChannel) combo. Dedupe by
+            // Material for the step3 dropdown — keep the first plant encountered.
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.Material))
+                .GroupBy(r => r.Material)
+                .Select(g => g.First())
+                .Select(r => new SapValidMaterialSales(
+                    Material: FormatMaterialNumber(r.Material),
+                    SalesOrg: r.SalesOrg ?? string.Empty,
+                    DistChannel: r.DistChannel ?? string.Empty,
+                    Plant: r.Plant ?? string.Empty,
+                    BaseUnit: r.BaseUnit ?? string.Empty,
+                    MaterialName: r.MaterialName ?? string.Empty))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching ValidMaterialSales");
+            return Array.Empty<SapValidMaterialSales>();
+        }
+    }
+
     public async Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
         string? salesOrg = null,
         string? distChannel = null,
         string? division = null,
-        int top = 100,
+        int top = 30,
         CancellationToken ct = default)
     {
         return await GetValidCustomersAsync(
@@ -1322,7 +1506,11 @@ public class SapClient : ISapClient
         int top,
         CancellationToken ct)
     {
-        var take = Math.Clamp(top, 1, 200);
+        // Cap raised from 200 → 500 to keep 135001 inside the dropdown
+        // even if ZI_AISO_VALID_CUSTOMER returns more rows for the
+        // UE00/WH/AS combo. The OData service is still capped server-side
+        // so the UI also offers a direct customer lookup fallback.
+        var take = Math.Clamp(top, 1, 500);
         var builder = new ODataQueryBuilder("ValidCustomer")
             .AddCustomParam("sap-client", "324")
             .Top(take);
@@ -1378,6 +1566,156 @@ public class SapClient : ISapClient
         {
             _logger.LogWarning(ex, "ValidCustomer lookup failed");
             return Array.Empty<SapValidCustomer>();
+        }
+    }
+
+    public async Task<IReadOnlyList<SapSalesOrg>> GetSalesOrgListAsync(CancellationToken ct = default)
+    {
+        var url = new ODataQueryBuilder("SalesOrgList").Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("SalesOrgList GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapSalesOrg>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapSalesOrgDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapSalesOrg>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.SalesOrg))
+                .Select(r => new SapSalesOrg(r.SalesOrg!, r.SalesOrgName ?? ""))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not SapODataException)
+        {
+            _logger.LogWarning(ex, "SalesOrgList lookup failed");
+            return Array.Empty<SapSalesOrg>();
+        }
+    }
+
+    public async Task<IReadOnlyList<SapDistChannel>> GetDistChannelListAsync(
+        string? salesOrg = null,
+        CancellationToken ct = default)
+    {
+        var builder = new ODataQueryBuilder("DistChannelList");
+
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            builder.Filter("SalesOrg", "eq", salesOrg.Trim().ToUpperInvariant());
+
+        var url = builder.Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("DistChannelList GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapDistChannel>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapDistChannelDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapDistChannel>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.DistChannel))
+                .Select(r => new SapDistChannel(
+                    (r.SalesOrg ?? "").Trim().ToUpperInvariant(),
+                    r.DistChannel!.Trim().ToUpperInvariant()))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not SapODataException)
+        {
+            _logger.LogWarning(ex, "DistChannelList lookup failed");
+            return Array.Empty<SapDistChannel>();
+        }
+    }
+
+    public async Task<IReadOnlyList<SapDivision>> GetDivisionListAsync(
+        string? salesOrg = null,
+        string? distChannel = null,
+        CancellationToken ct = default)
+    {
+        var builder = new ODataQueryBuilder("DivisionList");
+
+        if (!string.IsNullOrWhiteSpace(salesOrg))
+            builder.Filter("SalesOrg", "eq", salesOrg.Trim().ToUpperInvariant());
+        if (!string.IsNullOrWhiteSpace(distChannel))
+            builder.Filter("DistChannel", "eq", distChannel.Trim().ToUpperInvariant());
+
+        var url = builder.Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("DivisionList GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapDivision>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapDivisionDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapDivision>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.Division))
+                .Select(r => new SapDivision(
+                    (r.SalesOrg ?? "").Trim().ToUpperInvariant(),
+                    (r.DistChannel ?? "").Trim().ToUpperInvariant(),
+                    r.Division!.Trim().ToUpperInvariant()))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not SapODataException)
+        {
+            _logger.LogWarning(ex, "DivisionList lookup failed");
+            return Array.Empty<SapDivision>();
+        }
+    }
+
+    public async Task<IReadOnlyList<SapDocType>> GetDocTypeListAsync(CancellationToken ct = default)
+    {
+        var url = new ODataQueryBuilder("DocTypeList").Build();
+        _logger.LogInformation("Calling SAP OData: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("DocTypeList GET failed: {StatusCode}", (int)response.StatusCode);
+                return Array.Empty<SapDocType>();
+            }
+
+            var rawJson = await response.Content.ReadAsStringAsync(ct);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapDocTypeDto>>(rawJson, JsonOptions);
+
+            if (result?.Value == null)
+                return Array.Empty<SapDocType>();
+
+            return result.Value
+                .Where(r => !string.IsNullOrWhiteSpace(r.DocType))
+                .Select(r => new SapDocType(r.DocType!, r.DocTypeName ?? ""))
+                .ToList();
+        }
+        catch (Exception ex) when (ex is not SapODataException)
+        {
+            _logger.LogWarning(ex, "DocTypeList lookup failed");
+            return Array.Empty<SapDocType>();
         }
     }
 
@@ -1439,6 +1777,12 @@ public class SapClient : ISapClient
         try
         {
             var response = await _httpClient.GetAsync(url, ct);
+            var rawBody = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogInformation(
+                "SAP UserRole lookup {SapUser}: status={StatusCode} body={Body}",
+                normalized,
+                (int)response.StatusCode,
+                rawBody);
             if (response.StatusCode is System.Net.HttpStatusCode.NotFound
                 or System.Net.HttpStatusCode.BadRequest)
             {
@@ -1459,9 +1803,85 @@ public class SapClient : ISapClient
                 return null;
             }
 
-            var rawJson = await response.Content.ReadAsStringAsync(ct);
-            var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleDto>>(rawJson, JsonOptions);
+            var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleDto>>(
+                rawBody, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
             return result?.Value is { Count: > 0 };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "SAP UserRole lookup error for {SapUser}", normalized);
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Reads role + sales org + validity window from
+    /// <c>ZC_AISO_USER_ROLE_QUERY</c> via the OData <c>UserRoles</c> alias.
+    /// Returns <c>null</c> when the user has no row, the entity set is not
+    /// published yet (404), the filter is rejected (400), or the network
+    /// fails — callers should fall back to <c>IUserScopeLookup</c>.
+    /// </summary>
+    public async Task<SapUserRoleRow?> GetUserRoleAsync(string sapUserId, CancellationToken ct = default)
+    {
+        if (string.IsNullOrWhiteSpace(sapUserId))
+            return null;
+
+        var normalized = sapUserId.Trim().ToUpperInvariant();
+        var url = new ODataQueryBuilder("UserRole")
+            .AddCustomParam("sap-client", "324")
+            .Filter("SapUser", "eq", normalized)
+            .Top(1)
+            .Build();
+
+        _logger.LogInformation("Calling SAP OData user-role query: {Url}", url);
+
+        try
+        {
+            var response = await _httpClient.GetAsync(url, ct);
+            var rawBody = await response.Content.ReadAsStringAsync(ct);
+            _logger.LogInformation(
+                "SAP UserRole lookup {SapUser}: status={StatusCode} body={Body}",
+                normalized,
+                (int)response.StatusCode,
+                rawBody);
+            if (response.StatusCode is System.Net.HttpStatusCode.NotFound
+                or System.Net.HttpStatusCode.BadRequest)
+            {
+                // Entity set not published yet (e.g. CDS view not activated) —
+                // caller should fall back to Postgres user_mappings.
+                _logger.LogWarning(
+                    "SAP UserRole lookup unavailable for {SapUser}: {StatusCode}",
+                    normalized,
+                    (int)response.StatusCode);
+                return null;
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning(
+                    "SAP UserRole lookup failed for {SapUser}: {StatusCode}",
+                    normalized,
+                    (int)response.StatusCode);
+                return null;
+            }
+
+            var result = JsonSerializer.Deserialize<ODataResponse<SapUserRoleDto>>(
+                rawBody, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+            var row = result?.Value?.FirstOrDefault();
+            if (row is null)
+            {
+                _logger.LogInformation(
+                    "SAP UserRole returned no row for {SapUser}", normalized);
+                return null;
+            }
+
+            return new SapUserRoleRow(
+                SapUser: row.SapUser?.Trim() ?? normalized,
+                Role: string.IsNullOrWhiteSpace(row.UserRole) ? null : row.UserRole.Trim(),
+                SalesOrg: string.IsNullOrWhiteSpace(row.SalesOrg) ? null : row.SalesOrg.Trim().ToUpperInvariant(),
+                ValidFrom: null,
+                ValidTo: null);
         }
         catch (Exception ex)
         {

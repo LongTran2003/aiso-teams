@@ -185,6 +185,16 @@ public class ForceCancelRoutingTests
 
         public StatusFixedSapClient(SalesOrderStatus status) => _status = status;
 
+        public Task<IReadOnlyList<SapValidMaterialPlant>> GetValidMaterialPlantsAsync(CancellationToken ct = default)
+        {
+            return Task.FromResult<IReadOnlyList<SapValidMaterialPlant>>([]);
+        }
+
+        public Task<IReadOnlyList<SapValidMaterialSales>> GetValidMaterialSalesAsync(string? salesOrg = null, string? distChannel = null, int top = 30, CancellationToken ct = default)
+        {
+            return Task.FromResult<IReadOnlyList<SapValidMaterialSales>>([]);
+        }
+
         public Task<SalesOrder?> GetSalesOrderByIdAsync(string soNumber, CancellationToken ct = default) =>
             Task.FromResult<SalesOrder?>(new SalesOrder
             {
@@ -242,9 +252,12 @@ public class ForceCancelRoutingTests
             => throw new NotImplementedException();
         public Task<bool?> SapUserExistsAsync(string sapUserId, CancellationToken ct = default)
             => throw new NotImplementedException();
+
+        public Task<SapUserRoleRow?> GetUserRoleAsync(string sapUserId, CancellationToken ct = default)
+            => throw new NotImplementedException();
         public Task<IReadOnlyList<SapMaterial>> GetMaterialsAsync(CancellationToken ct = default) => Task.FromResult<IReadOnlyList<SapMaterial>>(Array.Empty<SapMaterial>());
 
-        public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(CancellationToken ct = default)
+        public Task<IReadOnlyList<SapSalesArea>> GetSalesAreasAsync(string? salesOrg = null, CancellationToken ct = default)
             => throw new NotImplementedException();
         public Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
             string? salesOrg = null, string? distChannel = null, string? division = null, int top = 100, CancellationToken ct = default)
@@ -252,6 +265,14 @@ public class ForceCancelRoutingTests
         public Task<bool?> IsCustomerValidForSalesAreaAsync(
             string customer, string salesOrg, string distChannel, string division, CancellationToken ct = default)
             => throw new NotImplementedException();
+        public Task<IReadOnlyList<SapSalesOrg>> GetSalesOrgListAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<SapSalesOrg>>([]);
+        public Task<IReadOnlyList<SapDistChannel>> GetDistChannelListAsync(string? salesOrg = null, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<SapDistChannel>>([]);
+        public Task<IReadOnlyList<SapDivision>> GetDivisionListAsync(string? salesOrg = null, string? distChannel = null, CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<SapDivision>>([]);
+        public Task<IReadOnlyList<SapDocType>> GetDocTypeListAsync(CancellationToken ct = default)
+            => Task.FromResult<IReadOnlyList<SapDocType>>([]);
     }
 
     private sealed class NoopApprovals : IOrderApprovalService
@@ -308,3 +329,4 @@ public class ForceCancelRoutingTests
             => Task.CompletedTask; public Task<IReadOnlyList<AISO.Domain.Users.ActiveDelegation>> GetActiveDelegationsAsync(string? filterDelegatorUser = null, CancellationToken ct = default) => Task.FromResult<IReadOnlyList<AISO.Domain.Users.ActiveDelegation>>(Array.Empty<AISO.Domain.Users.ActiveDelegation>());
     }
 }
+

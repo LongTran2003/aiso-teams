@@ -12,7 +12,7 @@ namespace AISO.AiOrchestration.Functions;
 /// </summary>
 public sealed class CreateOrderFunction : IFunction
 {
-    public const int MaxLineSlots = 8;
+    public const int MaxLineSlots = 20;
 
     private readonly ISapClient _sap;
     private readonly IUserScopeLookup _scope;
@@ -42,12 +42,14 @@ public sealed class CreateOrderFunction : IFunction
 
     public async Task<FunctionResult> ExecuteAsync(JsonElement parameters, string requestingSapUser, CancellationToken ct = default)
     {
-        var customer = ReadString(parameters, "customer") ?? "10100001";
+        var customer = ReadString(parameters, "customer");
         var salesOrg = ReadString(parameters, "sales_org");
         var distChannel = ReadString(parameters, "dist_channel") ?? "10";
         var division = ReadString(parameters, "division") ?? "00";
         var currency = ReadString(parameters, "currency") ?? "USD";
-        var unit = "EA";
+        // No hard-coded "EA" default. If the LLM doesn't pass a unit we'll resolve
+        // the first available material's BaseUnit from SAP below.
+        string? unit = ReadString(parameters, "unit");
 
         var userOrg = await _scope.GetSalesOrgBySapUserAsync(requestingSapUser, ct);
         if (string.IsNullOrWhiteSpace(salesOrg))
@@ -78,25 +80,42 @@ public sealed class CreateOrderFunction : IFunction
                         "VALIDATION");
                 }
 
-                plant = ReadString(item, "plant") ?? plant;
+                plant = ReadString(item, "plant"); // We no longer fallback to `plant` because there is no default plant
                 unit = ReadString(item, "unit") ?? unit;
 
                 lines.Add(new ConfirmCreateOrderLine(
                     material.Trim().ToUpperInvariant(),
-                    qty));
+                    qty,
+                    plant ?? "",
+                    unit ?? ""));
             }
         }
 
+        // Load material plants early (needed for fallback line and material choices).
+        var materials = await _sap.GetMaterialsAsync(ct);
+        var materialPlants = await _sap.GetValidMaterialPlantsAsync(ct);
+
         if (lines.Count == 0)
         {
-            lines.Add(new ConfirmCreateOrderLine("TG11", 1m));
+            var fallbackMat = materialPlants.Count > 0 ? materialPlants[0] : null;
+            lines.Add(new ConfirmCreateOrderLine(
+                "TG11",
+                1m,
+                fallbackMat?.Plant ?? "1010",
+                fallbackMat?.BaseUnit ?? "EA"));
         }
 
-        var areas = await _sap.GetSalesAreasAsync(ct);
+        var areas = await _sap.GetSalesAreasAsync(
+            string.IsNullOrWhiteSpace(userOrg) ? null : userOrg,
+            ct);
         var customers = await _sap.GetValidCustomersAsync(
             salesOrg: string.IsNullOrWhiteSpace(userOrg) ? null : userOrg,
             top: 100,
             ct: ct);
+
+        // If scoped list empty, fall back to unfiltered sample for the dropdown.
+        if (areas.Count == 0)
+            areas = await _sap.GetSalesAreasAsync(null, ct);
 
         // If scoped list empty, fall back to unfiltered sample for the dropdown.
         if (customers.Count == 0)
@@ -112,24 +131,69 @@ public sealed class CreateOrderFunction : IFunction
             .Select(g => g.First())
             .ToList();
 
-        var materials = await _sap.GetMaterialsAsync(ct);
-        var materialChoices = materials
-            .Select(m => new ConfirmCreateChoice(m.Label, m.Material))
+        // Load DocTypes via the new dedicated endpoint.
+        IReadOnlyList<SapDocType> docTypes;
+        try { docTypes = await _sap.GetDocTypeListAsync(ct); } catch { docTypes = Array.Empty<SapDocType>(); }
+        var docTypeChoices = docTypes
+            .Select(d => new ConfirmCreateChoice($"{d.DocType} — {d.DocTypeName}", d.DocType))
             .ToList();
+
+        // Fetch material names to enrich the label
+        var matDict = materials.ToDictionary(m => m.Material, m => m.MaterialName);
+
+        var materialChoices = materialPlants
+            .Select(mp =>
+            {
+                var name = matDict.TryGetValue(mp.Material, out var n) ? n : mp.MaterialType;
+                return new ConfirmCreateChoice(
+                    $"{mp.Material.TrimStart('0')} - {name} (Kho {mp.Plant})",
+                    $"{mp.Material}|{mp.Plant}|{mp.BaseUnit}");
+            })
+            .ToList();
+
+        // If the LLM didn't pass a unit, resolve it from the first material's
+        // BaseUnit so we never silently fall back to a hard-coded "EA".
+        if (string.IsNullOrWhiteSpace(unit) && materialPlants.Count > 0)
+            unit = materialPlants[0].BaseUnit;
+
+        // If SAP is unreachable/returning 401, all three will be empty.
+        // Show a clear error so the user knows it's a system issue, not an empty dropdown.
+        if (areas.Count == 0 && customers.Count == 0 && materialChoices.Count == 0)
+        {
+            return FunctionResult.Fail(
+                "SAP system is currently unavailable or your account does not have access. " +
+                "Please contact your administrator. (Error: SalesArea/Customer/Material data unavailable)",
+                "SAP_UNAVAILABLE");
+        }
 
         // Prefer a ValidCustomer row matching draft customer (+ user org when possible).
         ConfirmCreateChoice? selected = null;
         if (customerChoices.Count > 0)
         {
-            selected = customerChoices.FirstOrDefault(c =>
-                    SapValidCustomer.TryParseKey(c.Value, out var id, out var org, out _, out _)
-                    && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase)
-                    && (string.IsNullOrWhiteSpace(salesOrg)
-                        || string.Equals(org, salesOrg, StringComparison.OrdinalIgnoreCase)))
-                ?? customerChoices.FirstOrDefault(c =>
-                    SapValidCustomer.TryParseKey(c.Value, out var id, out _, out _, out _)
-                    && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase))
-                ?? customerChoices[0];
+            if (!string.IsNullOrWhiteSpace(customer))
+            {
+                selected = customerChoices.FirstOrDefault(c =>
+                        SapValidCustomer.TryParseKey(c.Value, out var id, out var org, out _, out _)
+                        && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase)
+                        && (string.IsNullOrWhiteSpace(salesOrg)
+                            || string.Equals(org, salesOrg, StringComparison.OrdinalIgnoreCase)))
+                    ?? customerChoices.FirstOrDefault(c =>
+                        SapValidCustomer.TryParseKey(c.Value, out var id, out _, out _, out _)
+                        && string.Equals(id.TrimStart('0'), customer.Trim().TrimStart('0'), StringComparison.OrdinalIgnoreCase));
+
+                if (selected == null)
+                {
+                    // Customer requested was not found in the valid customers list from SAP
+                    return FunctionResult.Fail(
+                        $"Customer {customer} does not exist or is not valid for your sales area. Please check the customer ID.",
+                        "VALIDATION");
+                }
+            }
+            else
+            {
+                // No customer requested, just pick the first available one to pre-fill the form
+                selected = customerChoices[0];
+            }
 
             if (SapValidCustomer.TryParseKey(selected.Value, out var sId, out var sOrg, out var sChan, out var sDiv))
             {
@@ -158,24 +222,28 @@ public sealed class CreateOrderFunction : IFunction
         }
 
         var customerFormValue = selected?.Value
-            ?? $"{customer.Trim()}|{salesOrg}|{distChannel}|{division}";
+            ?? $"{(customer ?? "").Trim()}|{salesOrg}|{distChannel}|{division}";
 
         _logger.LogInformation(
             "CreateOrder confirm step: customer={Customer} area={Org}/{Chan}/{Div} lines={LineCount} areas={AreaCount} customers={CustomerCount} by={User}",
             customer, salesOrg, distChannel, division, lines.Count, salesAreaChoices.Count, customerChoices.Count, requestingSapUser);
 
+        var debugInfo = string.Empty; // Reserved for future debug output
+
         return FunctionResult.Ok(new ConfirmCreateOrderResponse(
             Customer: customerFormValue,
             SalesOrg: salesOrg.Trim().ToUpperInvariant(),
             Currency: currency.Trim().ToUpperInvariant(),
-            Plant: plant.Trim(),
-            Unit: unit.Trim().ToUpperInvariant(),
+            Plant: "", // Plant will be read from Material
+            Unit: string.IsNullOrWhiteSpace(unit) ? string.Empty : unit.Trim().ToUpperInvariant(),
             Lines: lines,
             DistChannel: distChannel.Trim().ToUpperInvariant(),
             Division: division.Trim().ToUpperInvariant(),
             SalesAreaChoices: salesAreaChoices,
             CustomerChoices: customerChoices,
-            MaterialChoices: materialChoices));
+            MaterialChoices: materialChoices,
+            DocTypeChoices: docTypeChoices,
+            DebugInfo: debugInfo));
     }
 
     private static string? ReadString(JsonElement element, string name) =>
@@ -184,7 +252,7 @@ public sealed class CreateOrderFunction : IFunction
             : null;
 }
 
-public sealed record ConfirmCreateOrderLine(string Material, decimal Qty);
+public sealed record ConfirmCreateOrderLine(string Material, decimal Qty, string Plant = "", string Unit = "");
 
 public sealed record ConfirmCreateChoice(string Title, string Value);
 
@@ -200,7 +268,9 @@ public sealed record ConfirmCreateOrderResponse(
     string Division = "00",
     IReadOnlyList<ConfirmCreateChoice>? SalesAreaChoices = null,
     IReadOnlyList<ConfirmCreateChoice>? CustomerChoices = null,
-    IReadOnlyList<ConfirmCreateChoice>? MaterialChoices = null)
+    IReadOnlyList<ConfirmCreateChoice>? MaterialChoices = null,
+    IReadOnlyList<ConfirmCreateChoice>? DocTypeChoices = null,
+    string? DebugInfo = null)
 {
     /// <summary>First line material (tests / legacy callers).</summary>
     public string Material => Lines.Count > 0 ? Lines[0].Material : string.Empty;

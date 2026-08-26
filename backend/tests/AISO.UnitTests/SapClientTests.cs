@@ -273,11 +273,86 @@ public class SapClientTests
         });
 
         Assert.Equal("0000001888", result.SoNumber);
-        Assert.Contains(handler.RequestUris, u => u.Contains("createSalesOrder", StringComparison.Ordinal));
+        Assert.Contains(handler.RequestUris, u => u.Contains("SalesOrder?sap-client=324", StringComparison.Ordinal));
         Assert.Contains("REQUESTING_TEAMS_USER", handler.RequestBodies[0] ?? "");
         Assert.Contains("DEV-024", handler.RequestBodies[0] ?? "");
         Assert.Contains("\"CUSTOMER\":\"0000001000\"", handler.RequestBodies[0] ?? "");
         Assert.Contains(handler.RequestUris, u => u.Contains("SalesOrder('0000001888')", StringComparison.Ordinal));
+        // No PO/Date header → follow-up update should be skipped (no extra call).
+        Assert.Equal(3, handler.RequestUris.Count);
+    }
+
+    [Fact]
+    public async Task CreateSalesOrder_WithPoAndDate_TriggersFollowUpUpdateAction()
+    {
+        var handler = new StubHttpMessageHandler(
+            (HttpStatusCode.OK, "{\"SoNumber\":\"0000001999\"}"),       // 1. POST create
+            (HttpStatusCode.OK, "{}"),                                  // 2. POST updateSalesOrder (follow-up)
+            (HttpStatusCode.OK,                                         // 3. GET refresh
+                "{\"SoNumber\":\"0000001999\",\"Customer\":\"1000\",\"SalesOrg\":\"FU24\",\"OverallStatus\":\"A\",\"Currency\":\"VND\"}"));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://sap.test/") };
+        var client = new SapClient(httpClient, new StubTokenManager(), NullLogger<SapClient>.Instance);
+
+        await client.CreateSalesOrderAsync(new CreateSalesOrderDto
+        {
+            DocType = "ZOR",
+            SalesOrg = "FU24",
+            DistChannel = "FU",
+            Division = "FS",
+            Customer = "1000",
+            Currency = "VND",
+            RequestingSapUser = "DEV-024",
+            PurchaseOrderRef = "PO-4500001234",
+            RequestedDeliveryDate = "2026-09-30",
+            Items = new[]
+            {
+                new CreateSalesOrderItemDto
+                {
+                    Material = "MAT-1",
+                    Plant = "1010",
+                    OrderQty = 5,
+                    Unit = "PC"
+                }
+            }
+        });
+
+        // 1. POST create + 1 POST update follow-up + 2 GET refresh (header + items).
+        Assert.Equal(6, handler.RequestUris.Count);
+        Assert.Contains(handler.RequestUris, u => u.Contains("updateSalesOrder", StringComparison.Ordinal));
+        Assert.Contains("NEW_REFERENCE", handler.RequestBodies[1] ?? "");
+        Assert.Contains("PO-4500001234", handler.RequestBodies[1] ?? "");
+        Assert.Contains("REQUESTED_DELIVERY_DATE", handler.RequestBodies[1] ?? "");
+    }
+
+    [Fact]
+    public async Task CreateSalesOrder_WhenFollowUpUpdateFails_StillReturnsCreatedOrder()
+    {
+        var handler = new StubHttpMessageHandler(
+            (HttpStatusCode.OK, "{\"SoNumber\":\"0000002000\"}"),       // 1. POST create
+            (HttpStatusCode.BadRequest, "{\"error\":{\"message\":\"boom\"}}"), // 2. update fails
+            (HttpStatusCode.OK,                                         // 3. GET refresh
+                "{\"SoNumber\":\"0000002000\",\"Customer\":\"1000\",\"SalesOrg\":\"FU24\",\"OverallStatus\":\"A\",\"Currency\":\"VND\"}"));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://sap.test/") };
+        var client = new SapClient(httpClient, new StubTokenManager(), NullLogger<SapClient>.Instance);
+
+        var result = await client.CreateSalesOrderAsync(new CreateSalesOrderDto
+        {
+            DocType = "ZOR",
+            SalesOrg = "FU24",
+            DistChannel = "FU",
+            Division = "FS",
+            Customer = "1000",
+            Currency = "VND",
+            RequestingSapUser = "DEV-024",
+            PurchaseOrderRef = "PO-1",
+            Items = new[]
+            {
+                new CreateSalesOrderItemDto { Material = "MAT-1", Plant = "1010", OrderQty = 1, Unit = "PC" }
+            }
+        });
+
+        // Create itself succeeded even though the follow-up BAPI failed.
+        Assert.Equal("0000002000", result.SoNumber);
     }
 
     [Theory]
@@ -524,6 +599,72 @@ public class SapClientTests
         SapClient.ApplyStatusFilter(builder, status);
 
         Assert.Contains(Uri.EscapeDataString(expectedFragment), builder.Build());
+    }
+
+    [Fact]
+    public async Task GetSalesAreasAsync_WithSalesOrg_AddsServerSideFilter()
+    {
+        // Three rows across two SalesOrgs so we can prove the server-side filter narrowed the result.
+        const string body = """
+            {"value":[
+              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"TV01","DistrChannel":"10","Division":"00","SalesOrgName":"TV"}
+            ]}
+            """;
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        var areas = await client.GetSalesAreasAsync("UE00");
+
+        Assert.Single(areas);
+        Assert.Equal("UE00", areas[0].SalesOrg);
+        Assert.Equal("WH", areas[0].DistChannel);
+        Assert.Equal("AS", areas[0].Division);
+        // Server-side filter must be present in the URL — not just client-side.
+        // ODataQueryBuilder escapes the filter value: 'UE00' → %27UE00%27.
+        var uri = handler.RequestUris.Single();
+        Assert.Contains("SalesArea", uri);
+        Assert.Contains("&$filter=", uri);
+        Assert.Contains("SalesOrg", uri);
+        Assert.Contains("%27UE00%27", uri);
+        // Top must be high enough to cover a fresh org like UE00 (previous bug: Top(30) silently dropped it).
+        Assert.Contains("$top=200", uri);
+    }
+
+    [Fact]
+    public async Task GetSalesAreasAsync_WithEmptySalesOrg_DoesNotFilter()
+    {
+        const string body = """
+            {"value":[
+              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"TV01","DistrChannel":"10","Division":"00","SalesOrgName":"TV"}
+            ]}
+            """;
+        var client = CreateClient(HttpStatusCode.OK, body, out var handler);
+
+        var areas = await client.GetSalesAreasAsync(null);
+
+        Assert.Equal(2, areas.Count);
+        var uri = handler.RequestUris.Single();
+        Assert.DoesNotContain("&$filter=", uri);
+    }
+
+    [Fact]
+    public async Task GetSalesAreasAsync_ServerReturnsMixedOrgs_DefensiveClientFilterKeepsOnlyRequestedOrg()
+    {
+        // Simulates a gateway that ignored $filter and returned mixed rows.
+        const string body = """
+            {"value":[
+              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"TV01","DistrChannel":"10","Division":"00","SalesOrgName":"TV"}
+            ]}
+            """;
+        var client = CreateClient(HttpStatusCode.OK, body, out _);
+
+        var areas = await client.GetSalesAreasAsync("UE00");
+
+        Assert.Single(areas);
+        Assert.Equal("UE00", areas[0].SalesOrg);
     }
 
     private sealed class StubTokenManager : ISapTokenManager

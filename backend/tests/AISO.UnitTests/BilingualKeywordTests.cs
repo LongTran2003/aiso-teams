@@ -83,14 +83,16 @@ public class BilingualKeywordTests
     public void BuildConfirmCreateAndUpdateCards_IncludeActions()
     {
         var create = AISO.Bot.Cards.Builders.TeamsCardBuilder.BuildConfirmCreateOrderCard(
-            "10100001",
-            "1010",
-            "USD",
-            lines: new[]
-            {
-                new ConfirmCreateOrderLine("TG11", 2),
-                new ConfirmCreateOrderLine("DXTR1000", 5)
-            });
+            new ConfirmCreateOrderResponse(
+                Customer: "10100001",
+                SalesOrg: "1010",
+                Currency: "USD",
+                Plant: "1010",
+                Unit: "EA",
+                Lines: new[] {
+                    new ConfirmCreateOrderLine("TG11", 2),
+                    new ConfirmCreateOrderLine("DXTR1000", 5)
+                }));
         var createJson = Newtonsoft.Json.JsonConvert.SerializeObject(create.Content);
         Assert.Contains("create_so_confirm", createJson);
         Assert.Contains("10100001", createJson);
@@ -179,6 +181,37 @@ public class BilingualKeywordTests
     }
 
     [Theory]
+    [InlineData("my profile")]
+    [InlineData("My Profile")]
+    [InlineData("hồ sơ của tôi")]
+    [InlineData("thông tin của tôi")]
+    public async Task Keyword_MyProfile_RoutesToMyProfile(string message)
+    {
+        var dispatcher = CreateDispatcher();
+
+        var result = await dispatcher.DispatchAsync(message, "DEV-249", UserRole.Employee);
+
+        Assert.True(result.Handled, message);
+        Assert.Equal("MyProfile", result.FunctionName);
+        Assert.True(result.Result?.Success, result.Result?.ErrorMessage);
+        var payload = Assert.IsType<MyProfileResponse>(result.Result!.Payload);
+        Assert.Equal("DEV-249", payload.SapUser);
+    }
+
+    [Fact]
+    public async Task Keyword_MyProfile_BeatsMyOrders_ForProfileText()
+    {
+        // "my profile" should NOT fall through to GetSalesOrders.
+        var dispatcher = CreateDispatcher();
+
+        var result = await dispatcher.DispatchAsync("my profile", "DEV-249", UserRole.Employee);
+
+        Assert.True(result.Handled);
+        Assert.Equal("MyProfile", result.FunctionName);
+        Assert.IsNotType<GetSalesOrdersResponse>(result.Result!.Payload);
+    }
+
+    [Theory]
     [InlineData("show overdue orders")]
     [InlineData("xem đơn hàng quá hạn")]
     [InlineData("đơn giao trễ")]
@@ -225,6 +258,7 @@ public class BilingualKeywordTests
         services.AddSingleton<IFunction, RequestReleaseFunction>();
         services.AddSingleton<IFunction, GetSalesOrdersFunction>();
         services.AddSingleton<IFunction, GetOverdueOrdersFunction>();
+        services.AddSingleton<IFunction, MyProfileFunction>();
         services.AddSingleton<IFunctionRegistry, FunctionRegistry>();
         var sp = services.BuildServiceProvider();
         return new KeywordFunctionDispatcher(sp.GetRequiredService<IFunctionRegistry>());
