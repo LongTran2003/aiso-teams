@@ -81,7 +81,19 @@
           "width": "stretch",
           "items": [
             {
-              "type": "Input.ChoiceSet", "id": "material1", "label": "Material 1", "isRequired": true, "errorMessage": "At least one material is required", "value": "${material1}", "choices": [ { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" } ]
+              "type": "Input.ChoiceSet",
+              "id": "material1",
+              "label": "Material 1",
+              "isRequired": true,
+              "errorMessage": "At least one material is required",
+              "value": "${material1}",
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
             }
           ]
         },
@@ -111,18 +123,18 @@
           "width": "stretch",
           "items": [
             {
-                "type": "Input.ChoiceSet",
-                "id": "material2",
-                "label": "Material 2",
-                "value": "${material2}",
-                "choices": [
-                  {
-                    "$data": "${materialChoices}",
-                    "title": "${title}",
-                    "value": "${value}"
-                  }
-                ]
-              }
+              "type": "Input.ChoiceSet",
+              "id": "material2",
+              "label": "Material 2",
+              "value": "${material2}",
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
+            }
           ]
         },
         {
@@ -149,18 +161,18 @@
           "width": "stretch",
           "items": [
             {
-                "type": "Input.ChoiceSet",
-                "id": "material3",
-                "label": "Material 3",
-                "value": "${material3}",
-                "choices": [
-                  {
-                    "$data": "${materialChoices}",
-                    "title": "${title}",
-                    "value": "${value}"
-                  }
-                ]
-              }
+              "type": "Input.ChoiceSet",
+              "id": "material3",
+              "label": "Material 3",
+              "value": "${material3}",
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
+            }
           ]
         },
         {
@@ -187,18 +199,18 @@
           "width": "stretch",
           "items": [
             {
-                "type": "Input.ChoiceSet",
-                "id": "material4",
-                "label": "Material 4",
-                "value": "${material4}",
-                "choices": [
-                  {
-                    "$data": "${materialChoices}",
-                    "title": "${title}",
-                    "value": "${value}"
-                  }
-                ]
-              }
+              "type": "Input.ChoiceSet",
+              "id": "material4",
+              "label": "Material 4",
+              "value": "${material4}",
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
+            }
           ]
         },
         {
@@ -216,7 +228,6 @@
         }
       ]
     },
-
     {
       "type": "ColumnSet",
       "spacing": "Small",
@@ -226,18 +237,18 @@
           "width": "stretch",
           "items": [
             {
-                "type": "Input.ChoiceSet",
-                "id": "material5",
-                "label": "Material 5",
-                "value": "${material5}",
-                "choices": [
-                  {
-                    "$data": "${materialChoices}",
-                    "title": "${title}",
-                    "value": "${value}"
-                  }
-                ]
-              }
+              "type": "Input.ChoiceSet",
+              "id": "material5",
+              "label": "Material 5",
+              "value": "${material5}",
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
+            }
           ]
         },
         {
@@ -264,18 +275,18 @@
           "width": "stretch",
           "items": [
             {
-                "type": "Input.ChoiceSet",
-                "id": "material6",
-                "label": "Material 6",
-                "value": "${material6}",
-                "choices": [
-                  {
-                    "$data": "${materialChoices}",
-                    "title": "${title}",
-                    "value": "${value}"
-                  }
-                ]
-              }
+              "type": "Input.ChoiceSet",
+              "id": "material6",
+              "label": "Material 6",
+              "value": "${material6}",
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
+            }
           ]
         },
         {
@@ -302,18 +313,18 @@
           "width": "stretch",
           "items": [
             {
-                "type": "Input.ChoiceSet",
-                "id": "material7",
-                "label": "Material 7",
-                "value": "${material7}",
-                "choices": [
-                  {
-                    "$data": "${materialChoices}",
-                    "title": "${title}",
-                    "value": "${value}"
-                  }
-                ]
-              }
+              "type": "Input.ChoiceSet",
+              "id": "material7",
+              "label": "Material 7",
+              "value": "${material7}",
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
+            }
           ]
         },
         {
@@ -340,18 +351,18 @@
           "width": "stretch",
           "items": [
             {
-                "type": "Input.ChoiceSet",
-                "id": "material8",
-                "label": "Material 8",
-                "value": "${material8}",
-                "choices": [
-                  {
-                    "$data": "${materialChoices}",
-                    "title": "${title}",
-                    "value": "${value}"
-                  }
-                ]
-              }
+              "type": "Input.ChoiceSet",
+              "id": "material8",
+              "label": "Material 8",
+              "value": "${material8}",
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
+            }
           ]
         },
         {
@@ -376,11 +387,6 @@
       "title": "Create order",
       "style": "positive",
       "data": {
-        "msteams": {
-          "type": "messageBack",
-          "displayText": "Confirm create order",
-          "text": "create order"
-        },
         "action": "create_so_confirm",
         "plant": "${plant}",
         "unit": "${unit}"
@@ -399,4 +405,3 @@
     }
   ]
 }
-

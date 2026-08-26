@@ -21,13 +21,34 @@
       "type": "FactSet",
       "spacing": "Small",
       "facts": [
-        { "title": "Sales Area", "value": "${salesAreaLabel}" },
-        { "title": "Customer", "value": "${customerLabel}" },
-        { "title": "Ship-to", "value": "${shipToParty}" },
-        { "title": "Order type", "value": "${docType}" },
-        { "title": "Currency", "value": "${currency}" },
-        { "title": "PO Number", "value": "${purchaseOrderRef}" },
-        { "title": "Delivery Date", "value": "${requestedDeliveryDate}" }
+        {
+          "title": "Sales Area",
+          "value": "${salesAreaLabel}"
+        },
+        {
+          "title": "Customer",
+          "value": "${customerLabel}"
+        },
+        {
+          "title": "Ship-to",
+          "value": "${shipToParty}"
+        },
+        {
+          "title": "Order type",
+          "value": "${docType}"
+        },
+        {
+          "title": "Currency",
+          "value": "${currency}"
+        },
+        {
+          "title": "PO Number",
+          "value": "${purchaseOrderRef}"
+        },
+        {
+          "title": "Delivery Date",
+          "value": "${requestedDeliveryDate}"
+        }
       ]
     },
     {
@@ -38,18 +59,22 @@
       "spacing": "Medium",
       "wrap": true
     },
+    {
+      "type": "Container",
+      "spacing": "Small",
+      "items": [
         {
-          "type": "Container",
-          "spacing": "Small",
-          "items": [
+          "type": "FactSet",
+          "facts": [
             {
-              "type": "FactSet",
-              "facts": [
-                { "$data": "${lineItems}", "title": "${Material}", "value": "Qty ${Qty}  Plant: ${Plant}  Unit: ${Unit}" }
-              ]
+              "$data": "${lineItems}",
+              "title": "${Material}",
+              "value": "Qty ${Qty}  Plant: ${Plant}  Unit: ${Unit}"
             }
           ]
-        },
+        }
+      ]
+    },
     {
       "type": "Input.Text",
       "id": "lineItemsJson",
@@ -63,11 +88,6 @@
       "title": "Confirm & Create",
       "style": "positive",
       "data": {
-        "msteams": {
-          "type": "messageBack",
-          "displayText": "Confirm and create order",
-          "text": "create order"
-        },
         "action": "create_so_confirm",
         "salesArea": "${salesAreaKey}",
         "salesOrg": "${salesOrg}",
@@ -87,11 +107,6 @@
       "type": "Action.Submit",
       "title": "Back",
       "data": {
-        "msteams": {
-          "type": "messageBack",
-          "displayText": "Back to items",
-          "text": "Back"
-        },
         "action": "create_so_step3_submit",
         "salesArea": "${salesAreaKey}",
         "salesOrg": "${salesOrg}",

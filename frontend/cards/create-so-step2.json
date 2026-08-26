@@ -38,7 +38,13 @@
           "isRequired": true,
           "errorMessage": "Customer is required",
           "value": "${customer}",
-          "choices": [ { "$data": "${customerChoices}", "title": "${title}", "value": "${value}" } ]
+          "choices": [
+            {
+              "$data": "${customerChoices}",
+              "title": "${title}",
+              "value": "${value}"
+            }
+          ]
         },
         {
           "type": "Input.Text",
@@ -85,7 +91,13 @@
                   "isRequired": true,
                   "errorMessage": "Order type is required",
                   "value": "${selectedDocType}",
-                  "choices": [ { "$data": "${docTypeChoices}", "title": "${title}", "value": "${value}" } ]
+                  "choices": [
+                    {
+                      "$data": "${docTypeChoices}",
+                      "title": "${title}",
+                      "value": "${value}"
+                    }
+                  ]
                 }
               ]
             },
@@ -158,7 +170,7 @@
           "type": "Input.Text",
           "id": "shipToParty",
           "label": "Ship-to Party Customer Number",
-          "placeholder": "Optional — leave empty to use customer default",
+          "placeholder": "Optional \u2014 leave empty to use customer default",
           "value": "${shipToParty}",
           "isVisible": "${showShipToParty} == true"
         }
@@ -171,10 +183,6 @@
       "title": "Next",
       "style": "positive",
       "data": {
-        "msteams": {
-          "type": "messageBack",
-          "displayText": "Next step"
-        },
         "action": "create_so_step2_submit",
         "salesArea": "${salesAreaKey}",
         "salesOrg": "${salesOrg}",
