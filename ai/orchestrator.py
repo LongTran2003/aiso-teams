@@ -593,18 +593,10 @@ class AIOrchestrator:
         revoke_kws = ["revoke", "thu hồi", "thu hoi", "huỷ uỷ quyền", "huy uy quyen"]
         if any(kw in msg for kw in revoke_kws):
             return "RevokeDelegation"
-        # Force delegate
-        force_kws = ["force delegate", "cưỡng chế"]
-        if any(kw in msg for kw in force_kws):
-            return "ForceDelegateApproval"
         # List delegations
         list_kws = ["list delegation", "danh sách uỷ quyền", "danh sach uy quyen"]
         if any(kw in msg for kw in list_kws):
             return "ListDelegations"
-        # Normal delegate
-        delegate_kws = ["delegate", "uỷ quyền", "ủy quyền", "uy quyen"]
-        if any(kw in msg for kw in delegate_kws):
-            return "DelegateApproval"
         return None
 
     def process(
