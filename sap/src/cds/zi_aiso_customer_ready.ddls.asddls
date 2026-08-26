@@ -16,11 +16,7 @@ define view entity ZI_AISO_CUSTOMER_READY
                                and _ag.spart = knvv.spart
                                and _ag.parvw = 'AG'
 
-  left outer join knvp as _we on  _we.kunnr = knvv.kunnr
-                               and _we.vkorg = knvv.vkorg
-                               and _we.vtweg = knvv.vtweg
-                               and _we.spart = knvv.spart
-                               and _we.parvw = 'WE'
+  
 {
   key knvv.kunnr as Customer,
   key knvv.vkorg as SalesOrg,
@@ -30,6 +26,7 @@ define view entity ZI_AISO_CUSTOMER_READY
       kna1.name1 as CustomerName,
 
       // Cờ cảnh báo — không chặn nếu thiếu, vì AG/WE có thể tự suy ra
-      case when _ag.kunnr is not null then 'X' else '' end as HasExplicitAG,
-      case when _we.kunnr is not null then 'X' else '' end as HasExplicitWE
+      case when _ag.kunnr is not null then 'X' else '' end as HasExplicitAG
+      
 }
+where knvv.kalks is not initial 
