@@ -43,8 +43,7 @@
       "data": {
         "msteams": {
           "type": "messageBack",
-          "displayText": "Next step",
-          "text": "Next"
+          "displayText": "Next step"
         },
         "action": "create_so_step1_submit"
       }

@@ -363,7 +363,7 @@ internal static class TeamsCardBuilder
                     ["title"] = "Next",
                     ["style"] = "positive",
                     ["data"] = new Dictionary<string, object> {
-                        ["msteams"] = new Dictionary<string, object> { ["type"] = "messageBack", ["displayText"] = "Next step", ["text"] = "Next" },
+                        ["msteams"] = new Dictionary<string, object> { ["type"] = "messageBack", ["displayText"] = "Next step" },
                         ["action"] = "create_so_step1_submit"
                     }
                 },
