@@ -10,7 +10,7 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "Create sales order (Step 3 of 4) — Line Items",
+          "text": "Create sales order (Step 3 of 4) \u2014 Line Items",
           "weight": "Bolder",
           "size": "Medium",
           "color": "Accent",
@@ -20,8 +20,14 @@
           "type": "FactSet",
           "spacing": "Small",
           "facts": [
-            { "title": "Customer", "value": "${customerLabel}" },
-            { "title": "Sales area", "value": "${salesAreaLabel}" }
+            {
+              "title": "Customer",
+              "value": "${customerLabel}"
+            },
+            {
+              "title": "Sales area",
+              "value": "${salesAreaLabel}"
+            }
           ]
         }
       ]
@@ -34,17 +40,29 @@
           "type": "FactSet",
           "spacing": "Small",
           "facts": [
-            { "title": "Order type", "value": "${docType}" },
-            { "title": "Currency", "value": "${currency}" },
-            { "title": "PO", "value": "${purchaseOrderRef != '' ? purchaseOrderRef : '(none)'}" },
-            { "title": "Delivery", "value": "${requestedDeliveryDate != '' ? requestedDeliveryDate : '(none)'}" }
+            {
+              "title": "Order type",
+              "value": "${docType}"
+            },
+            {
+              "title": "Currency",
+              "value": "${currency}"
+            },
+            {
+              "title": "PO",
+              "value": "${purchaseOrderRef != '' ? purchaseOrderRef : '(none)'}"
+            },
+            {
+              "title": "Delivery",
+              "value": "${requestedDeliveryDate != '' ? requestedDeliveryDate : '(none)'}"
+            }
           ]
         }
       ]
     },
     {
       "type": "TextBlock",
-      "text": "Line items — fill at least one row before continuing",
+      "text": "Line items \u2014 fill at least one row before continuing",
       "weight": "Bolder",
       "size": "Small",
       "spacing": "Medium",
@@ -94,7 +112,13 @@
               "isRequired": true,
               "errorMessage": "At least one material is required",
               "value": "${material1}",
-              "choices": [ { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" } ]
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
             }
           ]
         },
@@ -141,7 +165,13 @@
               "label": "Material 2 (optional)",
               "style": "compact",
               "value": "${material2}",
-              "choices": [ { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" } ]
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
             }
           ]
         },
@@ -186,7 +216,13 @@
               "label": "Material 3 (optional)",
               "style": "compact",
               "value": "${material3}",
-              "choices": [ { "$data": "${materialChoices}", "title": "${title}", "value": "${value}" } ]
+              "choices": [
+                {
+                  "$data": "${materialChoices}",
+                  "title": "${title}",
+                  "value": "${value}"
+                }
+              ]
             }
           ]
         },
@@ -224,11 +260,6 @@
       "title": "Next: Review",
       "style": "positive",
       "data": {
-        "msteams": {
-          "type": "messageBack",
-          "displayText": "Review order",
-          "text": "Review"
-        },
         "action": "create_so_step3_submit",
         "salesArea": "${salesAreaKey}",
         "salesOrg": "${salesOrg}",
