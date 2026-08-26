@@ -278,6 +278,81 @@ public class SapClientTests
         Assert.Contains("DEV-024", handler.RequestBodies[0] ?? "");
         Assert.Contains("\"CUSTOMER\":\"0000001000\"", handler.RequestBodies[0] ?? "");
         Assert.Contains(handler.RequestUris, u => u.Contains("SalesOrder('0000001888')", StringComparison.Ordinal));
+        // No PO/Date header → follow-up update should be skipped (no extra call).
+        Assert.Equal(3, handler.RequestUris.Count);
+    }
+
+    [Fact]
+    public async Task CreateSalesOrder_WithPoAndDate_TriggersFollowUpUpdateAction()
+    {
+        var handler = new StubHttpMessageHandler(
+            (HttpStatusCode.OK, "{\"SoNumber\":\"0000001999\"}"),       // 1. POST create
+            (HttpStatusCode.OK, "{}"),                                  // 2. POST updateSalesOrder (follow-up)
+            (HttpStatusCode.OK,                                         // 3. GET refresh
+                "{\"SoNumber\":\"0000001999\",\"Customer\":\"1000\",\"SalesOrg\":\"FU24\",\"OverallStatus\":\"A\",\"Currency\":\"VND\"}"));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://sap.test/") };
+        var client = new SapClient(httpClient, new StubTokenManager(), NullLogger<SapClient>.Instance);
+
+        await client.CreateSalesOrderAsync(new CreateSalesOrderDto
+        {
+            DocType = "ZOR",
+            SalesOrg = "FU24",
+            DistChannel = "FU",
+            Division = "FS",
+            Customer = "1000",
+            Currency = "VND",
+            RequestingSapUser = "DEV-024",
+            PurchaseOrderRef = "PO-4500001234",
+            RequestedDeliveryDate = "2026-09-30",
+            Items = new[]
+            {
+                new CreateSalesOrderItemDto
+                {
+                    Material = "MAT-1",
+                    Plant = "1010",
+                    OrderQty = 5,
+                    Unit = "PC"
+                }
+            }
+        });
+
+        // 1. POST create + 1 POST update follow-up + 2 GET refresh (header + items).
+        Assert.Equal(6, handler.RequestUris.Count);
+        Assert.Contains(handler.RequestUris, u => u.Contains("updateSalesOrder", StringComparison.Ordinal));
+        Assert.Contains("NEW_REFERENCE", handler.RequestBodies[1] ?? "");
+        Assert.Contains("PO-4500001234", handler.RequestBodies[1] ?? "");
+        Assert.Contains("REQUESTED_DELIVERY_DATE", handler.RequestBodies[1] ?? "");
+    }
+
+    [Fact]
+    public async Task CreateSalesOrder_WhenFollowUpUpdateFails_StillReturnsCreatedOrder()
+    {
+        var handler = new StubHttpMessageHandler(
+            (HttpStatusCode.OK, "{\"SoNumber\":\"0000002000\"}"),       // 1. POST create
+            (HttpStatusCode.BadRequest, "{\"error\":{\"message\":\"boom\"}}"), // 2. update fails
+            (HttpStatusCode.OK,                                         // 3. GET refresh
+                "{\"SoNumber\":\"0000002000\",\"Customer\":\"1000\",\"SalesOrg\":\"FU24\",\"OverallStatus\":\"A\",\"Currency\":\"VND\"}"));
+        var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://sap.test/") };
+        var client = new SapClient(httpClient, new StubTokenManager(), NullLogger<SapClient>.Instance);
+
+        var result = await client.CreateSalesOrderAsync(new CreateSalesOrderDto
+        {
+            DocType = "ZOR",
+            SalesOrg = "FU24",
+            DistChannel = "FU",
+            Division = "FS",
+            Customer = "1000",
+            Currency = "VND",
+            RequestingSapUser = "DEV-024",
+            PurchaseOrderRef = "PO-1",
+            Items = new[]
+            {
+                new CreateSalesOrderItemDto { Material = "MAT-1", Plant = "1010", OrderQty = 1, Unit = "PC" }
+            }
+        });
+
+        // Create itself succeeded even though the follow-up BAPI failed.
+        Assert.Equal("0000002000", result.SoNumber);
     }
 
     [Theory]

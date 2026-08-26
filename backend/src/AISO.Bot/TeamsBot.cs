@@ -1958,16 +1958,11 @@ public class TeamsBot : TeamsActivityHandler
                                 }
                             }
 
-                            // Per-line overrides for date, PO and description.
-                            var itemDate = valueObj.TryGetValue($"deliveryDate{i}", StringComparison.OrdinalIgnoreCase, out var dTok)
-                                ? dTok.ToString()?.Trim()
-                                : null;
-                            var itemPo = valueObj.TryGetValue($"poRef{i}", StringComparison.OrdinalIgnoreCase, out var pTok)
-                                ? pTok.ToString()?.Trim()
-                                : null;
-                            var itemDesc = valueObj.TryGetValue($"description{i}", StringComparison.OrdinalIgnoreCase, out var descTok)
-                                ? descTok.ToString()?.Trim()
-                                : null;
+                            // Per-line overrides for date, PO and description — removed:
+                            // Step 3 only exposes a single header Requested Delivery
+                            // Date and Customer PO. Per-line description / line date /
+                            // line PO are not supported by the SAP DDIC on create.
+                            // (See comment in SapClient.CreateSalesOrderAsync.)
 
                             // Plant and Unit come straight from the dropdown / header — no
                             // hard-coded "EA" / "1010" fallback. Validate so an empty Unit
@@ -1987,10 +1982,7 @@ public class TeamsBot : TeamsActivityHandler
                                 Material = itemMaterial.ToUpperInvariant(),
                                 OrderQty = qty,
                                 Plant = itemPlant,
-                                Unit = itemUnit.ToUpperInvariant(),
-                                RequestedDeliveryDate = string.IsNullOrWhiteSpace(itemDate) ? null : itemDate,
-                                PurchaseOrderRef = string.IsNullOrWhiteSpace(itemPo) ? null : itemPo,
-                                ItemDescription = string.IsNullOrWhiteSpace(itemDesc) ? null : itemDesc
+                                Unit = itemUnit.ToUpperInvariant()
                             });
                         }
 

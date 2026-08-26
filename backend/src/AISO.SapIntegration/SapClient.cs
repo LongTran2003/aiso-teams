@@ -214,9 +214,11 @@ public class SapClient : ISapClient
         var url = "SalesOrder?sap-client=324&$format=json";
         _logger.LogInformation("Calling SAP OData: {Url}", url);
 
-        // Align with ZAISO_A_CREATE_SO field naming (uppercase keys):
-        // DOC_TYPE, SALES_ORG, DIST_CHANNEL, DIVISION, CUSTOMER, CURRENCY,
-        // PURCHASE_ORDER_REF, REQUESTED_DELIVERY_DATE, ITEMS.
+        // SAP DDIC `ZAISO_A_CREATE_SO` and item structure `ZAISO_S_SO_ITEM` only
+        // accept the baseline fields. PO Ref / Requested Delivery Date /
+        // Item Description are written via the follow-up update action below
+        // (`UpdateSalesOrderAsync`) which uses `BAPI_SALESORDER_CHANGE` —
+        // those BAPIs support `purch_no_c` / `req_date_h` natively.
         var payload = new Dictionary<string, object?>
         {
             ["DOC_TYPE"] = dto.DocType,
@@ -235,26 +237,9 @@ public class SapClient : ISapClient
                     ["ORDER_QTY"] = Math.Round(i.OrderQty, 3),
                     ["UNIT"] = i.Unit
                 };
-                if (!string.IsNullOrWhiteSpace(i.ItemDescription))
-                    item["ITEM_DESCRIPTION"] = i.ItemDescription.Trim();
-                var lineDate = !string.IsNullOrWhiteSpace(i.RequestedDeliveryDate)
-                    ? i.RequestedDeliveryDate
-                    : dto.RequestedDeliveryDate;
-                if (!string.IsNullOrWhiteSpace(lineDate))
-                    item["REQUESTED_DELIVERY_DATE"] = NormalizeSapDate(lineDate);
-                var linePo = !string.IsNullOrWhiteSpace(i.PurchaseOrderRef)
-                    ? i.PurchaseOrderRef
-                    : dto.PurchaseOrderRef;
-                if (!string.IsNullOrWhiteSpace(linePo))
-                    item["PURCHASE_ORDER_REF"] = linePo.Trim();
                 return item;
             }).ToList()
         };
-
-        if (!string.IsNullOrWhiteSpace(dto.PurchaseOrderRef))
-            payload["PURCHASE_ORDER_REF"] = dto.PurchaseOrderRef.Trim();
-        if (!string.IsNullOrWhiteSpace(dto.RequestedDeliveryDate))
-            payload["REQUESTED_DELIVERY_DATE"] = NormalizeSapDate(dto.RequestedDeliveryDate);
 
         try
         {
@@ -269,6 +254,16 @@ public class SapClient : ISapClient
             }
 
             var formatted = FormatSoNumber(soNumber);
+
+            // Apply header PO + delivery date and per-item description / line
+            // date / per-line PO via update action (BAPI_SALESORDER_CHANGE).
+            // We tolerate update failures here so a successful create is not
+            // rolled back just because the follow-up BAPI rejected something.
+            await TryApplyCreateFollowUpAsync(
+                formatted,
+                dto,
+                ct);
+
             var refreshed = await GetSalesOrderByIdAsync(formatted, ct);
             if (refreshed is not null)
                 return refreshed;
@@ -402,6 +397,62 @@ public class SapClient : ISapClient
         {
             _logger.LogError(ex, "Error calling SAP OData UpdateSalesOrderAsync for {SoNumber}", dto.SoNumber);
             throw;
+        }
+    }
+
+    /// <summary>
+    /// Apply header-level PO Ref / Requested Delivery Date to a freshly created
+    /// SO via the update action. Tolerates failures so a successful create is
+    /// not rolled back. Per-line description / date / PO are not supported by
+    /// the update payload and are logged so we know what was dropped.
+    /// </summary>
+    private async Task TryApplyCreateFollowUpAsync(
+        string formattedSoNumber,
+        CreateSalesOrderDto dto,
+        CancellationToken ct)
+    {
+        var hasHeaderPo = !string.IsNullOrWhiteSpace(dto.PurchaseOrderRef);
+        var hasHeaderDate = !string.IsNullOrWhiteSpace(dto.RequestedDeliveryDate);
+
+        // Surface per-line values the backend currently can't forward to SAP
+        // (DDIC doesn't expose them on create or update). This is just an
+        // audit trail so the next dev knows what's silently being dropped.
+        foreach (var item in dto.Items)
+        {
+            if (!string.IsNullOrWhiteSpace(item.ItemDescription)
+                || !string.IsNullOrWhiteSpace(item.PurchaseOrderRef)
+                || !string.IsNullOrWhiteSpace(item.RequestedDeliveryDate))
+            {
+                _logger.LogInformation(
+                    "CreateSalesOrder follow-up: per-line description/po/date for material {Material} on SO {SoNumber} dropped (DDIC limitation)",
+                    item.Material,
+                    formattedSoNumber);
+            }
+        }
+
+        if (!hasHeaderPo && !hasHeaderDate)
+            return;
+
+        try
+        {
+            await UpdateSalesOrderAsync(
+                new UpdateSalesOrderDto
+                {
+                    SoNumber = formattedSoNumber,
+                    RequestingSapUser = dto.RequestingSapUser!.Trim(),
+                    PurchaseOrderRef = hasHeaderPo ? dto.PurchaseOrderRef!.Trim() : null,
+                    ReqDeliveryDate = hasHeaderDate ? dto.RequestedDeliveryDate!.Trim() : null
+                },
+                ct);
+            _logger.LogInformation(
+                "CreateSalesOrder follow-up: applied PO/Date to SO {SoNumber}",
+                formattedSoNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex,
+                "CreateSalesOrder follow-up: failed to apply PO/Date to SO {SoNumber}. The order is created but PO/Date are not set.",
+                formattedSoNumber);
         }
     }
 
