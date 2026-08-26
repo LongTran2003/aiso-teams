@@ -61,6 +61,27 @@
               ]
             }
           ]
+        },
+        {
+          "type": "ActionSet",
+          "spacing": "Small",
+          "actions": [
+            {
+              "type": "Action.Submit",
+              "title": "Revoke",
+              "style": "destructive",
+              "data": {
+                "msteams": {
+                  "type": "messageBack",
+                  "displayText": "Thu hồi uỷ quyền cho ${delegateUser}",
+                  "text": "revoke delegation ${delegateUser}"
+                },
+                "action": "revoke_delegation_prompt",
+                "delegateUser": "${delegateUser}",
+                "delegationId": "${delegationId}"
+              }
+            }
+          ]
         }
       ]
     },
