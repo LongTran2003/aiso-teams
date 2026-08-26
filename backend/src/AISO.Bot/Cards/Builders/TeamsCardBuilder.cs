@@ -227,7 +227,7 @@ internal static class TeamsCardBuilder
                 // for manager cancellation path. When both apply (e.g. a manager
                 // also owns the order) we render both fields.
                 showReasonCode = role <= UserRole.Employee ? "true" : "false",
-                showReasonText  = role >= UserRole.Manager ? "true" : "false",
+                showReasonText = role >= UserRole.Manager ? "true" : "false",
                 warningMessage = role >= UserRole.Manager
                     ? "This cancels the sales order in SAP. Any pending release approval for this order will be cleared."
                     : "This rejects your sales order in SAP. This action cannot be undone once confirmed.",
