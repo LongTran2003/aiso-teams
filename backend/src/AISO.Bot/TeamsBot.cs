@@ -1674,17 +1674,29 @@ public class TeamsBot : TeamsActivityHandler
                             .Select(g => g.First())
                             .ToList();
 
-                        await turnContext.SendActivityAsync(
-                            MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep2Card(
-                                salesAreaLabel,
-                                salesAreaKey,
-                                salesOrg,
-                                distChannel,
-                                division,
-                                customerChoices,
-                                docTypes)),
-                            cancellationToken);
-                        return;
+                        try
+                        {
+                            await turnContext.SendActivityAsync(
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep2Card(
+                                    salesAreaLabel,
+                                    salesAreaKey,
+                                    salesOrg,
+                                    distChannel,
+                                    division,
+                                    customerChoices,
+                                    docTypes)),
+                                cancellationToken);
+                            return;
+                        }
+                        catch (Exception ex)
+                        {
+                            var debugCard = TeamsCardBuilder.BuildCreateOrderStep2Card(
+                                salesAreaLabel, salesAreaKey, salesOrg, distChannel, division, customerChoices, docTypes);
+                            var jsonStr = Newtonsoft.Json.JsonConvert.SerializeObject(debugCard.Content);
+                            _logger.LogError(ex, "Failed to send Step 2 card. JSON: {Json}", jsonStr);
+                            await turnContext.SendActivityAsync($"DEV ERROR CARD JSON: {jsonStr}", cancellationToken: cancellationToken);
+                            throw;
+                        }
                     }
 
                     if (string.Equals(action, "create_so_step2_submit", StringComparison.OrdinalIgnoreCase))
