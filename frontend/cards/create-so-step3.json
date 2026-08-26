@@ -10,7 +10,7 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "Create sales order (Step 3 of 4) \u2014 Line Items",
+          "text": "Create sales order (Step 3 of 4) — Line Items",
           "weight": "Bolder",
           "size": "Medium",
           "color": "Accent",
@@ -62,7 +62,7 @@
     },
     {
       "type": "TextBlock",
-      "text": "Line items \u2014 fill at least one row before continuing",
+      "text": "Line items — fill at least one row before continuing",
       "weight": "Bolder",
       "size": "Small",
       "spacing": "Medium",
@@ -252,7 +252,7 @@
           ]
         }
       ]
-    },
+    },
     {
       "type": "Container",
       "id": "row4",
@@ -655,7 +655,44 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row4","addRowBtn5","addRowBtn4","removeBtn4"]
+              "targetElements": [
+                {
+                  "elementId": "row4",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn4",
+                  "isVisible": true
+                }
+              ]
             }
           ]
         }
@@ -672,7 +709,48 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row5","addRowBtn6","addRowBtn5","removeBtn5"]
+              "targetElements": [
+                {
+                  "elementId": "row5",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn5",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn4",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -689,7 +767,52 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row6","addRowBtn7","addRowBtn6","removeBtn6"]
+              "targetElements": [
+                {
+                  "elementId": "row6",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn6",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn5",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -706,7 +829,56 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row7","addRowBtn8","addRowBtn7","removeBtn7"]
+              "targetElements": [
+                {
+                  "elementId": "row7",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn7",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn6",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -723,7 +895,60 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row8","addRowBtn9","addRowBtn8","removeBtn8"]
+              "targetElements": [
+                {
+                  "elementId": "row8",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn8",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn7",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -740,7 +965,64 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row9","addRowBtn10","addRowBtn9","removeBtn9"]
+              "targetElements": [
+                {
+                  "elementId": "row9",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn9",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn8",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -757,7 +1039,68 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "+ Add another row",
-              "targetElements": ["row10","addRowBtn10","removeBtn10"]
+              "targetElements": [
+                {
+                  "elementId": "row10",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn10",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn9",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -774,7 +1117,68 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "− Remove row",
-              "targetElements": ["row4","removeBtn4","addRowBtn4","addRowBtn5"]
+              "targetElements": [
+                {
+                  "elementId": "row4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn10",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -791,7 +1195,68 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "− Remove row",
-              "targetElements": ["row5","removeBtn5","addRowBtn5","addRowBtn6","removeBtn4"]
+              "targetElements": [
+                {
+                  "elementId": "row5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn4",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn10",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -808,7 +1273,64 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "− Remove row",
-              "targetElements": ["row6","removeBtn6","addRowBtn6","addRowBtn7","removeBtn5"]
+              "targetElements": [
+                {
+                  "elementId": "row6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn5",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn10",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -825,7 +1347,60 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "− Remove row",
-              "targetElements": ["row7","removeBtn7","addRowBtn7","addRowBtn8","removeBtn6"]
+              "targetElements": [
+                {
+                  "elementId": "row7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn6",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn10",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -842,7 +1417,56 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "− Remove row",
-              "targetElements": ["row8","removeBtn8","addRowBtn8","addRowBtn9","removeBtn7"]
+              "targetElements": [
+                {
+                  "elementId": "row8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn7",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn10",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -859,7 +1483,52 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "− Remove row",
-              "targetElements": ["row9","removeBtn9","addRowBtn9","addRowBtn10","removeBtn8"]
+              "targetElements": [
+                {
+                  "elementId": "row9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn8",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "removeBtn10",
+                  "isVisible": false
+                }
+              ]
             }
           ]
         }
@@ -876,7 +1545,48 @@
             {
               "type": "Action.ToggleVisibility",
               "title": "− Remove row",
-              "targetElements": ["row10","removeBtn10","addRowBtn10","removeBtn9"]
+              "targetElements": [
+                {
+                  "elementId": "row10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn10",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn10",
+                  "isVisible": true
+                },
+                {
+                  "elementId": "addRowBtn4",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn5",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn6",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn7",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn8",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "addRowBtn9",
+                  "isVisible": false
+                },
+                {
+                  "elementId": "removeBtn9",
+                  "isVisible": true
+                }
+              ]
             }
           ]
         }
