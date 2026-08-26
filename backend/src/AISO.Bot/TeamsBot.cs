@@ -2820,15 +2820,19 @@ public class TeamsBot : TeamsActivityHandler
                     }
                 }
             }
-            catch { /* Ignore parsing errors, userMessage stays empty */ }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Exception in Activity.Value parsing or action execution.");
+                await turnContext.SendActivityAsync($"DEV ERROR: {ex.Message} \n {ex.StackTrace}", cancellationToken: cancellationToken);
+            }
         }
 
         var normalizedMessage = userMessage.Trim();
         if (string.IsNullOrWhiteSpace(normalizedMessage))
         {
-            _logger.LogWarning("Received empty message or unhandled card action.");
+            var debugVal = turnContext.Activity.Value != null ? Newtonsoft.Json.JsonConvert.SerializeObject(turnContext.Activity.Value) : "NULL";
             await turnContext.SendActivityAsync(
-                "I didn't receive any text. Please type a command or question.",
+                $"DEBUG - Activity.Value was: {debugVal}",
                 cancellationToken: cancellationToken);
             return;
         }
