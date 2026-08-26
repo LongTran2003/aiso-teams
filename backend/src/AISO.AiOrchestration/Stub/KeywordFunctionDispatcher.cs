@@ -175,11 +175,32 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
             }
         }
 
-        // Pattern: Create Order (VI: "tạo đơn" / EN: "create order" | "create so" | "create sales order")
+        // Pattern: Create Order — EN + VI (with and without diacritics)
         if ((text.Contains("tạo") && text.Contains("đơn"))
+            || (text.Contains("tao") && text.Contains("don"))
+            || text.Contains("tạo đơn hàng")
+            || text.Contains("tao don hang")
+            || text.Contains("tạo đơn bán hàng")
+            || text.Contains("tao don ban hang")
+            || text.Contains("tạo sales order")
+            || text.Contains("tao sales order")
+            || text.Contains("tạo so")
+            || text.Contains("tao so")
+            || text.Contains("lập đơn")
+            || text.Contains("lap don")
+            || text.Contains("lập đơn hàng")
+            || text.Contains("lap don hang")
+            || text.Contains("lập đơn bán hàng")
+            || text.Contains("lap don ban hang")
+            || text.Contains("tạo đơn mới")
+            || text.Contains("tao don moi")
             || text.Contains("create order")
             || text.Contains("create so")
-            || text.Contains("create sales order"))
+            || text.Contains("create sales order")
+            || text.Contains("new sales order")
+            || text.Contains("new order")
+            || text.Contains("place order")
+            || text.Contains("make order"))
         {
             var fn = _registry.GetByName("CreateOrder");
             if (fn is not null)
@@ -197,7 +218,9 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                     @"(?:qty|quantity|số lượng)\s+(\d+)|(\d+)\s+(?:pc|pcs|units?)",
                     RegexOptions.IgnoreCase);
 
-                var customerId = "10100001";
+                // Only pass customer if explicitly specified in the message.
+                // When omitted, CreateOrderFunction pre-fills with the first SAP customer.
+                string? customerId = null;
                 if (custMatch.Success)
                 {
                     customerId = (custMatch.Groups[1].Success ? custMatch.Groups[1].Value
@@ -205,18 +228,24 @@ public sealed partial class KeywordFunctionDispatcher : IFunctionDispatcher
                         : custMatch.Groups[3].Value).ToUpperInvariant();
                 }
 
-                var material = matMatch.Success ? matMatch.Groups[1].Value.ToUpperInvariant() : "TG11";
+                var material = matMatch.Success ? matMatch.Groups[1].Value.ToUpperInvariant() : null;
                 var qty = 1;
                 if (qtyMatch.Success)
                 {
                     qty = int.Parse(qtyMatch.Groups[1].Success ? qtyMatch.Groups[1].Value : qtyMatch.Groups[2].Value);
                 }
 
-                var paramsObj = new
-                {
-                    customer = customerId,
-                    items = new[] { new { material = material, qty = qty } }
-                };
+                // Build minimal params — omit customer/material when not specified so the
+                // CreateOrderFunction shows Step 1 with SAP-loaded dropdowns.
+                object paramsObj;
+                if (customerId is not null && material is not null)
+                    paramsObj = new { customer = customerId, items = new[] { new { material, qty } } };
+                else if (customerId is not null)
+                    paramsObj = new { customer = customerId };
+                else if (material is not null)
+                    paramsObj = new { items = new[] { new { material, qty } } };
+                else
+                    paramsObj = new { };
 
                 var paramsJson = JsonSerializer.Serialize(paramsObj);
                 using var doc = JsonDocument.Parse(paramsJson);
