@@ -172,7 +172,7 @@
           "label": "Ship-to Party Customer Number",
           "placeholder": "Optional \u2014 leave empty to use customer default",
           "value": "${shipToParty}",
-          "isVisible": "${hasShipToParty} == true"
+          "isVisible": "${hasShipToParty == 'true'}"
         }
       ]
     }
