@@ -2302,7 +2302,7 @@ public class TeamsBot : TeamsActivityHandler
                             ? dateToken.ToString()?.Trim()
                             : null;
                         var lineOp = valueObj.TryGetValue("lineOp", StringComparison.OrdinalIgnoreCase, out var opToken)
-                            ? opToken.ToString()?.Trim().ToUpperInvariant()
+                            ? opToken.ToString()?.Trim().ToUpperInvariant() ?? "NONE"
                             : "NONE";
                         var itemNumber = valueObj.TryGetValue("itemNumber", StringComparison.OrdinalIgnoreCase, out var itemToken)
                             ? itemToken.ToString()?.Trim()
@@ -2379,6 +2379,8 @@ public class TeamsBot : TeamsActivityHandler
                                 && !string.Equals(reqDeliveryDate, currentDate, StringComparison.Ordinal);
 
                             var items = new List<UpdateSalesOrderItemDto>();
+
+                            // Add line items if operation is specified (U/I/D)
                             if (!string.IsNullOrWhiteSpace(lineOp) && lineOp is not ("NONE" or "N"))
                             {
                                 if (lineOp is "U" or "I")
@@ -2425,15 +2427,21 @@ public class TeamsBot : TeamsActivityHandler
                                 });
                             }
 
-                            if (!changeRef && !changeDate && items.Count == 0)
+                            // Pre-check: skip SAP call if nothing actually changed
+                            var hasItemsToChange = items.Count > 0 && items.Any(i =>
+                                !string.IsNullOrWhiteSpace(i.Operation) &&
+                                i.Operation is not ("NONE" or "N"));
+
+                            if (!changeRef && !changeDate && !hasItemsToChange)
                             {
                                 await turnContext.SendActivityAsync(
-                                    MessageFactory.Attachment(TeamsCardBuilder.BuildErrorCard(
-                                        "VALIDATION",
-                                        "Nothing to update. Change PO reference, delivery date, or a line operation.")),
+                                    MessageFactory.Text("Nothing to update — no changes were made to the sales order."),
                                     cancellationToken);
                                 return;
                             }
+
+                            // Allow submit even if no changes — SAP will handle gracefully
+                            // (null fields = no change). Show info only when truly nothing changed.
 
                             var updated = await _sap.UpdateSalesOrderAsync(
                                 new UpdateSalesOrderDto
