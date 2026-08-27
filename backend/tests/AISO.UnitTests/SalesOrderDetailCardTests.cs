@@ -425,47 +425,68 @@ public class CreateOrderStep1CardTests
         new("FU24", "FU Org"),
     ];
 
-    [Fact]
-    public void OrgOnly_NoChannels_RendersChannelDropdownNotPlaceholder()
-    {
-        // Before a SalesOrg is picked the placeholder TextBlock is fine.
-        var attachment = TeamsCardBuilder.BuildCreateOrderStep1Card(SampleSalesOrgs());
-        var json = JsonConvert.SerializeObject(attachment.Content);
-
-        Assert.Contains("select Sales Organization to load", json, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("No distribution channels available", json, StringComparison.OrdinalIgnoreCase);
-    }
+    private static IReadOnlyList<SapSalesArea> SampleAllAreas() =>
+    [
+        new SapSalesArea("TV01", "10", "00"),
+        new SapSalesArea("TV01", "20", "00"),
+        new SapSalesArea("TV01", "10", "AS"),
+        new SapSalesArea("FU24", "10", "00"),
+        new SapSalesArea("FU24", "FR", "FG"),
+    ];
 
     [Fact]
-    public void OrgSelected_ChannelsEmpty_RendersWarningText()
+    public void AllSalesAreas_RendersThreeDropdownsAtOnce()
     {
-        // After the user has actually picked an Org, an empty Channel list from SAP
-        // must surface as a Warning so the user knows to pick another Org instead
-        // of being stuck on a placeholder dropdown.
+        // The whole point of the rewrite: every dropdown is in the body together.
         var attachment = TeamsCardBuilder.BuildCreateOrderStep1Card(
             SampleSalesOrgs(),
-            selectedSalesOrg: "TV01",
-            distChannels: Array.Empty<SapDistChannel>(),
-            selectedDistChannel: null);
+            allSalesAreas: SampleAllAreas());
         var json = JsonConvert.SerializeObject(attachment.Content);
 
-        Assert.Contains("No distribution channels available for Sales Organization **TV01**", json, StringComparison.OrdinalIgnoreCase);
+        // Org dropdown is always there.
+        Assert.Contains("\"id\":\"salesOrg\"", json, StringComparison.OrdinalIgnoreCase);
+        // Channel + Division dropdowns must also be present — no placeholder text.
+        Assert.Contains("\"id\":\"distChannel\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"id\":\"division\"", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("select Sales Organization to load", json, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("select Distribution Channel to load", json, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
-    public void OrgAndChannelSelected_DivisionsEmpty_RendersWarningText()
+    public void AllSalesAreas_ChannelAndDivisionChoicesAreDistinct()
+    {
+        var attachment = TeamsCardBuilder.BuildCreateOrderStep1Card(
+            SampleSalesOrgs(),
+            allSalesAreas: SampleAllAreas());
+        var json = JsonConvert.SerializeObject(attachment.Content);
+
+        // Distinct channels across the whole SalesArea view: 10, 20, FR.
+        Assert.Contains("\"value\":\"10\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"value\":\"20\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"value\":\"FR\"", json, StringComparison.OrdinalIgnoreCase);
+        // Distinct divisions: 00, AS, FG.
+        Assert.Contains("\"value\":\"00\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"value\":\"AS\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"value\":\"FG\"", json, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void InvalidCombination_ShowsWarningAndKeepsSelections()
     {
         var attachment = TeamsCardBuilder.BuildCreateOrderStep1Card(
             SampleSalesOrgs(),
             selectedSalesOrg: "TV01",
-            distChannels: new[] { new SapDistChannel("TV01", "10") },
-            selectedDistChannel: "10",
-            divisions: Array.Empty<SapDivision>(),
-            selectedDivision: null);
+            selectedDistChannel: "FR",
+            selectedDivision: "FG",
+            allSalesAreas: SampleAllAreas(),
+            invalidCombinationMessage:
+                "Sales Organization **TV01** / Distribution Channel **FR** / Division **FG** is not a valid combination in SAP. Pick another Channel or Division.");
         var json = JsonConvert.SerializeObject(attachment.Content);
 
-        Assert.Contains("No divisions available for Sales Organization **TV01** / Distribution Channel **10**", json, StringComparison.OrdinalIgnoreCase);
-        Assert.DoesNotContain("select Distribution Channel to load", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("not a valid combination in SAP", json, StringComparison.OrdinalIgnoreCase);
+        // Pre-selected values survive the re-render so the user can tweak just one field.
+        Assert.Contains("\"value\":\"TV01\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"value\":\"FR\"", json, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("\"value\":\"FG\"", json, StringComparison.OrdinalIgnoreCase);
     }
 }

@@ -1519,10 +1519,11 @@ public class TeamsBot : TeamsActivityHandler
 
                     if (string.Equals(action, "create_so_step1_submit", StringComparison.OrdinalIgnoreCase))
                     {
-                        // ── Cascade: Org → Channel → Division, all three dropdowns in one card. ──
-                        // The card renders all three Input.ChoiceSets; Channel/Division choices
-                        // are populated server-side based on what the user has already picked.
-                        // Submitting the form posts the latest selections for each.
+                        // ── All-in-one Step 1: Org / Channel / Division dropdowns are rendered together. ──
+                        // We load `SalesArea` once (TVTA joined), build distinct choice lists for the
+                        // second and third dropdowns from it, then on submit validate the
+                        // (Org, Channel, Division) tuple actually exists in SAP. No per-step Next
+                        // button — the user fills all three dropdowns and clicks Next once.
                         var rawSalesOrg = valueObj.TryGetValue("salesOrg", StringComparison.OrdinalIgnoreCase, out var soTok)
                             ? soTok?.ToString()?.Trim() : null;
                         var rawDistChannel = valueObj.TryGetValue("distChannel", StringComparison.OrdinalIgnoreCase, out var dcTok)
@@ -1530,72 +1531,72 @@ public class TeamsBot : TeamsActivityHandler
                         var rawDivision = valueObj.TryGetValue("division", StringComparison.OrdinalIgnoreCase, out var dvTok)
                             ? dvTok?.ToString()?.Trim() : null;
 
-                        // Always need the full SalesOrg list for the first dropdown.
+                        // Pull the SalesOrg master + the full SalesArea join in parallel.
+                        // The master is needed even on the very first open of the card.
                         IReadOnlyList<SapSalesOrg> salesOrgs;
-                        try { salesOrgs = await _sap.GetSalesOrgListAsync(cancellationToken); }
-                        catch { salesOrgs = Array.Empty<SapSalesOrg>(); }
+                        IReadOnlyList<SapSalesArea> allAreas;
+                        try
+                        {
+                            var orgTask = _sap.GetSalesOrgListAsync(cancellationToken);
+                            var areaTask = _sap.GetSalesAreasAsync(salesOrg: null, ct: cancellationToken);
+                            await Task.WhenAll(orgTask, areaTask);
+                            salesOrgs = orgTask.Result;
+                            allAreas = areaTask.Result;
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogWarning(ex, "create_so_step1: SAP lookup failed (salesOrgs or allAreas)");
+                            salesOrgs = Array.Empty<SapSalesOrg>();
+                            allAreas = Array.Empty<SapSalesArea>();
+                        }
 
-                        // Org missing/empty → show Org dropdown only, no next-step possible.
-                        if (string.IsNullOrWhiteSpace(rawSalesOrg))
+                        // If any of the three fields is blank the user simply hasn't picked yet;
+                        // re-render the same all-in-one card without an error so they can finish.
+                        if (string.IsNullOrWhiteSpace(rawSalesOrg)
+                            || string.IsNullOrWhiteSpace(rawDistChannel)
+                            || string.IsNullOrWhiteSpace(rawDivision))
                         {
                             await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep1Card(salesOrgs)),
+                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep1Card(
+                                    salesOrgs,
+                                    selectedSalesOrg: rawSalesOrg,
+                                    allSalesAreas: allAreas)),
                                 cancellationToken);
                             return;
                         }
 
                         var salesOrg = rawSalesOrg.ToUpperInvariant();
-
-                        // Org picked, Channel missing/empty → show Org + Channel dropdown.
-                        IReadOnlyList<SapDistChannel> distChannels;
-                        try { distChannels = await _sap.GetDistChannelListAsync(salesOrg, cancellationToken); }
-                        catch { distChannels = Array.Empty<SapDistChannel>(); }
-
-                        // Diagnostic: surface the upstream result so we can tell the difference
-                        // between "Org has no channels in SAP" and "OData call failed" without
-                        // scraping Application Insights manually.
-                        if (distChannels.Count == 0)
-                        {
-                            _logger.LogWarning(
-                                "create_so_step1: SAP DistChannelList returned 0 rows for SalesOrg={SalesOrg}. " +
-                                "User will see a warning and must pick another Org.",
-                                salesOrg);
-                        }
-
-                        if (string.IsNullOrWhiteSpace(rawDistChannel))
-                        {
-                            await turnContext.SendActivityAsync(
-                                MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep1Card(
-                                    salesOrgs, salesOrg, distChannels, null)),
-                                cancellationToken);
-                            return;
-                        }
-
                         var distChannel = rawDistChannel.ToUpperInvariant();
+                        var division = rawDivision.ToUpperInvariant();
 
-                        // Org + Channel picked, Division missing/empty → show all three dropdowns.
-                        IReadOnlyList<SapDivision> divisions;
-                        try { divisions = await _sap.GetDivisionListAsync(salesOrg, distChannel, cancellationToken); }
-                        catch { divisions = Array.Empty<SapDivision>(); }
+                        // Validate the tuple exists in SAP. allAreas can hold rows whose
+                        // SalesOrg/Channel/Division don't all line up (e.g. one row with
+                        // Org=TV01/Channel=10/Division=00, another with Org=TV01/Channel=20/
+                        // Division=00) so we need to check all three keys together.
+                        var validCombo = allAreas.Any(a =>
+                            string.Equals(a.SalesOrg, salesOrg, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(a.DistChannel, distChannel, StringComparison.OrdinalIgnoreCase)
+                            && string.Equals(a.Division, division, StringComparison.OrdinalIgnoreCase));
 
-                        if (divisions.Count == 0)
+                        if (!validCombo)
                         {
                             _logger.LogWarning(
-                                "create_so_step1: SAP DivisionList returned 0 rows for SalesOrg={SalesOrg}, DistChannel={DistChannel}. " +
-                                "User will see a warning and must pick another Channel.",
-                                salesOrg, distChannel);
-                        }
+                                "create_so_step1: rejected invalid SalesArea tuple Org={Org}, Channel={Channel}, Division={Division} — not present in SAP SalesArea.",
+                                salesOrg, distChannel, division);
 
-                        if (string.IsNullOrWhiteSpace(rawDivision))
-                        {
                             await turnContext.SendActivityAsync(
                                 MessageFactory.Attachment(TeamsCardBuilder.BuildCreateOrderStep1Card(
-                                    salesOrgs, salesOrg, distChannels, distChannel, divisions, null)),
+                                    salesOrgs,
+                                    selectedSalesOrg: salesOrg,
+                                    selectedDistChannel: distChannel,
+                                    selectedDivision: division,
+                                    allSalesAreas: allAreas,
+                                    invalidCombinationMessage:
+                                        $"Sales Organization **{salesOrg}** / Distribution Channel **{distChannel}** / Division **{division}** is not a valid combination in SAP. Pick another Channel or Division.")),
                                 cancellationToken);
                             return;
                         }
 
-                        var division = rawDivision.ToUpperInvariant();
                         var salesAreaKey = $"{salesOrg}|{distChannel}|{division}";
                         var salesAreaLabel = $"{salesOrg} / {distChannel} / {division}";
 
@@ -3461,21 +3462,26 @@ public class TeamsBot : TeamsActivityHandler
 
             if (result.Payload is AISO.AiOrchestration.Functions.ConfirmCreateOrderResponse confirmCreate)
             {
-                // AI path: show Step 1 with the cascading SalesOrg dropdown.
-                // When the AI provides a pre-selected SalesOrg, load all three levels
-                // so the user can review and navigate. Otherwise start fresh.
+                // AI path: show Step 1 with the all-in-one SalesOrg / Channel / Division
+                // dropdowns loaded from `SalesArea`. When the AI provides a pre-selected
+                // tuple, pre-select all three so the user can review or tweak before
+                // hitting Next. Otherwise start fresh.
                 IReadOnlyList<SapSalesOrg> salesOrgs;
-                IReadOnlyList<SapDistChannel> distChannels = [];
-                IReadOnlyList<SapDivision> divisions = [];
+                IReadOnlyList<SapSalesArea> allAreas;
                 string? selOrg = null, selChan = null, selDiv = null;
 
                 try
                 {
-                    salesOrgs = await _sap.GetSalesOrgListAsync(cancellationToken);
+                    var orgTask = _sap.GetSalesOrgListAsync(cancellationToken);
+                    var areaTask = _sap.GetSalesAreasAsync(salesOrg: null, ct: cancellationToken);
+                    await Task.WhenAll(orgTask, areaTask);
+                    salesOrgs = orgTask.Result;
+                    allAreas = areaTask.Result;
                 }
                 catch
                 {
                     salesOrgs = Array.Empty<SapSalesOrg>();
+                    allAreas = Array.Empty<SapSalesArea>();
                 }
 
                 if (!string.IsNullOrWhiteSpace(confirmCreate.SalesAreaKey)
@@ -3484,15 +3490,17 @@ public class TeamsBot : TeamsActivityHandler
                     selOrg = aiOrg;
                     selChan = aiChan;
                     selDiv = aiDiv;
-                    try { distChannels = await _sap.GetDistChannelListAsync(aiOrg, cancellationToken); } catch { }
-                    try { divisions = await _sap.GetDivisionListAsync(aiOrg, aiChan, cancellationToken); } catch { }
                 }
 
                 await ReplaceLoadingActivityAsync(
                     turnContext,
                     loadingActivityId,
                     TeamsCardBuilder.BuildCreateOrderStep1Card(
-                        salesOrgs, selOrg, distChannels, selChan, divisions, selDiv),
+                        salesOrgs,
+                        selectedSalesOrg: selOrg,
+                        selectedDistChannel: selChan,
+                        selectedDivision: selDiv,
+                        allSalesAreas: allAreas),
                     cancellationToken);
 
                 _logger.LogInformation(

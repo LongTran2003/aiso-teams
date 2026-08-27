@@ -243,12 +243,16 @@ internal static class TeamsCardBuilder
         IReadOnlyList<SapDistChannel>? distChannels = null,
         string? selectedDistChannel = null,
         IReadOnlyList<SapDivision>? divisions = null,
-        string? selectedDivision = null)
+        string? selectedDivision = null,
+        IReadOnlyList<SapSalesArea>? allSalesAreas = null,
+        string? invalidCombinationMessage = null)
     {
         var card = BuildStep1CardData(
             salesOrgs, selectedSalesOrg,
             distChannels, selectedDistChannel,
-            divisions, selectedDivision);
+            divisions, selectedDivision,
+            allSalesAreas,
+            invalidCombinationMessage);
 
         return CardTemplateFileLoader.BuildAdaptiveCardFromObject(card);
     }
@@ -259,19 +263,55 @@ internal static class TeamsCardBuilder
         IReadOnlyList<SapDistChannel>? distChannels,
         string? selectedDistChannel,
         IReadOnlyList<SapDivision>? divisions,
-        string? selectedDivision)
+        string? selectedDivision,
+        IReadOnlyList<SapSalesArea>? allSalesAreas,
+        string? invalidCombinationMessage)
     {
+        // Build the three dropdowns. When the caller pre-supplies `allSalesAreas`
+        // (the joined TVTA-style view), we render every dropdown with its global
+        // distinct values so the user sees all three choices at once and submits
+        // a single (Org, Channel, Division) tuple — no per-step submit required.
+        //
+        // When the caller does not supply `allSalesAreas` (legacy callers) we
+        // fall back to the per-field lists they already passed in, which may be
+        // null/empty and trigger the same cascade warnings as before.
         var orgChoices = salesOrgs
-            .Select(o => new Dictionary<string, object> { ["title"] = $"{o.SalesOrg} — {o.SalesOrgName}", ["value"] = o.SalesOrg.ToUpperInvariant().Trim() })
+            .Select(o => new Dictionary<string, object>
+            {
+                ["title"] = $"{o.SalesOrg} — {o.SalesOrgName}",
+                ["value"] = o.SalesOrg.ToUpperInvariant().Trim()
+            })
             .ToList();
 
-        var chanChoices = (distChannels ?? [])
-            .Select(c => new Dictionary<string, object> { ["title"] = c.DistChannel, ["value"] = c.DistChannel.ToUpperInvariant().Trim() })
-            .ToList();
+        List<Dictionary<string, object>> chanChoices;
+        List<Dictionary<string, object>> divChoices;
 
-        var divChoices = (divisions ?? [])
-            .Select(d => new Dictionary<string, object> { ["title"] = d.Division, ["value"] = d.Division.ToUpperInvariant().Trim() })
-            .ToList();
+        if (allSalesAreas is { Count: > 0 })
+        {
+            chanChoices = allSalesAreas
+                .Select(a => a.DistChannel.ToUpperInvariant().Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+                .Select(v => new Dictionary<string, object> { ["title"] = v, ["value"] = v })
+                .ToList();
+
+            divChoices = allSalesAreas
+                .Select(a => a.Division.ToUpperInvariant().Trim())
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(v => v, StringComparer.OrdinalIgnoreCase)
+                .Select(v => new Dictionary<string, object> { ["title"] = v, ["value"] = v })
+                .ToList();
+        }
+        else
+        {
+            chanChoices = (distChannels ?? [])
+                .Select(c => new Dictionary<string, object> { ["title"] = c.DistChannel, ["value"] = c.DistChannel.ToUpperInvariant().Trim() })
+                .ToList();
+
+            divChoices = (divisions ?? [])
+                .Select(d => new Dictionary<string, object> { ["title"] = d.Division, ["value"] = d.Division.ToUpperInvariant().Trim() })
+                .ToList();
+        }
 
         var body = new List<object>
         {
@@ -296,6 +336,19 @@ internal static class TeamsCardBuilder
             }
         };
 
+        if (!string.IsNullOrWhiteSpace(invalidCombinationMessage))
+        {
+            body.Add(new Dictionary<string, object>
+            {
+                ["type"] = "TextBlock",
+                ["text"] = invalidCombinationMessage,
+                ["size"] = "Small",
+                ["color"] = "Warning",
+                ["wrap"] = true,
+                ["spacing"] = "Medium"
+            });
+        }
+
         body.Add(new Dictionary<string, object> { ["type"] = "TextBlock", ["text"] = "Distribution Channel *", ["weight"] = "Bolder", ["size"] = "Small", ["spacing"] = "Medium", ["wrap"] = true });
 
         if (chanChoices.Count > 0)
@@ -314,20 +367,14 @@ internal static class TeamsCardBuilder
         }
         else
         {
-            // The user has already picked a SalesOrg, so empty result here means SAP
-            // returned no distribution channels for that Org. Show a real error
-            // instead of a generic "(select ... to load)" hint, otherwise the user
-            // is stuck — the Channel dropdown never appears and submit just loops.
-            var msg = !string.IsNullOrWhiteSpace(selectedSalesOrg)
-                ? $"No distribution channels available for Sales Organization **{selectedSalesOrg}** in SAP. Please pick another Sales Organization."
-                : "(select Sales Organization to load)";
+            // No channels anywhere in SAP for any sales area — render a warning so
+            // the user isn't stuck on a placeholder they can't interact with.
             body.Add(new Dictionary<string, object>
             {
                 ["type"] = "TextBlock",
-                ["text"] = msg,
+                ["text"] = "No distribution channels are available in SAP. Contact the AISO admin.",
                 ["size"] = "Small",
-                ["color"] = !string.IsNullOrWhiteSpace(selectedSalesOrg) ? "Warning" : "Default",
-                ["isSubtle"] = string.IsNullOrWhiteSpace(selectedSalesOrg),
+                ["color"] = "Warning",
                 ["wrap"] = true
             });
         }
@@ -350,19 +397,12 @@ internal static class TeamsCardBuilder
         }
         else
         {
-            // Same defensive fix as the Channel branch: if the user has already
-            // picked Org + Channel but SAP returned no divisions, surface that
-            // explicitly so they can try a different Channel instead of looping.
-            var msg = !string.IsNullOrWhiteSpace(selectedDistChannel)
-                ? $"No divisions available for Sales Organization **{selectedSalesOrg}** / Distribution Channel **{selectedDistChannel}** in SAP. Please pick another Distribution Channel."
-                : "(select Distribution Channel to load)";
             body.Add(new Dictionary<string, object>
             {
                 ["type"] = "TextBlock",
-                ["text"] = msg,
+                ["text"] = "No divisions are available in SAP. Contact the AISO admin.",
                 ["size"] = "Small",
-                ["color"] = !string.IsNullOrWhiteSpace(selectedDistChannel) ? "Warning" : "Default",
-                ["isSubtle"] = string.IsNullOrWhiteSpace(selectedDistChannel),
+                ["color"] = "Warning",
                 ["wrap"] = true
             });
         }
