@@ -607,9 +607,9 @@ public class SapClientTests
         // Three rows across two SalesOrgs so we can prove the server-side filter narrowed the result.
         const string body = """
             {"value":[
-              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
-              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
-              {"SalesOrg":"TV01","DistrChannel":"10","Division":"00","SalesOrgName":"TV"}
+              {"SalesOrg":"UE00","DistChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"UE00","DistChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"TV01","DistChannel":"10","Division":"00","SalesOrgName":"TV"}
             ]}
             """;
         var client = CreateClient(HttpStatusCode.OK, body, out var handler);
@@ -636,8 +636,8 @@ public class SapClientTests
     {
         const string body = """
             {"value":[
-              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
-              {"SalesOrg":"TV01","DistrChannel":"10","Division":"00","SalesOrgName":"TV"}
+              {"SalesOrg":"UE00","DistChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"TV01","DistChannel":"10","Division":"00","SalesOrgName":"TV"}
             ]}
             """;
         var client = CreateClient(HttpStatusCode.OK, body, out var handler);
@@ -655,8 +655,8 @@ public class SapClientTests
         // Simulates a gateway that ignored $filter and returned mixed rows.
         const string body = """
             {"value":[
-              {"SalesOrg":"UE00","DistrChannel":"WH","Division":"AS","SalesOrgName":"UE"},
-              {"SalesOrg":"TV01","DistrChannel":"10","Division":"00","SalesOrgName":"TV"}
+              {"SalesOrg":"UE00","DistChannel":"WH","Division":"AS","SalesOrgName":"UE"},
+              {"SalesOrg":"TV01","DistChannel":"10","Division":"00","SalesOrgName":"TV"}
             ]}
             """;
         var client = CreateClient(HttpStatusCode.OK, body, out _);

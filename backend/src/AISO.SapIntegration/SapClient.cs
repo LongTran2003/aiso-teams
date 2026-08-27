@@ -1300,7 +1300,7 @@ public class SapClient : ISapClient
 
             var query = result.Value
                 .Where(r => !string.IsNullOrWhiteSpace(r.SalesOrg)
-                            && !string.IsNullOrWhiteSpace(r.DistrChannel)
+                            && !string.IsNullOrWhiteSpace(r.DistChannel)
                             && !string.IsNullOrWhiteSpace(r.Division));
 
             // Defensive client-side filter in case the OData filter was ignored by the gateway.
@@ -1312,7 +1312,7 @@ public class SapClient : ISapClient
             return query
                 .Select(r => new SapSalesArea(
                     r.SalesOrg!.Trim().ToUpperInvariant(),
-                    r.DistrChannel!.Trim().ToUpperInvariant(),
+                    r.DistChannel!.Trim().ToUpperInvariant(),
                     r.Division!.Trim().ToUpperInvariant(),
                     r.SalesOrgName?.Trim(),
                     r.DistChannelName?.Trim(),
