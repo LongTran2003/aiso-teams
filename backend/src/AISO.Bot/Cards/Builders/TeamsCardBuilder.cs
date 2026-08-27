@@ -1009,7 +1009,7 @@ internal static class TeamsCardBuilder
                 ? $"Note for manager: {noteText}"
                 : string.Empty,
             showReleasedBanner = showReleasedUx ? "true" : "false",
-            releasedBannerTitle = showReleasedUx ? "Đơn đã duyệt — chờ vận chuyển" : string.Empty,
+            releasedBannerTitle = showReleasedUx ? "Order approved — awaiting delivery" : string.Empty,
             releasedBannerMessage = string.Empty,
             showApprovalJourney = showJourney,
             journeySteps = journey.Select(s => new { title = s.Title, detail = s.Detail }).ToList(),
@@ -1067,7 +1067,7 @@ internal static class TeamsCardBuilder
             var label = status == SalesOrderStatus.Open
                 ? "Open (Released)"
                 : $"{status} (Released)";
-            return (label, "Good", true, "Đã duyệt");
+            return (label, "Good", true, "Released");
         }
 
         if (approvedButStillBlocked)

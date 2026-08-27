@@ -460,7 +460,7 @@
     },
     {
       "type": "Action.Submit",
-      "title": "Xo\u00e1 \u0111\u01a1n",
+      "title": "Delete order",
       "style": "destructive",
       "$when": "${showDelete == 'true'}",
       "data": {

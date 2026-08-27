@@ -18,7 +18,7 @@ public class SalesOrderDetailCardTests
         Assert.Contains("Request release", json);
         Assert.Contains("\"action\":\"release_so\"", json);
         Assert.DoesNotContain("\"action\":\"approve_so\"", json);
-        Assert.Contains("Xoá đơn", json);
+        Assert.Contains("Delete order", json);
         Assert.Contains("Forward", json);
         Assert.Contains("No line items available yet.", json);
         Assert.DoesNotContain("Waiting for manager approval", json);
@@ -290,8 +290,8 @@ public class SalesOrderDetailCardTests
         Assert.Contains("Approved", json);
         Assert.Contains("DEV-249", json);
         Assert.Contains("Open (Released)", json);
-        Assert.Contains("Đã duyệt", json);
-        Assert.Contains("Đơn đã duyệt — chờ vận chuyển", json);
+        Assert.Contains("Approved", json);
+        Assert.Contains("Order approved — awaiting delivery", json);
         Assert.DoesNotContain("delivery block was cleared", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("not that the order is stuck", json, StringComparison.OrdinalIgnoreCase);
         Assert.DoesNotContain("\"action\":\"release_so\"", json);
@@ -349,7 +349,7 @@ public class SalesOrderDetailCardTests
         var json = JsonConvert.SerializeObject(attachment.Content);
 
         Assert.Contains("Open (Released)", json);
-        Assert.Contains("Đã duyệt", json);
+        Assert.Contains("Released", json);
         Assert.DoesNotContain("\"status\":\"Open\"", json);
     }
 

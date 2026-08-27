@@ -42,7 +42,7 @@ public static class ApprovalJourney
             {
                 steps.Add(new(
                     "3. Released in SAP",
-                    "Đơn đã duyệt — chờ vận chuyển"));
+                    "Order approved — awaiting delivery"));
             }
             else
             {

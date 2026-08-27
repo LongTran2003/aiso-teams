@@ -111,7 +111,7 @@ public class OverdueOrderNotificationJob : BackgroundService
 
     private async Task SendOverdueEmailAsync(IEmailService emailService, string email, string salesOrg, IReadOnlyList<OverdueOrder> orders, CancellationToken ct)
     {
-        string subject = $"[Cảnh Báo] Báo cáo đơn hàng quá hạn - {salesOrg} ({DateTime.Now:dd/MM/yyyy})";
+        string subject = $"[Alert] Overdue Sales Orders Report - {salesOrg} ({DateTime.Now:dd/MM/yyyy})";
 
         var rows = string.Join("\n", orders.Select(o => $@"
             <tr>
@@ -119,24 +119,24 @@ public class OverdueOrderNotificationJob : BackgroundService
                 <td style='border: 1px solid #ddd; padding: 8px;'>{o.CustomerName}</td>
                 <td style='border: 1px solid #ddd; padding: 8px;'>{o.NetValue} {o.Currency}</td>
                 <td style='border: 1px solid #ddd; padding: 8px;'>{o.ScheduledDeliveryDate:dd/MM/yyyy}</td>
-                <td style='border: 1px solid #ddd; padding: 8px; color: red;'><b>{o.DaysPastDue} ngày</b></td>
+                <td style='border: 1px solid #ddd; padding: 8px; color: red;'><b>{o.DaysPastDue} day(s)</b></td>
             </tr>
         "));
 
         string html = $@"
             <div style='font-family: Arial, sans-serif;'>
-                <h2 style='color: #d9534f;'>Cảnh Báo Đơn Hàng Quá Hạn - Khu vực {salesOrg}</h2>
-                <p>Kính gửi Quản lý,</p>
-                <p>Hệ thống ghi nhận có <b>{orders.Count}</b> đơn hàng đã trễ hạn giao hàng. Vui lòng kiểm tra và có biện pháp xử lý kịp thời.</p>
-                
+                <h2 style='color: #d9534f;'>Overdue Sales Orders Alert - Area {salesOrg}</h2>
+                <p>Dear Manager,</p>
+                <p>The system has identified <b>{orders.Count}</b> sales order(s) that have exceeded their scheduled delivery date. Please review and take timely action.</p>
+
                 <table style='border-collapse: collapse; width: 100%; margin-top: 20px;'>
                     <thead>
                         <tr style='background-color: #f2f2f2;'>
-                            <th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Mã Đơn Hàng</th>
-                            <th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Khách Hàng</th>
-                            <th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Giá Trị</th>
-                            <th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Hạn Giao Hàng</th>
-                            <th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Số Ngày Trễ</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Sales Order</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Customer</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Net Value</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Scheduled Delivery</th>
+                            <th style='border: 1px solid #ddd; padding: 8px; text-align: left;'>Days Overdue</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -144,7 +144,7 @@ public class OverdueOrderNotificationJob : BackgroundService
                     </tbody>
                 </table>
                 <br>
-                <p>Trân trọng,<br>Hệ thống AISO Teams Bot</p>
+                <p>Best regards,<br>AISO Teams Bot</p>
             </div>
         ";
 
