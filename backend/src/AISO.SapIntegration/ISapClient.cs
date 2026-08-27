@@ -166,9 +166,10 @@ public interface ISapClient
 
     /// <summary>
     /// Customers ready for sales order creation from
-    /// <c>CustomerReady</c> (ZC_AISO_CUSTOMER_READY). Filtered server-side
-    /// to customers with a KALKS (pricing condition) record, which is
-    /// required by the sales-order create flow.
+    /// <c>ValidCustomer</c> (ZI_AISO_VALID_CUSTOMER). Any KNVV row in the
+    /// user's authorized sales areas — TEMPORARY rollback from
+    /// <c>CustomerReady</c> (ZC_AISO_CUSTOMER_READY) which was returning
+    /// an empty dropdown. Restore the KALKS filter once root-caused.
     /// </summary>
     Task<IReadOnlyList<SapValidCustomer>> GetValidCustomersAsync(
         string? salesOrg = null,

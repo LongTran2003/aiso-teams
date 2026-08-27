@@ -44,7 +44,7 @@ internal class SapValidCustomerDto
     public string? Division { get; set; }
     public string? CustomerName { get; set; }
     public string? Country { get; set; }
-    /// <summary>ZC_AISO_CUSTOMER_READY only — X when the customer has an explicit AG (sold-to party) record.</summary>
+    /// <summary>CustomerReady-only — X when the customer has an explicit AG (sold-to party) record. Unused when reading from ValidCustomer.</summary>
     public string? HasExplicitAG { get; set; }
 }
 
