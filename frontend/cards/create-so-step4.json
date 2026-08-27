@@ -10,7 +10,7 @@
       "items": [
         {
           "type": "TextBlock",
-          "text": "Xac nhan don hang",
+          "text": "Confirm order",
           "weight": "Bolder",
           "size": "Medium",
           "wrap": true
